@@ -1,16 +1,12 @@
 [package]
 name = "nullpath"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Nullpath — gamified offsec career atlas"
+authors = ["enrik-m"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+# The `_lib` suffix avoids a Windows-only conflict with the bin name.
 name = "nullpath_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
@@ -20,6 +16,19 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
 
+# OS idle detection — used by the session tracker
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_System_SystemInformation", "Win32_UI_Input_KeyboardAndMouse"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-graphics = "0.24"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# X11 idle detection. Wayland users will see the threshold not auto-fire;
+# we fall back to in-window detection (mouse/key events on the app window).
+x11 = { version = "2.21", features = ["xss"] }
