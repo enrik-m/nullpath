@@ -3,6 +3,7 @@ import { Play, Square, Pause, Zap, ChevronRight, Target } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUi, formatHms } from "../store";
 import { sfx } from "../lib/sfx";
+import { evaluateAchievements } from "../lib/achievements";
 import { cn } from "../lib/cn";
 import * as db from "../db";
 import type { NodeRow } from "../db/types";
@@ -111,6 +112,8 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
       nodeId: session.focusNodeId,
     });
     setSession(null);
+    // Evaluate achievements after session-end modal
+    window.setTimeout(() => evaluateAchievements(), 3500);
   }
 
   async function toggleHunt() {

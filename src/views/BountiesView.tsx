@@ -14,6 +14,7 @@ import type {
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
 import { Button } from "../components/ui/Button";
+import { evaluateAchievements } from "../lib/achievements";
 
 const SEVERITY_COLOR: Record<BountySeverity, string> = {
   info: "var(--color-fg-3)",
@@ -262,6 +263,8 @@ function BountyForm({
     } else {
       await db.addBounty(payload);
     }
+    // Re-evaluate achievements for first-bounty / first-payout milestones
+    window.setTimeout(() => evaluateAchievements(), 500);
     onSaved();
   }
 

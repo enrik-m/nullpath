@@ -18,6 +18,7 @@ import type {
   NodeResourceRow,
   NodeRow,
   NodeStatus,
+  RefresherRow,
   RegionRow,
   ResourceKind,
   SessionRow,
@@ -543,6 +544,54 @@ export async function bountyTotals(): Promise<{
      FROM bounty_submission`,
   );
   return rows[0] ?? { total: 0, accepted: 0, payout: 0, cves: 0 };
+}
+
+// ---------------------------------------------------------------------------
+// Spaced repetition refresher queue
+// ---------------------------------------------------------------------------
+
+const REFRESHER_INTERVALS_DAYS = [1, 3, 7, 21, 60, 180];
+
+function refresherDueDate(streak: number): string {
+  const idx = Math.min(streak, REFRESHER_INTERVALS_DAYS.length - 1);
+  const days = REFRESHER_INTERVALS_DAYS[idx];
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+}
+
+/** Schedule (or reset) a refresher row when a node is completed. */
+export async function scheduleRefresher(nodeId: string): Promise<void> {
+  const conn = await db();
+  const due = refresherDueDate(0);
+  await conn.execute(
+    `INSERT INTO refresher (node_id, streak, due_at) VALUES ($1, 0, $2)
+     ON CONFLICT(node_id) DO UPDATE SET streak = 0, due_at = excluded.due_at`,
+    [nodeId, due],
+  );
+}
+
+export async function dueRefreshers(limit = 10): Promise<RefresherRow[]> {
+  const conn = await db();
+  return conn.select<RefresherRow[]>(
+    "SELECT * FROM refresher WHERE due_at <= datetime('now') ORDER BY due_at ASC LIMIT $1",
+    [limit],
+  );
+}
+
+export async function ackRefresher(nodeId: string, recalled: boolean): Promise<void> {
+  const conn = await db();
+  const rows = await conn.select<RefresherRow[]>(
+    "SELECT * FROM refresher WHERE node_id = $1",
+    [nodeId],
+  );
+  const cur = rows[0];
+  if (!cur) return;
+  const newStreak = recalled ? cur.streak + 1 : 0;
+  await conn.execute(
+    "UPDATE refresher SET streak = $1, last_at = $2, due_at = $3 WHERE node_id = $4",
+    [newStreak, nowIso(), refresherDueDate(newStreak), nodeId],
+  );
 }
 
 // ---------------------------------------------------------------------------

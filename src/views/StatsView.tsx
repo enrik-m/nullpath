@@ -5,13 +5,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Camera } from "lucide-react";
+import { Camera, Brain, X, Check } from "lucide-react";
 import * as db from "../db";
-import type { RegionRow, StreakDayRow } from "../db/types";
+import type { RegionRow, StreakDayRow, RefresherRow, NodeRow } from "../db/types";
 import { formatHmShort, levelForXp, xpForLevel } from "../store";
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
 import { Button } from "../components/ui/Button";
+import { useUi } from "../store";
 
 interface ZoneTime {
   zone_id: string;
@@ -27,6 +28,9 @@ export function StatsView() {
   const [totalSeconds, setTotalSeconds] = useState(0);
   const [streakDays, setStreakDays] = useState<StreakDayRow[]>([]);
   const [streak, setStreak] = useState(0);
+  const [refreshers, setRefreshers] = useState<Array<RefresherRow & { node: NodeRow | null }>>([]);
+  const go = useUi((s) => s.go);
+  const selectNode = useUi((s) => s.selectNode);
   const [completedNodes, setCompletedNodes] = useState(0);
   const [totalNodes, setTotalNodes] = useState(0);
   const [xp, setXp] = useState(0);
@@ -42,6 +46,10 @@ export function StatsView() {
       const total = await db.totalStudySeconds();
       const days = await db.getStreakDays(56);
       const st = await db.currentStreak();
+      const due = await db.dueRefreshers(20);
+      const enrichedDue = await Promise.all(
+        due.map(async (r) => ({ ...r, node: await db.getNode(r.node_id) })),
+      );
 
       // XP from completed nodes + minutes
       const allKinds = (
@@ -54,6 +62,7 @@ export function StatsView() {
       setRegion(r);
       setStreakDays(days);
       setStreak(st);
+      setRefreshers(enrichedDue);
 
       const completedXp = all.filter((n) => n.status === "complete").reduce((s, n) => s + (n.user_xp || 0), 0);
       const minuteXp = Math.floor(total / 60) * 4;
@@ -176,6 +185,78 @@ export function StatsView() {
             accent={region?.color_accent ?? "#22d3ee"}
           />
         </div>
+
+        {/* Refreshers due */}
+        {refreshers.length > 0 && (
+          <div className="np-glass rounded-lg p-5 mt-6 border-[var(--color-magenta-dim)]">
+            <div className="flex items-center gap-2 mb-3">
+              <Brain size={14} className="text-[var(--color-magenta)]" />
+              <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-magenta)]">
+                // refreshers due · {refreshers.length}
+              </div>
+            </div>
+            <div className="text-[12px] text-[var(--color-fg-2)] mb-3">
+              Spaced repetition queue. Mental check: still got it? Tap green if recall lands clean,
+              red to push it back to 1-day spacing.
+            </div>
+            <div className="space-y-1.5">
+              {refreshers.slice(0, 6).map((r) => (
+                <div
+                  key={r.id}
+                  className="np-glass rounded px-3 py-2 flex items-center gap-3"
+                >
+                  <button
+                    onClick={() => {
+                      sfx.click();
+                      if (r.node) {
+                        go({ name: "zone", zoneId: r.node.zone_id });
+                        selectNode(r.node.id);
+                      }
+                    }}
+                    className="flex-1 text-left min-w-0"
+                  >
+                    <div className="np-mono text-[10px] uppercase tracking-[0.15em] text-[var(--color-magenta)]">
+                      {r.node_id} · streak {r.streak}
+                    </div>
+                    <div className="text-[12.5px] text-[var(--color-fg-0)] truncate mt-0.5">
+                      {r.node?.name ?? "—"}
+                    </div>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      sfx.success();
+                      await db.ackRefresher(r.node_id, true);
+                      const due = await db.dueRefreshers(20);
+                      const enrichedDue = await Promise.all(
+                        due.map(async (rr) => ({ ...rr, node: await db.getNode(rr.node_id) })),
+                      );
+                      setRefreshers(enrichedDue);
+                    }}
+                    className="p-1.5 rounded text-[var(--color-lime)] hover:bg-[color-mix(in_oklab,var(--color-lime)_10%,transparent)]"
+                    title="Recalled cleanly"
+                  >
+                    <Check size={14} />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      sfx.warn();
+                      await db.ackRefresher(r.node_id, false);
+                      const due = await db.dueRefreshers(20);
+                      const enrichedDue = await Promise.all(
+                        due.map(async (rr) => ({ ...rr, node: await db.getNode(rr.node_id) })),
+                      );
+                      setRefreshers(enrichedDue);
+                    }}
+                    className="p-1.5 rounded text-[var(--color-rose)] hover:bg-[color-mix(in_oklab,var(--color-rose)_10%,transparent)]"
+                    title="Forgot — re-study"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Streak heatmap */}
         <div className="np-glass rounded-lg p-5 mt-6">

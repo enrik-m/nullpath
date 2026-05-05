@@ -29,6 +29,7 @@ import * as db from "../db";
 import type { NodeRow, NodeResourceRow, ResourceKind } from "../db/types";
 import { useUi, xpForCompletingNode } from "../store";
 import { sfx } from "../lib/sfx";
+import { evaluateAchievements } from "../lib/achievements";
 import { cn } from "../lib/cn";
 import { DepthTag, StatusTag, KindTag } from "./ui/Tag";
 import { Button } from "./ui/Button";
@@ -131,10 +132,13 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
     const xp = xpForCompletingNode(node.depth);
     await db.setNodeStatus(node.id, "complete");
     await db.setNodeXp(node.id, (node.user_xp || 0) + xp);
+    await db.scheduleRefresher(node.id);
     await reload();
     onChanged();
-    // Echo Mode prompt
+    // Echo Mode prompt — fires first, then achievement engine after dismiss
     showModal({ kind: "echo-prompt", nodeId: node.id });
+    // Evaluate after a short delay so the echo modal stacks first
+    window.setTimeout(() => evaluateAchievements(), 4000);
   }
 
   async function markAvailable() {

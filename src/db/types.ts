@@ -160,6 +160,14 @@ export interface BountySubmissionRow {
   visibility: Visibility;
 }
 
+export interface RefresherRow {
+  id: number;
+  node_id: string;
+  streak: number;
+  last_at: string | null;
+  due_at: string;
+}
+
 // ---------------------------------------------------------------------------
 // Domain shapes used by the UI (decoded from rows)
 // ---------------------------------------------------------------------------

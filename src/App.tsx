@@ -16,6 +16,7 @@ import { BountiesView } from "./views/BountiesView";
 import { SettingsView } from "./views/SettingsView";
 import { useSessionTicker } from "./hooks/useSessionTicker";
 import { useDailyBriefing } from "./hooks/useDailyBriefing";
+import { primeAchievementEngine } from "./lib/achievements";
 import * as db from "./db";
 
 function App() {
@@ -29,7 +30,7 @@ function App() {
   useSessionTicker();
   useDailyBriefing();
 
-  // Hydrate user prefs once DB is ready
+  // Hydrate user prefs once DB is ready + prime achievement engine
   useEffect(() => {
     let cancelled = false;
     async function hydrate() {
@@ -38,6 +39,7 @@ function App() {
         if (cancelled) return;
         setScanlines(state.scanlines_enabled === 1);
         setSound(state.sound_enabled === 1);
+        await primeAchievementEngine();
       } catch {
         // Migrations probably haven't applied yet — they will on first DB call
       }

@@ -28,6 +28,12 @@ pub fn run() {
             sql: include_str!("../migrations/003_bounties.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "spaced repetition queue",
+            sql: include_str!("../migrations/004_repetition.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
