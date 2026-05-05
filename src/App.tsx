@@ -5,6 +5,8 @@ import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { BootView } from "./views/BootView";
 import { AtlasView } from "./views/AtlasView";
+import { RegionView } from "./views/RegionView";
+import { ZoneView } from "./views/ZoneView";
 import { CodexStub, StatsStub, BountiesStub } from "./views/Stubs";
 import { useSessionTicker } from "./hooks/useSessionTicker";
 import * as db from "./db";
@@ -93,9 +95,9 @@ function ViewRenderer() {
     case "atlas":
       return <AtlasView />;
     case "region":
-      return <RegionPlaceholder regionId={route.regionId} />;
+      return <RegionView regionId={route.regionId} />;
     case "zone":
-      return <ZonePlaceholder zoneId={route.zoneId} />;
+      return <ZoneView zoneId={route.zoneId} />;
     case "codex":
       return <CodexStub />;
     case "stats":
@@ -107,26 +109,6 @@ function ViewRenderer() {
     default:
       return null;
   }
-}
-
-function RegionPlaceholder({ regionId }: { regionId: string }) {
-  return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="np-mono text-[var(--color-fg-2)] text-xs tracking-[0.3em]">
-        constellation for {regionId} loading...
-      </div>
-    </div>
-  );
-}
-
-function ZonePlaceholder({ zoneId }: { zoneId: string }) {
-  return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="np-mono text-[var(--color-fg-2)] text-xs tracking-[0.3em]">
-        node graph for {zoneId} loading...
-      </div>
-    </div>
-  );
 }
 
 function SettingsPlaceholder() {
