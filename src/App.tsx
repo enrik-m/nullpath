@@ -1,14 +1,21 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useUi } from "./store";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
+import { ModalRoot } from "./components/ModalRoot";
+import { SearchModal } from "./components/SearchModal";
+import { RandomKickModal } from "./components/RandomKickModal";
 import { BootView } from "./views/BootView";
 import { AtlasView } from "./views/AtlasView";
 import { RegionView } from "./views/RegionView";
 import { ZoneView } from "./views/ZoneView";
-import { CodexStub, StatsStub, BountiesStub } from "./views/Stubs";
+import { CodexView } from "./views/CodexView";
+import { StatsView } from "./views/StatsView";
+import { BountiesView } from "./views/BountiesView";
+import { SettingsView } from "./views/SettingsView";
 import { useSessionTicker } from "./hooks/useSessionTicker";
+import { useDailyBriefing } from "./hooks/useDailyBriefing";
 import * as db from "./db";
 
 function App() {
@@ -16,7 +23,11 @@ function App() {
   const setScanlines = useUi((s) => s.setScanlines);
   const setSound = useUi((s) => s.setSound);
 
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [kickOpen, setKickOpen] = useState(false);
+
   useSessionTicker();
+  useDailyBriefing();
 
   // Hydrate user prefs once DB is ready
   useEffect(() => {
@@ -37,7 +48,7 @@ function App() {
     };
   }, [setScanlines, setSound]);
 
-  // Keyboard shortcuts: 1-4 quick switch, Cmd/Ctrl+K search
+  // Keyboard shortcuts
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
@@ -45,6 +56,14 @@ function App() {
         target?.tagName === "INPUT" ||
         target?.tagName === "TEXTAREA" ||
         target?.isContentEditable;
+
+      // ⌘K / Ctrl+K — global search (works even in fields)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+
       if (inField) return;
 
       const go = useUi.getState().go;
@@ -52,7 +71,10 @@ function App() {
       else if (e.key === "2") go({ name: "codex" });
       else if (e.key === "3") go({ name: "stats" });
       else if (e.key === "4") go({ name: "bounties" });
-      else if (e.key === "Escape") {
+      else if (e.key === "/") {
+        e.preventDefault();
+        setSearchOpen(true);
+      } else if (e.key === "Escape") {
         const cur = useUi.getState().route;
         if (cur.name === "zone" || cur.name === "region") useUi.getState().back();
       }
@@ -63,15 +85,20 @@ function App() {
 
   // Boot view stands alone (no shell)
   if (route.name === "boot") {
-    return <BootView />;
+    return (
+      <>
+        <BootView />
+        <ModalRoot />
+      </>
+    );
   }
 
   return (
     <div className="h-screen w-screen flex">
-      <Sidebar onSearchClick={() => {}} />
+      <Sidebar onSearchClick={() => setSearchOpen(true)} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <TopBar onRandomKick={() => {}} />
+        <TopBar onRandomKick={() => setKickOpen(true)} />
         <AnimatePresence mode="wait">
           <motion.main
             key={routeKey(route)}
@@ -85,6 +112,10 @@ function App() {
           </motion.main>
         </AnimatePresence>
       </div>
+
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <RandomKickModal open={kickOpen} onClose={() => setKickOpen(false)} />
+      <ModalRoot />
     </div>
   );
 }
@@ -99,26 +130,16 @@ function ViewRenderer() {
     case "zone":
       return <ZoneView zoneId={route.zoneId} />;
     case "codex":
-      return <CodexStub />;
+      return <CodexView />;
     case "stats":
-      return <StatsStub />;
+      return <StatsView />;
     case "bounties":
-      return <BountiesStub />;
+      return <BountiesView />;
     case "settings":
-      return <SettingsPlaceholder />;
+      return <SettingsView />;
     default:
       return null;
   }
-}
-
-function SettingsPlaceholder() {
-  return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="np-mono text-[var(--color-fg-2)] text-xs tracking-[0.3em]">
-        settings loading...
-      </div>
-    </div>
-  );
 }
 
 function routeKey(r: ReturnType<typeof useUi.getState>["route"]): string {

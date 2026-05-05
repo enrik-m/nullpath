@@ -135,6 +135,31 @@ export interface AchievementRow {
   unlocked_at: string | null;
 }
 
+export type BountySeverity = "info" | "low" | "medium" | "high" | "critical";
+export type BountyStatus =
+  | "submitted"
+  | "triaged"
+  | "accepted"
+  | "rejected"
+  | "duplicate"
+  | "informative"
+  | "resolved";
+
+export interface BountySubmissionRow {
+  id: number;
+  program: string;
+  title: string;
+  severity: BountySeverity;
+  status: BountyStatus;
+  payout_usd: number | null;
+  submitted_at: string;
+  resolved_at: string | null;
+  cve_id: string | null;
+  related_node: string | null;
+  notes: string | null;
+  visibility: Visibility;
+}
+
 // ---------------------------------------------------------------------------
 // Domain shapes used by the UI (decoded from rows)
 // ---------------------------------------------------------------------------

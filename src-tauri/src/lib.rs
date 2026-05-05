@@ -22,6 +22,12 @@ pub fn run() {
             sql: include_str!("../migrations/002_seed_web.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "bounty submission ledger",
+            sql: include_str!("../migrations/003_bounties.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

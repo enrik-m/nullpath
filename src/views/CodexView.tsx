@@ -1,0 +1,246 @@
+/**
+ * CodexView — global archive of every resource attached anywhere in the
+ * skill graph. Filterable by kind, sortable, openable.
+ */
+
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { invoke } from "@tauri-apps/api/core";
+import { ExternalLink, Pin, PinOff, Trash2 } from "lucide-react";
+import * as db from "../db";
+import type { NodeResourceRow, ResourceKind } from "../db/types";
+import { useUi } from "../store";
+import { sfx } from "../lib/sfx";
+import { cn } from "../lib/cn";
+
+const KIND_LABEL: Record<ResourceKind, string> = {
+  video: "Video",
+  blog: "Blog",
+  writeup: "Writeup",
+  lab: "Lab",
+  tool: "Tool",
+  misc: "Misc",
+};
+
+const KIND_COLOR: Record<ResourceKind, string> = {
+  video: "#fb7185",
+  blog: "#22d3ee",
+  writeup: "#a3e635",
+  lab: "#e879f9",
+  tool: "#fbbf24",
+  misc: "#6b7088",
+};
+
+const ALL_KINDS: ResourceKind[] = ["video", "blog", "writeup", "lab", "tool", "misc"];
+
+interface ResourceWithNode extends NodeResourceRow {
+  node_name: string;
+  node_zone: string;
+}
+
+export function CodexView() {
+  const go = useUi((s) => s.go);
+  const selectNode = useUi((s) => s.selectNode);
+  const [items, setItems] = useState<ResourceWithNode[]>([]);
+  const [filter, setFilter] = useState<ResourceKind | "all">("all");
+  const [q, setQ] = useState("");
+
+  async function reload() {
+    const all = await db.getAllResources();
+    // Hydrate node names — single bulk select
+    const conn = await db.db();
+    const nodes = await conn.select<{ id: string; name: string; zone_id: string }[]>(
+      `SELECT id, name, zone_id FROM node`,
+    );
+    const map = new Map(nodes.map((n) => [n.id, n]));
+    const enriched = all.map((r) => {
+      const n = map.get(r.node_id);
+      return { ...r, node_name: n?.name ?? r.node_id, node_zone: n?.zone_id ?? "" };
+    });
+    setItems(enriched);
+  }
+
+  useEffect(() => {
+    reload();
+  }, []);
+
+  const filtered = useMemo(() => {
+    let out = items;
+    if (filter !== "all") out = out.filter((r) => r.kind === filter);
+    if (q.trim()) {
+      const lq = q.toLowerCase();
+      out = out.filter(
+        (r) =>
+          r.title.toLowerCase().includes(lq) ||
+          r.url?.toLowerCase().includes(lq) ||
+          r.note?.toLowerCase().includes(lq) ||
+          r.node_name.toLowerCase().includes(lq) ||
+          r.node_id.toLowerCase().includes(lq),
+      );
+    }
+    return out;
+  }, [items, filter, q]);
+
+  const counts = useMemo(() => {
+    const c: Record<ResourceKind | "all", number> = {
+      all: items.length,
+      video: 0,
+      blog: 0,
+      writeup: 0,
+      lab: 0,
+      tool: 0,
+      misc: 0,
+    };
+    for (const r of items) c[r.kind]++;
+    return c;
+  }, [items]);
+
+  async function openUrl(url: string) {
+    try {
+      await invoke("plugin:opener|open_url", { url });
+    } catch {
+      window.open(url, "_blank");
+    }
+  }
+
+  async function togglePin(id: number) {
+    sfx.click();
+    await db.togglePinResource(id);
+    reload();
+  }
+
+  async function deleteOne(id: number) {
+    sfx.warn();
+    await db.deleteResource(id);
+    reload();
+  }
+
+  return (
+    <div className="flex-1 overflow-auto">
+      <div className="px-10 py-10 max-w-[1100px]">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <div className="np-mono text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] uppercase mb-2">
+            // codex / archive
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--color-fg-0)]">
+            Every resource you've collected.
+          </h1>
+          <p className="text-[var(--color-fg-2)] mt-2 text-sm max-w-xl">
+            Videos, blogs, writeups, labs — pulled from every node in your skill graph.
+          </p>
+        </motion.div>
+
+        {/* Filter strip */}
+        <div className="flex items-center gap-2 flex-wrap mb-4">
+          <button
+            onClick={() => {
+              sfx.click();
+              setFilter("all");
+            }}
+            className={cn(
+              "np-mono text-[10px] tracking-[0.15em] uppercase px-3 py-1.5 rounded transition",
+              filter === "all"
+                ? "bg-[var(--color-cyan-dim)] text-[var(--color-bg-0)]"
+                : "text-[var(--color-fg-2)] hover:text-[var(--color-fg-0)] border border-[var(--color-border-default)]",
+            )}
+          >
+            All ({counts.all})
+          </button>
+          {ALL_KINDS.map((k) => (
+            <button
+              key={k}
+              onClick={() => {
+                sfx.click();
+                setFilter(k);
+              }}
+              className={cn(
+                "np-mono text-[10px] tracking-[0.15em] uppercase px-3 py-1.5 rounded transition",
+                filter === k
+                  ? "text-[var(--color-bg-0)]"
+                  : "text-[var(--color-fg-2)] hover:text-[var(--color-fg-0)] border border-[var(--color-border-default)]",
+              )}
+              style={{
+                background: filter === k ? KIND_COLOR[k] : undefined,
+              }}
+            >
+              {KIND_LABEL[k]} ({counts[k]})
+            </button>
+          ))}
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="filter..."
+            className="ml-auto bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-1.5 text-[12px] text-[var(--color-fg-0)] np-mono focus:border-[var(--color-cyan-dim)] focus:outline-none w-48"
+          />
+        </div>
+
+        {/* List */}
+        <div className="space-y-1.5">
+          {filtered.length === 0 && (
+            <div className="np-glass rounded-lg p-12 text-center">
+              <div className="np-mono text-[12px] text-[var(--color-fg-3)] tracking-widest">
+                {items.length === 0
+                  ? "no resources yet — open a node and start attaching videos / blogs / writeups"
+                  : `no resources match these filters`}
+              </div>
+            </div>
+          )}
+          {filtered.map((r) => (
+            <div
+              key={r.id}
+              className="np-glass rounded p-3 flex items-start gap-3 hover:border-[var(--color-cyan-dim)] transition"
+              style={{ borderLeftWidth: 3, borderLeftColor: KIND_COLOR[r.kind] }}
+            >
+              <span
+                className="np-mono text-[9px] tracking-[0.2em] uppercase shrink-0 w-14 mt-1"
+                style={{ color: KIND_COLOR[r.kind] }}
+              >
+                {KIND_LABEL[r.kind]}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] text-[var(--color-fg-0)] truncate">{r.title}</div>
+                {r.note && (
+                  <div className="text-[11.5px] text-[var(--color-fg-2)] mt-0.5 line-clamp-2">
+                    {r.note}
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    sfx.click();
+                    go({ name: "zone", zoneId: r.node_zone });
+                    selectNode(r.node_id);
+                  }}
+                  className="np-mono text-[10px] text-[var(--color-cyan)] hover:underline tracking-[0.15em] uppercase mt-1.5 inline-flex items-center gap-1"
+                >
+                  → {r.node_id} {r.node_name}
+                </button>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {r.url && (
+                  <button
+                    onClick={() => openUrl(r.url!)}
+                    className="text-[var(--color-fg-3)] hover:text-[var(--color-cyan)] p-1.5"
+                  >
+                    <ExternalLink size={13} />
+                  </button>
+                )}
+                <button
+                  onClick={() => togglePin(r.id)}
+                  className="text-[var(--color-fg-3)] hover:text-[var(--color-amber)] p-1.5"
+                >
+                  {r.pinned ? <PinOff size={13} /> : <Pin size={13} />}
+                </button>
+                <button
+                  onClick={() => deleteOne(r.id)}
+                  className="text-[var(--color-fg-3)] hover:text-[var(--color-rose)] p-1.5"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -9,6 +9,9 @@ import Database from "@tauri-apps/plugin-sql";
 import type {
   AchievementRow,
   AppStateRow,
+  BountySeverity,
+  BountyStatus,
+  BountySubmissionRow,
   NodeEdgeRow,
   NodeKind,
   NodeNoteRow,
@@ -454,6 +457,92 @@ export async function unlockAchievement(input: {
     );
   }
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Bounty ledger
+// ---------------------------------------------------------------------------
+
+export async function getBounties(): Promise<BountySubmissionRow[]> {
+  const conn = await db();
+  return conn.select<BountySubmissionRow[]>(
+    "SELECT * FROM bounty_submission ORDER BY submitted_at DESC",
+  );
+}
+
+export async function addBounty(input: {
+  program: string;
+  title: string;
+  severity: BountySeverity;
+  status?: BountyStatus;
+  payout_usd?: number | null;
+  submitted_at?: string;
+  cve_id?: string | null;
+  related_node?: string | null;
+  notes?: string | null;
+}): Promise<number> {
+  const conn = await db();
+  const r = await conn.execute(
+    `INSERT INTO bounty_submission
+     (program, title, severity, status, payout_usd, submitted_at, cve_id, related_node, notes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      input.program,
+      input.title,
+      input.severity,
+      input.status ?? "submitted",
+      input.payout_usd ?? null,
+      input.submitted_at ?? nowIso(),
+      input.cve_id ?? null,
+      input.related_node ?? null,
+      input.notes ?? null,
+    ],
+  );
+  return r.lastInsertId ?? 0;
+}
+
+export async function updateBounty(
+  id: number,
+  patch: Partial<BountySubmissionRow>,
+): Promise<void> {
+  const conn = await db();
+  const sets: string[] = [];
+  const args: unknown[] = [];
+  let i = 1;
+  for (const [k, v] of Object.entries(patch)) {
+    if (k === "id") continue;
+    sets.push(`${k} = $${i}`);
+    args.push(v);
+    i++;
+  }
+  if (sets.length === 0) return;
+  args.push(id);
+  await conn.execute(`UPDATE bounty_submission SET ${sets.join(", ")} WHERE id = $${i}`, args);
+}
+
+export async function deleteBounty(id: number): Promise<void> {
+  const conn = await db();
+  await conn.execute("DELETE FROM bounty_submission WHERE id = $1", [id]);
+}
+
+export async function bountyTotals(): Promise<{
+  total: number;
+  accepted: number;
+  payout: number;
+  cves: number;
+}> {
+  const conn = await db();
+  const rows = await conn.select<
+    Array<{ total: number; accepted: number; payout: number; cves: number }>
+  >(
+    `SELECT
+       COUNT(*) AS total,
+       SUM(CASE WHEN status IN ('accepted','resolved') THEN 1 ELSE 0 END) AS accepted,
+       COALESCE(SUM(payout_usd), 0) AS payout,
+       SUM(CASE WHEN cve_id IS NOT NULL AND cve_id != '' THEN 1 ELSE 0 END) AS cves
+     FROM bounty_submission`,
+  );
+  return rows[0] ?? { total: 0, accepted: 0, payout: 0, cves: 0 };
 }
 
 // ---------------------------------------------------------------------------
