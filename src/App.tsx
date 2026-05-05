@@ -5,6 +5,7 @@ import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { ModalRoot } from "./components/ModalRoot";
 import { SearchModal } from "./components/SearchModal";
+import { ShortcutsModal } from "./components/ShortcutsModal";
 import { RandomKickModal } from "./components/RandomKickModal";
 import { BootView } from "./views/BootView";
 import { AtlasView } from "./views/AtlasView";
@@ -26,6 +27,7 @@ function App() {
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [kickOpen, setKickOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   useSessionTicker();
   useDailyBriefing();
@@ -76,6 +78,9 @@ function App() {
       else if (e.key === "/") {
         e.preventDefault();
         setSearchOpen(true);
+      } else if (e.key === "?") {
+        e.preventDefault();
+        setShortcutsOpen(true);
       } else if (e.key === "Escape") {
         const cur = useUi.getState().route;
         if (cur.name === "zone" || cur.name === "region") useUi.getState().back();
@@ -117,6 +122,7 @@ function App() {
 
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       <RandomKickModal open={kickOpen} onClose={() => setKickOpen(false)} />
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <ModalRoot />
     </div>
   );

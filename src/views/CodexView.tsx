@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { ExternalLink, Pin, PinOff, Trash2 } from "lucide-react";
 import * as db from "../db";
 import type { NodeResourceRow, ResourceKind } from "../db/types";
@@ -95,9 +95,9 @@ export function CodexView() {
     return c;
   }, [items]);
 
-  async function openUrl(url: string) {
+  async function openExternal(url: string) {
     try {
-      await invoke("plugin:opener|open_url", { url });
+      await openUrl(url);
     } catch {
       window.open(url, "_blank");
     }
@@ -218,7 +218,7 @@ export function CodexView() {
               <div className="flex items-center gap-1 shrink-0">
                 {r.url && (
                   <button
-                    onClick={() => openUrl(r.url!)}
+                    onClick={() => openExternal(r.url!)}
                     className="text-[var(--color-fg-3)] hover:text-[var(--color-cyan)] p-1.5"
                   >
                     <ExternalLink size={13} />

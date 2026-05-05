@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   X,
   CheckCircle2,
@@ -207,9 +207,9 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
     setResources(res);
   }
 
-  async function openUrl(url: string) {
+  async function openExternal(url: string) {
     try {
-      await invoke("plugin:opener|open_url", { url });
+      await openUrl(url);
     } catch {
       window.open(url, "_blank");
     }
@@ -456,7 +456,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                       <button
                         onClick={() => {
                           sfx.click();
-                          openUrl(r.url!);
+                          openExternal(r.url!);
                         }}
                         className="text-[var(--color-fg-3)] hover:text-[var(--color-cyan)] p-1"
                       >
