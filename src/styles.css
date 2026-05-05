@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/700.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+
+/* ============================================================
+   Nullpath — dark cyberpunk-terminal theme
+   ------------------------------------------------------------
+   Base near-black with deep gradient panels.
+   Cyan primary, magenta secondary, lime for completion states.
+   ============================================================ */
+
+@theme {
+  /* Base */
+  --color-bg-0: #06070b;          /* deepest */
+  --color-bg-1: #0a0b13;          /* base */
+  --color-bg-2: #11131e;          /* panel */
+  --color-bg-3: #181b2a;          /* elevated */
+  --color-bg-4: #232739;          /* hover */
+
+  /* Borders */
+  --color-border-subtle: #1f2335;
+  --color-border-default: #2c3148;
+  --color-border-strong: #3d435e;
+
+  /* Text */
+  --color-fg-0: #f4f5fb;          /* primary */
+  --color-fg-1: #b8bccd;          /* secondary */
+  --color-fg-2: #6b7088;          /* muted */
+  --color-fg-3: #41465e;          /* faint */
+
+  /* Accents */
+  --color-cyan: #22d3ee;
+  --color-cyan-dim: #0e7490;
+  --color-cyan-glow: #22d3ee44;
+
+  --color-magenta: #e879f9;
+  --color-magenta-dim: #a21caf;
+  --color-magenta-glow: #e879f944;
+
+  --color-lime: #a3e635;
+  --color-lime-dim: #4d7c0f;
+  --color-lime-glow: #a3e63544;
+
+  --color-amber: #fbbf24;
+  --color-rose: #fb7185;
+
+  /* Depth tag colors */
+  --color-depth-intro: #6b7088;
+  --color-depth-std: #22d3ee;
+  --color-depth-adv: #e879f9;
+  --color-depth-res: #fb7185;
+
+  /* Status colors */
+  --color-status-locked: #41465e;
+  --color-status-available: #6b7088;
+  --color-status-in-progress: #22d3ee;
+  --color-status-complete: #a3e635;
+
+  /* Fonts */
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg-0);
+  color: var(--color-fg-0);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow: hidden; /* the app manages its own scroll regions */
+}
+
+#root {
+  isolation: isolate;
+  position: relative;
+}
+
+/* Body backdrop — deep gradient + soft chromatic glow */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 60% 50% at 80% 0%, var(--color-cyan-glow), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 20% 100%, var(--color-magenta-glow), transparent 60%),
+    linear-gradient(180deg, var(--color-bg-0) 0%, var(--color-bg-1) 100%);
+  pointer-events: none;
+}
+
+/* Optional CRT scanline overlay */
+body[data-scanlines="on"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.018) 0px,
+    rgba(255, 255, 255, 0.018) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+}
+
+/* Selection */
+::selection {
+  background: var(--color-cyan);
+  color: var(--color-bg-0);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+  background-clip: padding-box;
+}
+
+/* Focus rings */
+:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   Utility classes — small set, used across components.
+   Tailwind handles most styling; these are escape hatches.
+   ============================================================ */
+
+.np-glass {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-bg-2), transparent 10%) 0%,
+    color-mix(in oklab, var(--color-bg-1), transparent 5%) 100%
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.np-glow-cyan {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-cyan) 60%, transparent),
+    0 0 20px var(--color-cyan-glow);
+}
+
+.np-glow-magenta {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-magenta) 60%, transparent),
+    0 0 20px var(--color-magenta-glow);
+}
+
+.np-glow-lime {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-lime) 60%, transparent),
+    0 0 20px var(--color-lime-glow);
+}
+
+.np-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+}
+
+.np-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-border-default) 50%,
+    transparent 100%
+  );
+}
+
+@keyframes np-pulse-glow {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 6px var(--color-cyan-glow)); }
+  50% { opacity: 0.7; filter: drop-shadow(0 0 12px var(--color-cyan-glow)); }
+}
+
+.np-pulse {
+  animation: np-pulse-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes np-ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.np-ticker > * {
+  animation: np-ticker 40s linear infinite;
+}
+
+/* react-flow theme overrides come in a separate file loaded lazily */

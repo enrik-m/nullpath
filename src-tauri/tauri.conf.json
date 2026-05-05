@@ -12,9 +12,16 @@
   "app": {
     "windows": [
       {
-        "title": "nullpath",
-        "width": 800,
-        "height": 600
+        "title": "Nullpath",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1100,
+        "minHeight": 720,
+        "decorations": true,
+        "fullscreen": false,
+        "resizable": true,
+        "center": true,
+        "backgroundColor": "#06070b"
       }
     ],
     "security": {

@@ -1,49 +1,37 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useEffect } from "react";
 
+/**
+ * Root application component.
+ *
+ * The real router/views are wired in later commits — this is the
+ * cyberpunk-theme smoke test: a centered glyph + lockup confirming
+ * Tailwind v4, font loading, and the gradient backdrop are alive.
+ */
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
-
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  useEffect(() => {
+    // CRT scanlines on by default — toggleable from settings later
+    document.body.dataset.scanlines = "on";
+  }, []);
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <main className="h-screen w-screen flex items-center justify-center select-none">
+      <div className="flex flex-col items-center gap-6">
+        <div className="np-mono text-xs tracking-[0.4em] text-[var(--color-fg-2)] uppercase">
+          Nullpath // boot ok
+        </div>
+        <div className="flex items-baseline gap-1">
+          <span className="text-7xl font-bold tracking-tight bg-gradient-to-br from-[var(--color-cyan)] via-[var(--color-fg-0)] to-[var(--color-magenta)] bg-clip-text text-transparent">
+            null
+          </span>
+          <span className="text-7xl font-bold tracking-tight text-[var(--color-fg-0)]">
+            path
+          </span>
+          <span className="np-mono text-2xl text-[var(--color-cyan)] np-pulse">_</span>
+        </div>
+        <div className="np-mono text-[11px] text-[var(--color-fg-3)] tracking-widest">
+          OFFENSIVE-SECURITY CAREER ATLAS
+        </div>
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
     </main>
   );
 }
