@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Snowflake, RefreshCcw } from "lucide-react";
+import { Snowflake, RefreshCcw, Download, Upload } from "lucide-react";
 import * as db from "../db";
 import type { AppStateRow } from "../db/types";
 import { useUi } from "../store";
@@ -12,6 +12,8 @@ import { sfx } from "../lib/sfx";
 import { Button } from "../components/ui/Button";
 import { cn } from "../lib/cn";
 import { LIMITS } from "../lib/limits";
+import { toast } from "../lib/toast";
+import { APP_VERSION } from "../lib/version";
 
 export function SettingsView() {
   const setScanlines = useUi((s) => s.setScanlines);
@@ -60,6 +62,81 @@ export function SettingsView() {
     sfx.warn();
     await db.resetAllProgress();
     location.reload();
+  }
+
+  /**
+   * Export every user-generated row as a JSON file the user picks the
+   * location of. Skill graph rows (region/zone/node definitions) are
+   * excluded because they're seeded by migration; we only export the
+   * per-user state attached to them.
+   */
+  async function exportBackup() {
+    try {
+      const snap = await db.exportBackup(APP_VERSION);
+      const text = JSON.stringify(snap, null, 2);
+      const today = new Date().toISOString().split("T")[0];
+      const safeHandle = (snap.appState.handle || "operator")
+        .replace(/[^a-z0-9_-]/gi, "")
+        .toLowerCase();
+      const defaultName = `nullpath-${safeHandle}-${today}.json`;
+
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const path = await save({
+        title: "Export Nullpath backup",
+        defaultPath: defaultName,
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+      if (!path) return;
+      const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+      await writeTextFile(path, text);
+      sfx.success();
+      const filename = path.split(/[\\/]/).pop() || path;
+      toast.success(`Backup saved → ${filename}`);
+    } catch (err) {
+      console.error("[backup] export failed:", err);
+      sfx.warn();
+      toast.error(`Export failed — ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /**
+   * Import a previously-exported JSON backup. Wipes existing user state
+   * first; the snapshot becomes the new source of truth. The user is
+   * prompted to confirm before the wipe happens.
+   */
+  async function importBackup() {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const path = await open({
+        title: "Import Nullpath backup",
+        multiple: false,
+        directory: false,
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+      if (!path || typeof path !== "string") return;
+
+      const { readTextFile } = await import("@tauri-apps/plugin-fs");
+      const text = await readTextFile(path);
+      const snap = JSON.parse(text) as db.BackupSnapshot;
+
+      if (
+        !confirm(
+          `Replace ALL local progress with this backup (${snap.exportedAt ?? "no timestamp"})? Cannot be undone.`,
+        )
+      ) {
+        return;
+      }
+
+      await db.importBackup(snap);
+      sfx.success();
+      toast.success("Backup restored. Reloading...");
+      // Force a fresh render so all views re-fetch from the restored DB.
+      window.setTimeout(() => location.reload(), 800);
+    } catch (err) {
+      console.error("[backup] import failed:", err);
+      sfx.warn();
+      toast.error(`Import failed — ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   return (
@@ -118,6 +195,26 @@ export function SettingsView() {
               value={state.sound_enabled === 1}
               onChange={(v) => update({ sound_enabled: v ? 1 : 0 })}
             />
+          </Section>
+
+          {/* Backup */}
+          <Section title="Backup">
+            <div className="text-[13px] text-[var(--color-fg-2)] mb-3">
+              Export every node-completion, note, resource, bounty, refresher, streak day, and
+              achievement to a portable JSON file. Restoring wipes whatever's currently in the
+              local DB and replaces it with the snapshot — useful for moving between machines or
+              keeping a manual snapshot before a risky reset.
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" size="sm" onClick={exportBackup}>
+                <Download size={12} />
+                Export backup
+              </Button>
+              <Button variant="ghost" size="sm" onClick={importBackup}>
+                <Upload size={12} />
+                Import backup
+              </Button>
+            </div>
           </Section>
 
           {/* Danger zone */}

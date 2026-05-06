@@ -299,6 +299,195 @@ export async function upsertNote(nodeId: string, body: string): Promise<void> {
 // Streak
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Backup / restore — JSON snapshot of every user-generated row.
+//
+// The skill graph itself (region / zone / node) is seeded from
+// migrations and excluded from the backup — node user_xp / status /
+// timestamps are part of the snapshot since they're per-user.
+// ---------------------------------------------------------------------------
+
+export interface BackupSnapshot {
+  /** Schema version of THIS file. Bump when the shape changes. */
+  schema: 1;
+  /** ISO timestamp of when the snapshot was taken. */
+  exportedAt: string;
+  /** Nullpath app version that produced the file. */
+  appVersion: string;
+  /** Per-node user state — xp, status, timestamps. */
+  nodes: Array<{
+    id: string;
+    status: NodeStatus;
+    user_xp: number;
+    completed_at: string | null;
+    started_at: string | null;
+  }>;
+  resources: NodeResourceRow[];
+  notes: NodeNoteRow[];
+  refreshers: RefresherRow[];
+  bounties: BountySubmissionRow[];
+  streakDays: StreakDayRow[];
+  achievements: AchievementRow[];
+  appState: AppStateRow;
+}
+
+/**
+ * Capture the full user state as a portable JSON object. The skill graph
+ * itself is excluded — restoring on a future migration that's added new
+ * nodes still works because we re-apply user state by `id`.
+ */
+export async function exportBackup(appVersion: string): Promise<BackupSnapshot> {
+  const conn = await db();
+  const [nodes, resources, notes, refreshers, bounties, streakDays, achievements, appState] =
+    await Promise.all([
+      conn.select<BackupSnapshot["nodes"]>(
+        "SELECT id, status, user_xp, completed_at, started_at FROM node WHERE status != 'available' OR user_xp > 0",
+      ),
+      getAllResources(),
+      conn.select<NodeNoteRow[]>("SELECT * FROM node_note"),
+      conn.select<RefresherRow[]>("SELECT * FROM refresher"),
+      getBounties(),
+      getStreakDays(10000),
+      getAchievements(),
+      getAppState(),
+    ]);
+  return {
+    schema: 1,
+    exportedAt: nowIso(),
+    appVersion,
+    nodes,
+    resources,
+    notes,
+    refreshers,
+    bounties,
+    streakDays,
+    achievements,
+    appState,
+  };
+}
+
+/**
+ * Re-apply a backup snapshot. Wipes existing user state first (the
+ * snapshot is the new source of truth) and re-inserts everything.
+ *
+ * IDs are preserved for `app_state` (always row 1) and the seeded
+ * `node` table (we update by id). All other tables get fresh
+ * AUTOINCREMENT ids since their primary keys are local-only.
+ */
+export async function importBackup(snap: BackupSnapshot): Promise<void> {
+  if (snap.schema !== 1) {
+    throw new Error(`Unsupported backup schema: ${snap.schema}`);
+  }
+  const conn = await db();
+
+  // Wipe — same order as resetAllProgress (deletes before updates).
+  await conn.execute("DELETE FROM node_resource");
+  await conn.execute("DELETE FROM node_note");
+  await conn.execute("DELETE FROM refresher");
+  await conn.execute("DELETE FROM bounty_submission");
+  await conn.execute("DELETE FROM streak_day");
+  await conn.execute("DELETE FROM achievement");
+  await conn.execute(
+    "UPDATE node SET status='available', user_xp=0, completed_at=NULL, started_at=NULL",
+  );
+
+  // Restore per-node state.
+  for (const n of snap.nodes) {
+    await conn.execute(
+      "UPDATE node SET status=$1, user_xp=$2, completed_at=$3, started_at=$4 WHERE id=$5",
+      [n.status, n.user_xp, n.completed_at, n.started_at, n.id],
+    );
+  }
+
+  // Restore resources (lose the original id since it's autoincrement-local).
+  for (const r of snap.resources) {
+    await conn.execute(
+      `INSERT INTO node_resource (node_id, kind, title, url, note, pinned, visibility, added_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [r.node_id, r.kind, r.title, r.url, r.note, r.pinned, r.visibility, r.added_at],
+    );
+  }
+
+  // Notes — upsert by node_id (unique).
+  for (const n of snap.notes) {
+    await conn.execute(
+      `INSERT INTO node_note (node_id, body_md, visibility, updated_at) VALUES ($1, $2, $3, $4)
+       ON CONFLICT(node_id) DO UPDATE SET
+         body_md = excluded.body_md,
+         visibility = excluded.visibility,
+         updated_at = excluded.updated_at`,
+      [n.node_id, n.body_md, n.visibility, n.updated_at],
+    );
+  }
+
+  // Refreshers — upsert by node_id (unique).
+  for (const r of snap.refreshers) {
+    await conn.execute(
+      `INSERT INTO refresher (node_id, streak, last_at, due_at) VALUES ($1, $2, $3, $4)
+       ON CONFLICT(node_id) DO UPDATE SET
+         streak = excluded.streak,
+         last_at = excluded.last_at,
+         due_at = excluded.due_at`,
+      [r.node_id, r.streak, r.last_at, r.due_at],
+    );
+  }
+
+  // Bounties — fresh ids.
+  for (const b of snap.bounties) {
+    await conn.execute(
+      `INSERT INTO bounty_submission
+         (program, title, severity, status, payout_usd, submitted_at, cve_id, related_node, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        b.program,
+        b.title,
+        b.severity,
+        b.status,
+        b.payout_usd,
+        b.submitted_at,
+        b.cve_id,
+        b.related_node,
+        b.notes,
+      ],
+    );
+  }
+
+  // Streak days — primary key is the day string.
+  for (const d of snap.streakDays) {
+    await conn.execute(
+      `INSERT INTO streak_day (day, sessions, used_freeze) VALUES ($1, $2, $3)
+       ON CONFLICT(day) DO UPDATE SET
+         sessions = excluded.sessions,
+         used_freeze = excluded.used_freeze`,
+      [d.day, d.sessions, d.used_freeze],
+    );
+  }
+
+  // Achievements — primary key is the id string.
+  for (const a of snap.achievements) {
+    await conn.execute(
+      `INSERT INTO achievement (id, name, description, icon, unlocked_at) VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT(id) DO UPDATE SET
+         name = excluded.name,
+         description = excluded.description,
+         icon = excluded.icon,
+         unlocked_at = excluded.unlocked_at`,
+      [a.id, a.name, a.description, a.icon, a.unlocked_at],
+    );
+  }
+
+  // App state — always row 1; restore the user-controlled fields.
+  await updateAppState({
+    handle: snap.appState.handle,
+    scanlines_enabled: snap.appState.scanlines_enabled,
+    sound_enabled: snap.appState.sound_enabled,
+    freeze_tokens: snap.appState.freeze_tokens,
+    last_freeze_award_week: snap.appState.last_freeze_award_week,
+  });
+
+  notifyMutation();
+}
+
 /**
  * Wipes all user-generated data while preserving the seeded skill graph.
  * Single transaction so a partial reset can't leave orphans.
