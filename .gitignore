@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Derived from node_modules at predev/prebuild — see
+# scripts/copy-sql-wasm.mjs. Don't commit; it'd duplicate the
+# installed dep and go stale on every sql.js upgrade.
+/public/sql-wasm.wasm
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

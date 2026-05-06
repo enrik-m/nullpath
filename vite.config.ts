@@ -27,12 +27,6 @@ export default defineConfig({
       },
     },
   },
-  // Vitest's `optimizeDeps` for sql.js — Vite tries to pre-bundle
-  // sql.js as ESM but it ships a UMD wrapper; excluding it forces
-  // the on-demand path that the runtime `initSqlJs` uses.
-  optimizeDeps: {
-    exclude: ["sql.js"],
-  },
   server: {
     port: 1420,
   },

@@ -24,9 +24,22 @@
 
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
-import sqlWasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 
 import { runMigrations } from "./migrations";
+
+/**
+ * URL of the SQLite WASM payload. Lives in `public/` so Vite serves
+ * it as a static asset at a stable, hashable URL — both in dev
+ * (Vite's static handler) and in prod (Vercel's CDN). The
+ * `?url`-from-node_modules approach is unreliable across Vite
+ * versions; the public/ pattern is the canonical sql.js + Vite
+ * setup.
+ *
+ * `BASE_URL` honors any base path the build is mounted under (root
+ * `/` by default). We prepend the leading slash explicitly so a
+ * trailing slash in `BASE_URL` doesn't double up.
+ */
+const SQL_WASM_URL = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/sql-wasm.wasm`;
 
 /** IndexedDB key under which the serialized SQLite file is stored. */
 const IDB_KEY = "nullpath:db:v1";
@@ -52,9 +65,11 @@ let saveTimer: number | null = null;
 
 async function loadSqlJs(): Promise<SqlJsStatic> {
   if (sqlJs) return sqlJs;
-  // sql.js needs to know where to fetch the .wasm. With Vite's `?url`
-  // import the wasm file is hashed + emitted alongside the bundle.
-  sqlJs = await initSqlJs({ locateFile: () => sqlWasmUrl });
+  // sql.js's `locateFile` callback gets the bare filename
+  // ("sql-wasm.wasm") and is expected to return the absolute URL
+  // we want it fetched from. `SQL_WASM_URL` resolves to the file we
+  // copied into public/ at predev/prebuild time.
+  sqlJs = await initSqlJs({ locateFile: () => SQL_WASM_URL });
   return sqlJs;
 }
 

@@ -4,7 +4,9 @@
   "version": "0.22.0-beta.1",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/copy-sql-wasm.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/copy-sql-wasm.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "seed:build": "node scripts/build-seed.mjs",
