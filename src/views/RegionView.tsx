@@ -1,16 +1,12 @@
 /**
- * RegionView — the constellation map for a single region.
+ * RegionView — top-down zone DAG.
  *
- * Renders the 23 zones as stars on a single connected serpentine path —
- * the natural progression order, top to bottom. Pan/zoom is hand-rolled
- * because we want the dragging to feel right and not fight react-flow's
- * graph semantics here.
+ * Z01 Foundations is the root. Each child zone connects to one or more
+ * parents that represent its prerequisites. Completing a parent lights up
+ * its outgoing edges so what's "unlocked next" is always visually obvious.
  *
- * Pan model: a `<g>` transform that translates+scales world coords. The SVG
- * has no viewBox, so 1 SVG unit = 1 screen pixel. World coords are in the
- * `<g>`. To pan we add screen-pixel deltas to view.x / view.y. To zoom we
- * scale the `<g>` and adjust translation so the cursor's world point stays
- * fixed.
+ * No hard locking — every zone stays clickable. The lit edges are an
+ * advisory progression hint, not a gate.
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
@@ -30,6 +26,8 @@ interface ZoneNode {
 }
 
 const STAR_RADIUS = 38;
+const MIN_SCALE = 0.35;
+const MAX_SCALE = 2.5;
 
 interface View {
   x: number;
@@ -37,9 +35,54 @@ interface View {
   scale: number;
 }
 
-const DEFAULT_VIEW: View = { x: 0, y: 0, scale: 1 };
-const MIN_SCALE = 0.35;
-const MAX_SCALE = 2.5;
+// ---------------------------------------------------------------------------
+// The DAG. Each entry: child → parents that must (in spirit) be done first.
+// These are advisory, not enforcing — every zone is always clickable.
+// ---------------------------------------------------------------------------
+type EdgeMap = Record<string, string[]>;
+
+const ZONE_PARENTS: EdgeMap = {
+  // Layer 1 — first branches off Foundations
+  Z22: ["Z01"], // Methodology
+  Z02: ["Z01"], // Tooling
+  Z03: ["Z01"], // Recon
+
+  // Layer 2 — vuln basics, mostly under Tooling, with Recon feeding Misconfig
+  Z04: ["Z02"],
+  Z05: ["Z02"],
+  Z06: ["Z02"],
+  Z07: ["Z02", "Z06"],
+  Z08: ["Z02"],
+  Z09: ["Z02"],
+  Z10: ["Z06"],
+  Z12: ["Z03", "Z02"],
+
+  // Layer 3 — specializations grown out of vuln basics
+  Z14: ["Z08", "Z04"],            // Source review off Server-Side + Injection
+  Z18: ["Z05"],                    // Frontend frameworks off Client-Side
+  Z19: ["Z05"],                    // Modern browser off Client-Side
+  Z11: ["Z04", "Z06"],            // API Gateway off Injection + Auth
+  Z13: ["Z07", "Z06"],            // Business Logic off Access + Auth
+  Z20: ["Z04", "Z08"],            // AI/LLM off Injection + Server-Side
+  Z16: ["Z08"],                    // Cloud-Native off Server-Side
+
+  // Layer 4 — research-grade specialties
+  Z15: ["Z14"],                    // Supply Chain off Source review
+  Z17: ["Z04", "Z05", "Z09"],     // WAF/CDN bypass off Inj + Client + HTTP
+  Z21: ["Z11", "Z14", "Z17"],     // Defenses off API + Source + WAF
+
+  // Layer 5 — endgame
+  Z23: ["Z21", "Z15", "Z16", "Z19", "Z20", "Z13", "Z18", "Z22"],
+};
+
+// ---------------------------------------------------------------------------
+// Edge geometry helpers
+// ---------------------------------------------------------------------------
+function bezierEdgePath(sx: number, sy: number, tx: number, ty: number): string {
+  // Vertical drop: simple S-curve via y-midpoint control points.
+  const my = (sy + ty) / 2;
+  return `M ${sx} ${sy} C ${sx} ${my}, ${tx} ${my}, ${tx} ${ty}`;
+}
 
 export function RegionView({ regionId }: RegionViewProps) {
   const go = useUi((s) => s.go);
@@ -48,7 +91,7 @@ export function RegionView({ regionId }: RegionViewProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [view, setView] = useState<View>(DEFAULT_VIEW);
+  const [view, setView] = useState<View>({ x: 0, y: 0, scale: 1 });
   const dragRef = useRef<{ x0: number; y0: number; vx0: number; vy0: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -72,13 +115,10 @@ export function RegionView({ regionId }: RegionViewProps) {
     };
   }, [regionId]);
 
-  // Center the path on first paint and on container resize.
-  useLayoutEffect(() => {
+  const fitView = useCallback(() => {
     if (!containerRef.current || zones.length === 0) return;
     const rect = containerRef.current.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-
-    // Compute world bounds from zone coords
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const z of zones) {
       const x = z.zone.cx ?? 0;
@@ -88,13 +128,11 @@ export function RegionView({ regionId }: RegionViewProps) {
       if (y < minY) minY = y;
       if (y > maxY) maxY = y;
     }
-    const worldW = maxX - minX + 200; // padding for star radius + name labels
-    const worldH = maxY - minY + 240;
+    const worldW = maxX - minX + 240;
+    const worldH = maxY - minY + 280;
     const fitScale = Math.min(rect.width / worldW, rect.height / worldH, 1);
-
     const worldCx = (minX + maxX) / 2;
     const worldCy = (minY + maxY) / 2;
-
     setView({
       scale: fitScale,
       x: rect.width / 2 - worldCx * fitScale,
@@ -102,49 +140,66 @@ export function RegionView({ regionId }: RegionViewProps) {
     });
   }, [zones]);
 
-  // ---------------------------------------------------------------------
-  // Sequential edges: connect each zone to the next by sort_order.
-  // This produces the serpentine path from Z01 → Z23.
-  // ---------------------------------------------------------------------
-  const edgePath = useMemo(() => {
-    if (zones.length < 2) return "";
-    const ordered = [...zones].sort((a, b) => a.zone.sort_order - b.zone.sort_order);
-    const points = ordered.map((z) => ({ x: z.zone.cx ?? 0, y: z.zone.cy ?? 0 }));
+  useLayoutEffect(() => {
+    fitView();
+  }, [fitView]);
 
-    // Build a smooth path: straight horizontal segments along rows,
-    // gentle quadratic curves around row corners.
-    let d = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1];
-      const cur = points[i];
-      const sameRow = Math.abs(prev.y - cur.y) < 1;
-      if (sameRow) {
-        d += ` L ${cur.x} ${cur.y}`;
-      } else {
-        // Vertical drop between rows — round the corner using a quadratic
-        // curve via the midpoint to give a "river bend" feel.
-        const mx = (prev.x + cur.x) / 2;
-        const my = (prev.y + cur.y) / 2;
-        d += ` Q ${prev.x} ${my} ${mx} ${my}`;
-        d += ` Q ${cur.x} ${my} ${cur.x} ${cur.y}`;
-      }
-    }
-    return d;
+  // ---------------------------------------------------------------------
+  // Resolve coords + per-zone completion + edge "lit" state
+  // ---------------------------------------------------------------------
+  const zoneById = useMemo(() => {
+    const m = new Map<string, ZoneNode>();
+    for (const z of zones) m.set(z.zone.id, z);
+    return m;
   }, [zones]);
 
+  const isZoneComplete = useCallback(
+    (id: string) => {
+      const z = zoneById.get(id);
+      if (!z?.stats) return false;
+      return z.stats.total_nodes > 0 && z.stats.completed_nodes === z.stats.total_nodes;
+    },
+    [zoneById],
+  );
+
+  const isZoneStarted = useCallback(
+    (id: string) => {
+      const z = zoneById.get(id);
+      if (!z?.stats) return false;
+      return z.stats.completed_nodes > 0 || z.stats.in_progress_nodes > 0;
+    },
+    [zoneById],
+  );
+
+  /** All ancestor parents complete → zone is "unlocked." */
+  const isZoneUnlocked = useCallback(
+    (id: string): boolean => {
+      const parents = ZONE_PARENTS[id];
+      if (!parents || parents.length === 0) return true;
+      return parents.every((p) => isZoneComplete(p));
+    },
+    [isZoneComplete],
+  );
+
+  const edges = useMemo(() => {
+    const out: Array<{ from: string; to: string; lit: boolean; reachable: boolean }> = [];
+    for (const [child, parents] of Object.entries(ZONE_PARENTS)) {
+      for (const parent of parents) {
+        const lit = isZoneComplete(parent);
+        const reachable = isZoneStarted(parent);
+        out.push({ from: parent, to: child, lit, reachable });
+      }
+    }
+    return out;
+  }, [isZoneComplete, isZoneStarted]);
+
   // ---------------------------------------------------------------------
-  // Pan / zoom
+  // Pan / zoom (window-level listeners so drag survives leaving the SVG)
   // ---------------------------------------------------------------------
   function onMouseDown(e: React.MouseEvent) {
-    // Don't start panning on a star or a button
     if ((e.target as HTMLElement).closest("[data-zone-star]")) return;
     if (e.button !== 0) return;
-    dragRef.current = {
-      x0: e.clientX,
-      y0: e.clientY,
-      vx0: view.x,
-      vy0: view.y,
-    };
+    dragRef.current = { x0: e.clientX, y0: e.clientY, vx0: view.x, vy0: view.y };
     setIsDragging(true);
     e.preventDefault();
   }
@@ -166,9 +221,6 @@ export function RegionView({ regionId }: RegionViewProps) {
     }
   }, []);
 
-  // Bind drag listeners to window so dragging continues even if the cursor
-  // briefly leaves the SVG. Bug source #1 in the previous version: drag
-  // state was lost on element-leave.
   useEffect(() => {
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
@@ -188,7 +240,6 @@ export function RegionView({ regionId }: RegionViewProps) {
     setView((v) => {
       const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, v.scale * factor));
       const f = newScale / v.scale;
-      // Keep the world point under the cursor anchored
       return {
         scale: newScale,
         x: cx - (cx - v.x) * f,
@@ -231,25 +282,7 @@ export function RegionView({ regionId }: RegionViewProps) {
           <button
             onClick={() => {
               sfx.click();
-              if (!containerRef.current || zones.length === 0) return;
-              const rect = containerRef.current.getBoundingClientRect();
-              let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-              for (const z of zones) {
-                minX = Math.min(minX, z.zone.cx ?? 0);
-                maxX = Math.max(maxX, z.zone.cx ?? 0);
-                minY = Math.min(minY, z.zone.cy ?? 0);
-                maxY = Math.max(maxY, z.zone.cy ?? 0);
-              }
-              const worldW = maxX - minX + 200;
-              const worldH = maxY - minY + 240;
-              const fitScale = Math.min(rect.width / worldW, rect.height / worldH, 1);
-              const worldCx = (minX + maxX) / 2;
-              const worldCy = (minY + maxY) / 2;
-              setView({
-                scale: fitScale,
-                x: rect.width / 2 - worldCx * fitScale,
-                y: rect.height / 2 - worldCy * fitScale,
-              });
+              fitView();
             }}
             className="hover:text-[var(--color-fg-0)] transition"
           >
@@ -266,11 +299,7 @@ export function RegionView({ regionId }: RegionViewProps) {
         onMouseDown={onMouseDown}
         onWheel={onWheel}
       >
-        <svg
-          width="100%"
-          height="100%"
-          style={{ display: "block" }}
-        >
+        <svg width="100%" height="100%" style={{ display: "block" }}>
           <defs>
             <radialGradient id="star-glow" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor={accent} stopOpacity="0.55" />
@@ -278,29 +307,18 @@ export function RegionView({ regionId }: RegionViewProps) {
               <stop offset="100%" stopColor={accent} stopOpacity="0" />
             </radialGradient>
             <radialGradient id="star-glow-complete" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="var(--color-lime)" stopOpacity="0.55" />
+              <stop offset="0%" stopColor="var(--color-lime)" stopOpacity="0.6" />
               <stop offset="60%" stopColor="var(--color-lime)" stopOpacity="0.05" />
               <stop offset="100%" stopColor="var(--color-lime)" stopOpacity="0" />
             </radialGradient>
-            {/* Animated gradient along the path for the "live" trail effect */}
-            <linearGradient id="path-flow" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor={accent} stopOpacity="0.05" />
-              <stop offset="50%" stopColor={accent} stopOpacity="0.7" />
-              <stop offset="100%" stopColor={accent} stopOpacity="0.05" />
-              <animate
-                attributeName="x1"
-                from="-1"
-                to="1"
-                dur="8s"
-                repeatCount="indefinite"
-              />
-              <animate
-                attributeName="x2"
-                from="0"
-                to="2"
-                dur="8s"
-                repeatCount="indefinite"
-              />
+            <radialGradient id="star-glow-locked" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="var(--color-fg-3)" stopOpacity="0.18" />
+              <stop offset="80%" stopColor="var(--color-fg-3)" stopOpacity="0" />
+            </radialGradient>
+            {/* Lit (parent-complete) edge — a flowing gradient */}
+            <linearGradient id="edge-lit" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-lime)" stopOpacity="0.95" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0.95" />
             </linearGradient>
           </defs>
 
@@ -308,39 +326,48 @@ export function RegionView({ regionId }: RegionViewProps) {
             transform={`translate(${view.x} ${view.y}) scale(${view.scale})`}
             style={{ transformOrigin: "0 0" }}
           >
-            {/* The path — drawn behind the stars */}
-            {edgePath && (
-              <>
-                {/* Outer glow */}
-                <path
-                  d={edgePath}
-                  fill="none"
-                  stroke={accent}
-                  strokeOpacity={0.18}
-                  strokeWidth={14 / view.scale}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                {/* Base path */}
-                <path
-                  d={edgePath}
-                  fill="none"
-                  stroke="var(--color-border-default)"
-                  strokeWidth={2.5 / view.scale}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                {/* Animated flow */}
-                <path
-                  d={edgePath}
-                  fill="none"
-                  stroke="url(#path-flow)"
-                  strokeWidth={3.5 / view.scale}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </>
-            )}
+            {/* Edges */}
+            {edges.map((e) => {
+              const a = zoneById.get(e.from);
+              const b = zoneById.get(e.to);
+              if (!a || !b) return null;
+              const sx = a.zone.cx ?? 0;
+              const sy = a.zone.cy ?? 0;
+              const tx = b.zone.cx ?? 0;
+              const ty = b.zone.cy ?? 0;
+              const d = bezierEdgePath(sx, sy, tx, ty);
+              const stroke = e.lit
+                ? "url(#edge-lit)"
+                : e.reachable
+                  ? accent
+                  : "var(--color-border-default)";
+              const opacity = e.lit ? 1 : e.reachable ? 0.55 : 0.4;
+              const width = e.lit ? 2.8 : 1.5;
+              return (
+                <g key={`${e.from}->${e.to}`}>
+                  {/* Soft halo behind lit edges */}
+                  {e.lit && (
+                    <path
+                      d={d}
+                      fill="none"
+                      stroke={accent}
+                      strokeOpacity={0.25}
+                      strokeWidth={10 / view.scale + 4}
+                      strokeLinecap="round"
+                    />
+                  )}
+                  <path
+                    d={d}
+                    fill="none"
+                    stroke={stroke}
+                    strokeOpacity={opacity}
+                    strokeWidth={width / view.scale + (e.lit ? 1 : 0)}
+                    strokeLinecap="round"
+                    strokeDasharray={e.lit ? undefined : `${4 / view.scale} ${4 / view.scale}`}
+                  />
+                </g>
+              );
+            })}
 
             {/* Zone stars */}
             {zones.map((z) => (
@@ -349,6 +376,7 @@ export function RegionView({ regionId }: RegionViewProps) {
                 zone={z}
                 accent={accent}
                 hovered={hovered === z.zone.id}
+                unlocked={isZoneUnlocked(z.zone.id)}
                 onHover={(id) => {
                   setHovered(id);
                   if (id) sfx.hover();
@@ -366,8 +394,12 @@ export function RegionView({ regionId }: RegionViewProps) {
       {/* Hover tooltip */}
       {hovered && (
         <ZoneHoverPanel
-          zone={zones.find((z) => z.zone.id === hovered)!}
+          zone={zoneById.get(hovered)!}
           accent={accent}
+          unlocked={isZoneUnlocked(hovered)}
+          parentNames={(ZONE_PARENTS[hovered] ?? []).map(
+            (p) => zoneById.get(p)?.zone.name ?? p,
+          )}
         />
       )}
     </div>
@@ -382,12 +414,14 @@ function ZoneStar({
   zone,
   accent,
   hovered,
+  unlocked,
   onHover,
   onSelect,
 }: {
   zone: ZoneNode;
   accent: string;
   hovered: boolean;
+  unlocked: boolean;
   onHover: (id: string | null) => void;
   onSelect: () => void;
 }) {
@@ -403,15 +437,22 @@ function ZoneStar({
     ? "var(--color-lime)"
     : isActive
       ? accent
-      : "var(--color-fg-2)";
+      : unlocked
+        ? "var(--color-fg-1)"
+        : "var(--color-fg-3)";
 
   const circumference = 2 * Math.PI * STAR_RADIUS;
+  const haloId = isComplete
+    ? "star-glow-complete"
+    : unlocked
+      ? "star-glow"
+      : "star-glow-locked";
 
   return (
     <g
       data-zone-star
       transform={`translate(${cx} ${cy})`}
-      style={{ cursor: "pointer" }}
+      style={{ cursor: "pointer", opacity: unlocked ? 1 : 0.65 }}
       onMouseEnter={() => onHover(zone.zone.id)}
       onMouseLeave={() => onHover(null)}
       onClick={onSelect}
@@ -419,7 +460,7 @@ function ZoneStar({
       {/* Glow halo */}
       <circle
         r={STAR_RADIUS * (hovered ? 2.4 : 2.0)}
-        fill={isComplete ? "url(#star-glow-complete)" : "url(#star-glow)"}
+        fill={`url(#${haloId})`}
         opacity={hovered ? 1 : 0.7}
         style={{ transition: "opacity 200ms, r 200ms" }}
       />
@@ -427,7 +468,7 @@ function ZoneStar({
       <circle
         r={STAR_RADIUS}
         fill="var(--color-bg-1)"
-        stroke="var(--color-border-default)"
+        stroke={unlocked ? "var(--color-border-default)" : "var(--color-border-subtle)"}
         strokeWidth={2}
       />
       {/* Progress arc */}
@@ -492,7 +533,7 @@ function ZoneStar({
         fontFamily="var(--font-sans)"
         fontSize={11}
         fontWeight={500}
-        fill={hovered ? "var(--color-fg-0)" : "var(--color-fg-1)"}
+        fill={hovered ? "var(--color-fg-0)" : unlocked ? "var(--color-fg-1)" : "var(--color-fg-3)"}
         style={{ transition: "fill 150ms" }}
       >
         {zone.zone.name}
@@ -504,9 +545,13 @@ function ZoneStar({
 function ZoneHoverPanel({
   zone,
   accent,
+  unlocked,
+  parentNames,
 }: {
   zone: ZoneNode;
   accent: string;
+  unlocked: boolean;
+  parentNames: string[];
 }) {
   const total = zone.stats?.total_nodes ?? 0;
   const completed = zone.stats?.completed_nodes ?? 0;
@@ -517,11 +562,19 @@ function ZoneHoverPanel({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15 }}
-      className="absolute right-6 bottom-6 np-glass rounded-md p-4 max-w-[280px] pointer-events-none"
+      className="absolute right-6 bottom-6 np-glass rounded-md p-4 max-w-[320px] pointer-events-none"
       style={{ borderColor: accent + "55" }}
     >
-      <div className="np-mono text-[10px] tracking-[0.2em] uppercase" style={{ color: accent }}>
-        {zone.zone.id}
+      <div className="flex items-baseline justify-between">
+        <div className="np-mono text-[10px] tracking-[0.2em] uppercase" style={{ color: accent }}>
+          {zone.zone.id}
+        </div>
+        <div
+          className="np-mono text-[9px] tracking-[0.2em] uppercase"
+          style={{ color: unlocked ? "var(--color-lime)" : "var(--color-fg-3)" }}
+        >
+          {unlocked ? "AVAILABLE" : "GATED"}
+        </div>
       </div>
       <div className="text-base font-bold text-[var(--color-fg-0)] mt-0.5 mb-2">
         {zone.zone.name}
@@ -541,6 +594,17 @@ function ZoneHoverPanel({
           {completed} ({pct}%)
         </span>
       </div>
+      {parentNames.length > 0 && (
+        <>
+          <div className="np-divider my-2" />
+          <div className="np-mono text-[9px] tracking-[0.2em] uppercase text-[var(--color-fg-3)] mb-1">
+            unlocked by
+          </div>
+          <div className="np-mono text-[10.5px] text-[var(--color-fg-2)] leading-tight">
+            {parentNames.join("  ·  ")}
+          </div>
+        </>
+      )}
       <div className="mt-2 np-mono text-[10px] tracking-widest text-[var(--color-fg-3)]">
         click to enter
       </div>

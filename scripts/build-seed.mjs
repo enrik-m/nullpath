@@ -53,51 +53,54 @@ const ZONE_KIND = {
 };
 
 // ---------------------------------------------------------------------------
-// Layout: serpentine path. Zones are placed in 4 rows, alternating direction,
-// so the journey reads as one continuous trail from Z01 (top-left) through
-// to Z23 (bottom-left), with each row connecting tail-to-head with the next.
+// Layout: top-down DAG ("tree" / "root system"). Z01 Foundations is the root;
+// zones unfold layer by layer with each child connecting to one or more
+// parents. Completing a parent zone lights up its outgoing edges so the
+// "what's next" path is always visually obvious.
 //
-//    Z01 → Z02 → Z03 → Z04 → Z05 → Z06         (row 0, left → right)
-//                                  ↓
-//    Z12 ← Z11 ← Z10 ← Z09 ← Z08 ← Z07         (row 1, right → left)
-//     ↓
-//    Z13 → Z14 → Z15 → Z16 → Z17 → Z18         (row 2, left → right)
-//                                  ↓
-//          Z23 ← Z22 ← Z21 ← Z20 ← Z19         (row 3, right → left)
-//
-// Spacing: 280 horizontal × 320 vertical — comfortable breathing room.
+// Layers (top → bottom):
+//   L0  Z01 Foundations
+//   L1  Z22 Methodology · Z02 Tooling · Z03 Recon
+//   L2  Z04 Z05 Z06 Z07 Z08 Z09 Z10 Z12  (the OWASP-tier vuln basics)
+//   L3  Z14 Z18 Z19 Z11 Z13 Z20 Z16     (specializations)
+//   L4  Z15 Z17 Z21                      (deep / research-grade)
+//   L5  Z23 Capstones
 // ---------------------------------------------------------------------------
 const ZONE_LAYOUT = {
-  // Row 0: Foundations → Recon → Injection → Client-Side
-  Z01: { cx: -700, cy: -480 },
-  Z02: { cx: -420, cy: -480 },
-  Z03: { cx: -140, cy: -480 },
-  Z04: { cx:  140, cy: -480 },
-  Z05: { cx:  420, cy: -480 },
-  Z06: { cx:  700, cy: -480 },
+  // L0 — root
+  Z01: { cx:    0, cy: -720 },
 
-  // Row 1 (right → left): Auth → Access → Server-Side → HTTP → CSRF → API
-  Z07: { cx:  700, cy: -160 },
-  Z08: { cx:  420, cy: -160 },
-  Z09: { cx:  140, cy: -160 },
-  Z10: { cx: -140, cy: -160 },
-  Z11: { cx: -420, cy: -160 },
-  Z12: { cx: -700, cy: -160 },
+  // L1 — first branches
+  Z22: { cx: -450, cy: -480 },  // Methodology
+  Z02: { cx:    0, cy: -480 },  // Tooling
+  Z03: { cx:  450, cy: -480 },  // Recon
 
-  // Row 2 (left → right): Misconfig → Business → Source → Supply → Cloud → WAF
-  Z13: { cx: -700, cy:  160 },
-  Z14: { cx: -420, cy:  160 },
-  Z15: { cx: -140, cy:  160 },
-  Z16: { cx:  140, cy:  160 },
-  Z17: { cx:  420, cy:  160 },
-  Z18: { cx:  700, cy:  160 },
+  // L2 — vuln basics
+  Z04: { cx: -700, cy: -220 },  // Injection
+  Z05: { cx: -500, cy: -220 },  // Client-Side
+  Z06: { cx: -300, cy: -220 },  // Auth
+  Z07: { cx: -100, cy: -220 },  // Access Control
+  Z08: { cx:  100, cy: -220 },  // Server-Side
+  Z09: { cx:  300, cy: -220 },  // HTTP / Cache
+  Z10: { cx:  500, cy: -220 },  // CSRF
+  Z12: { cx:  700, cy: -220 },  // Misconfig
 
-  // Row 3 (right → left): Frontend → Modern Browser → AI → Defenses → Methodology → Capstones
-  Z19: { cx:  700, cy:  480 },
-  Z20: { cx:  420, cy:  480 },
-  Z21: { cx:  140, cy:  480 },
-  Z22: { cx: -140, cy:  480 },
-  Z23: { cx: -420, cy:  480 },
+  // L3 — specializations
+  Z14: { cx: -680, cy:   60 },  // Source-Code Review
+  Z18: { cx: -460, cy:   60 },  // Frontend Frameworks
+  Z19: { cx: -240, cy:   60 },  // Modern Browser
+  Z11: { cx:  -20, cy:   60 },  // API Gateway
+  Z13: { cx:  200, cy:   60 },  // Business Logic
+  Z20: { cx:  420, cy:   60 },  // AI/LLM
+  Z16: { cx:  640, cy:   60 },  // Cloud-Native
+
+  // L4 — deep specialties
+  Z15: { cx: -560, cy:  340 },  // Supply Chain
+  Z17: { cx: -120, cy:  340 },  // WAF/CDN Bypass
+  Z21: { cx:  340, cy:  340 },  // Defenses
+
+  // L5 — endgame
+  Z23: { cx:    0, cy:  600 },  // Capstones
 };
 
 // ---------------------------------------------------------------------------
