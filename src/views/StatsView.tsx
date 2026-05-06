@@ -117,28 +117,65 @@ export function StatsView() {
     return out;
   }, [streakDays]);
 
-  function exportCard() {
-    sfx.success();
-    if (!cardRef.current) return;
-    // Render card via canvas — we use html2canvas-style approach with SVG
-    // serialization for simplicity. Simplest path: take a screenshot via the
-    // platform's print API. For desktop, save as PNG via canvas2image isn't
-    // available without a lib. Use the print-to-image trick: open a new
-    // window with the card and prompt save.
-    const html = cardRef.current.outerHTML;
-    const blob = new Blob(
-      [
-        `<!doctype html><html><head><meta charset="utf-8"><title>operator-card</title>
-         <style>
-           body{margin:0;padding:40px;background:#06070b;display:grid;place-items:center;min-height:100vh;
-                font-family:'Inter',system-ui;}
-           ${getAllStyles()}
-         </style></head><body>${html}</body></html>`,
-      ],
-      { type: "text/html" },
-    );
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "width=720,height=900");
+  const [exporting, setExporting] = useState(false);
+  const [exportMsg, setExportMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function exportCard() {
+    if (!cardRef.current || exporting) return;
+    setExporting(true);
+    setExportMsg(null);
+    try {
+      // 1. Render the operator card to a high-res PNG via html-to-image.
+      //    pixelRatio: 2 gives retina-quality output at the same logical size.
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(cardRef.current, {
+        pixelRatio: 2,
+        backgroundColor: "#07091a",
+        cacheBust: true,
+      });
+
+      // 2. Convert the data URL to raw bytes for writeFile().
+      const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+      // 3. Suggest a filename with today's date.
+      const today = new Date().toISOString().split("T")[0];
+      const profileHandle = "operator"; // (read from app_state if you want)
+      const defaultName = `nullpath-${profileHandle}-${today}.png`;
+
+      // 4. Open the native save dialog so the user picks the location.
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const path = await save({
+        title: "Export operator card",
+        defaultPath: defaultName,
+        filters: [{ name: "PNG image", extensions: ["png"] }],
+      });
+
+      if (!path) {
+        // User canceled — silent
+        setExporting(false);
+        return;
+      }
+
+      // 5. Write the PNG to the chosen path.
+      const { writeFile } = await import("@tauri-apps/plugin-fs");
+      await writeFile(path, bytes);
+
+      sfx.success();
+      const filename = path.split(/[\\/]/).pop() || path;
+      setExportMsg({ ok: true, text: `Saved → ${filename}` });
+      window.setTimeout(() => setExportMsg(null), 4000);
+    } catch (err) {
+      console.error("[export] operator card failed:", err);
+      sfx.warn();
+      const msg = err instanceof Error ? err.message : String(err);
+      setExportMsg({ ok: false, text: `Export failed — ${msg}` });
+      window.setTimeout(() => setExportMsg(null), 6000);
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -153,10 +190,22 @@ export function StatsView() {
               Operator dossier
             </h1>
           </div>
-          <Button variant="outline" size="sm" onClick={exportCard}>
-            <Camera size={12} />
-            Export operator card
-          </Button>
+          <div className="flex items-center gap-3">
+            {exportMsg && (
+              <span
+                className="np-screen text-[10px] tracking-[0.15em]"
+                style={{
+                  color: exportMsg.ok ? "var(--color-lime)" : "var(--color-rose)",
+                }}
+              >
+                {exportMsg.text}
+              </span>
+            )}
+            <Button variant="outline" size="sm" onClick={exportCard} disabled={exporting}>
+              <Camera size={12} />
+              {exporting ? "RENDERING…" : "EXPORT CARD"}
+            </Button>
+          </div>
         </motion.div>
 
         {/* Top stats strip */}
@@ -466,20 +515,3 @@ function OperatorCard({
   );
 }
 
-// Capture all stylesheet text (used for the export window so the card looks right)
-function getAllStyles(): string {
-  const sheets = Array.from(document.styleSheets);
-  const lines: string[] = [];
-  for (const sheet of sheets) {
-    try {
-      const rules = (sheet as CSSStyleSheet).cssRules;
-      if (!rules) continue;
-      for (const r of Array.from(rules)) {
-        lines.push((r as CSSRule).cssText);
-      }
-    } catch {
-      // Cross-origin stylesheet — skip
-    }
-  }
-  return lines.join("\n");
-}
