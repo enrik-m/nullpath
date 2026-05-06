@@ -69,7 +69,7 @@ export function BountiesView() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="px-10 py-10 max-w-[1100px]">
+      <div className="px-4 sm:px-10 py-6 sm:py-10 max-w-[1100px]">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-end justify-between flex-wrap gap-4">
           <div>
             <div className="np-mono text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] uppercase mb-2">
@@ -108,8 +108,8 @@ export function BountiesView() {
             </div>
           </div>
         ) : (
-          <div className="np-pixel rounded-lg overflow-hidden">
-            <table className="w-full">
+          <div className="np-pixel rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[820px]">
               <thead>
                 <tr className="border-b border-[var(--color-border-default)] np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
                   <th className="px-4 py-3 text-left">Date</th>
@@ -282,7 +282,7 @@ function BountyForm({
       <motion.div
         initial={{ scale: 0.97 }}
         animate={{ scale: 1 }}
-        className="np-pixel rounded-lg w-[560px] max-w-full p-6 border-[var(--color-cyan-dim)] max-h-[90vh] overflow-y-auto"
+        className="np-pixel rounded-lg w-[560px] max-w-full p-4 sm:p-6 border-[var(--color-cyan-dim)] max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -317,7 +317,7 @@ function BountyForm({
               className="w-full mt-1 bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-2 text-sm text-[var(--color-fg-0)] focus:border-[var(--color-cyan-dim)] focus:outline-none"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
                 Severity
@@ -351,7 +351,7 @@ function BountyForm({
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
                 Submitted

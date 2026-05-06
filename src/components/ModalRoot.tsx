@@ -117,7 +117,7 @@ function EchoPromptModal({ nodeId }: { nodeId: string }) {
   }
 
   return (
-    <div className="np-pixel rounded-lg w-[520px] max-w-full p-6 border-[var(--color-cyan-dim)] np-glow-cyan">
+    <div className="np-pixel rounded-lg w-[520px] max-w-full p-4 sm:p-6 border-[var(--color-cyan-dim)] np-glow-cyan">
       <div className="flex items-center gap-2">
         <CheckCircle2 size={16} className="text-[var(--color-lime)]" />
         <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-lime)]">
@@ -213,7 +213,7 @@ function IdleResumeModal({ idleSeconds }: { idleSeconds: number }) {
   }
 
   return (
-    <div className="np-pixel rounded-lg w-[480px] max-w-full p-6 border-[var(--color-amber)] shadow-[0_0_24px_color-mix(in_oklab,var(--color-amber)_30%,transparent)]">
+    <div className="np-pixel rounded-lg w-[480px] max-w-full p-4 sm:p-6 border-[var(--color-amber)] shadow-[0_0_24px_color-mix(in_oklab,var(--color-amber)_30%,transparent)]">
       <div className="flex items-center gap-2">
         <Coffee size={16} className="text-[var(--color-amber)]" />
         <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-amber)]">
@@ -264,7 +264,7 @@ function SessionEndModal({
   }, [nodeId]);
 
   return (
-    <div className="np-pixel rounded-lg w-[480px] max-w-full p-6 border-[var(--color-cyan-dim)] np-glow-cyan">
+    <div className="np-pixel rounded-lg w-[480px] max-w-full p-4 sm:p-6 border-[var(--color-cyan-dim)] np-glow-cyan">
       <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-cyan)]">
         // session ended
       </div>
@@ -317,7 +317,7 @@ function LevelUpModal({ oldLevel, newLevel }: { oldLevel: number; newLevel: numb
     sfx.levelUp();
   }, []);
   return (
-    <div className="np-pixel rounded-lg w-[460px] max-w-full p-7 border-[var(--color-magenta-dim)] np-glow-magenta">
+    <div className="np-pixel rounded-lg w-[460px] max-w-full p-4 sm:p-6 border-[var(--color-magenta-dim)] np-glow-magenta">
       <div className="flex items-center gap-2">
         <Sparkles size={16} className="text-[var(--color-magenta)]" />
         <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-magenta)]">
@@ -358,7 +358,7 @@ function AchievementModal({
     sfx.success();
   }, []);
   return (
-    <div className="np-pixel rounded-lg w-[440px] max-w-full p-6 border-[var(--color-amber)] shadow-[0_0_28px_color-mix(in_oklab,var(--color-amber)_35%,transparent)]">
+    <div className="np-pixel rounded-lg w-[440px] max-w-full p-4 sm:p-6 border-[var(--color-amber)] shadow-[0_0_28px_color-mix(in_oklab,var(--color-amber)_35%,transparent)]">
       <div className="flex items-center gap-2">
         <Trophy size={16} className="text-[var(--color-amber)]" />
         <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-amber)]">
@@ -429,7 +429,7 @@ function DailyBriefingModal() {
   }, []);
 
   return (
-    <div className="np-pixel rounded-lg w-[560px] max-w-full p-6 border-[var(--color-cyan-dim)]">
+    <div className="np-pixel rounded-lg w-[560px] max-w-full p-4 sm:p-6 border-[var(--color-cyan-dim)]">
       <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-3)]">
         // daily briefing · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
       </div>

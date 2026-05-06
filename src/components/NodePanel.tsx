@@ -33,6 +33,7 @@ import { evaluateAchievements } from "../lib/achievements";
 import { cn } from "../lib/cn";
 import { DepthTag, StatusTag, KindTag } from "./ui/Tag";
 import { Button } from "./ui/Button";
+import { useIsMobile } from "../hooks/useMediaQuery";
 
 interface NodePanelProps {
   nodeId: string;
@@ -65,6 +66,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
   const setSession = useUi((s) => s.setSession);
   const patchSession = useUi((s) => s.patchSession);
   const selectNode = useUi((s) => s.selectNode);
+  const isMobile = useIsMobile();
 
   const [node, setNode] = useState<NodeRow | null>(null);
   const [children, setChildren] = useState<NodeRow[]>([]);
@@ -220,15 +222,23 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
   return (
     <AnimatePresence>
       <motion.aside
-        initial={{ x: 460 }}
-        animate={{ x: 0 }}
-        exit={{ x: 460 }}
+        initial={isMobile ? { y: "100%" } : { x: 460 }}
+        animate={isMobile ? { y: 0 } : { x: 0 }}
+        exit={isMobile ? { y: "100%" } : { x: 460 }}
         transition={{ type: "tween", duration: 0.2, ease: "linear" }}
-        className="w-[460px] shrink-0 h-full flex flex-col overflow-hidden"
+        className={cn(
+          "flex flex-col overflow-hidden",
+          isMobile
+            ? "fixed inset-x-0 bottom-0 top-14 z-40"
+            : "w-[460px] shrink-0 h-full",
+        )}
         style={{
           background: "var(--color-bg-1)",
-          borderLeft: "2px solid var(--color-border-default)",
-          boxShadow: "inset 2px 0 0 0 var(--color-border-bright)",
+          borderLeft: isMobile ? undefined : "2px solid var(--color-border-default)",
+          borderTop: isMobile ? "2px solid var(--color-border-default)" : undefined,
+          boxShadow: isMobile
+            ? "0 -8px 0 0 rgba(0,0,0,0.4)"
+            : "inset 2px 0 0 0 var(--color-border-bright)",
         }}
       >
         {/* OS-window title bar */}

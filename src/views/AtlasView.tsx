@@ -71,7 +71,7 @@ export function AtlasView() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="px-10 py-12 max-w-[1400px] mx-auto">
+      <div className="px-4 sm:px-10 py-6 sm:py-12 max-w-[1400px] mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}

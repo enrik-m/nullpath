@@ -111,7 +111,7 @@ export function RandomKickModal({ open, onClose }: KickProps) {
       <motion.div
         initial={{ scale: 0.97 }}
         animate={{ scale: 1 }}
-        className="np-pixel rounded-lg w-[560px] max-w-full p-6 border-[var(--color-magenta-dim)]"
+        className="np-pixel rounded-lg w-[560px] max-w-full p-4 sm:p-6 border-[var(--color-magenta-dim)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

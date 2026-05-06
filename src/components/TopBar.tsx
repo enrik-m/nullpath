@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Play, Square, Pause, Zap, ChevronRight, Target } from "lucide-react";
+import { Play, Square, Pause, Zap, ChevronRight, Target, Menu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUi, formatHms } from "../store";
 import { sfx } from "../lib/sfx";
@@ -8,6 +8,7 @@ import * as db from "../db";
 import type { NodeRow } from "../db/types";
 import { PixelButton } from "./pixel/PixelButton";
 import { evaluateAchievements } from "../lib/achievements";
+import { useIsMobile } from "../hooks/useMediaQuery";
 
 /**
  * TopBar — RPG-HUD-flavored. Breadcrumbs read like a navigation trail,
@@ -21,6 +22,8 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
   const setSession = useUi((s) => s.setSession);
   const patchSession = useUi((s) => s.patchSession);
   const showModal = useUi((s) => s.showModal);
+  const setDrawerOpen = useUi((s) => s.setDrawerOpen);
+  const isMobile = useIsMobile();
 
   const [crumbs, setCrumbs] = useState<{ label: string; route: any | null }[]>([]);
   const [focusNode, setFocusNode] = useState<NodeRow | null>(null);
@@ -115,18 +118,35 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
     sfx.click();
   }
 
+  // On mobile, show only the *last* (current) crumb.
+  const visibleCrumbs = isMobile ? crumbs.slice(-1) : crumbs;
+
   return (
     <header
-      className="h-14 shrink-0 flex items-center px-4 gap-3"
+      className="h-14 shrink-0 flex items-center px-3 sm:px-4 gap-2 sm:gap-3"
       style={{
         background: "var(--color-bg-1)",
         borderBottom: "2px solid var(--color-border-default)",
         boxShadow: "inset 0 -2px 0 0 var(--color-border-shadow)",
       }}
     >
+      {/* Hamburger (mobile only) */}
+      {isMobile && (
+        <button
+          onClick={() => {
+            sfx.click();
+            setDrawerOpen(true);
+          }}
+          className="np-pixel-flat w-9 h-9 flex items-center justify-center text-[var(--color-cyan)] shrink-0"
+          aria-label="Open menu"
+        >
+          <Menu size={16} />
+        </button>
+      )}
+
       {/* Breadcrumbs */}
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        {crumbs.map((c, i) => (
+      <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+        {visibleCrumbs.map((c, i) => (
           <div key={i} className="flex items-center gap-2 min-w-0">
             {c.route ? (
               <button
@@ -143,17 +163,17 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
                 ▸ {c.label}
               </span>
             )}
-            {i < crumbs.length - 1 && (
+            {i < visibleCrumbs.length - 1 && (
               <ChevronRight size={11} className="text-[var(--color-fg-3)] shrink-0" />
             )}
           </div>
         ))}
       </div>
 
-      {/* Random Kick */}
-      <PixelButton variant="ghost" size="sm" onClick={onRandomKick}>
+      {/* Encounter — icon-only on mobile to save space */}
+      <PixelButton variant="ghost" size="sm" onClick={onRandomKick} aria-label="Random encounter">
         <Zap size={11} />
-        ENCOUNTER
+        <span className="hidden sm:inline">ENCOUNTER</span>
       </PixelButton>
 
       {/* Session controls */}
@@ -180,7 +200,7 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
             <button
               onClick={toggleHunt}
               className={cn(
-                "np-screen text-[10px] tracking-[0.15em] uppercase px-2 py-1.5 border-2 transition",
+                "hidden sm:block np-screen text-[10px] tracking-[0.15em] uppercase px-2 py-1.5 border-2 transition",
                 session.huntMode
                   ? "text-[var(--color-bg-0)] bg-[var(--color-magenta)] border-[var(--color-magenta)]"
                   : "text-[var(--color-fg-3)] border-[var(--color-border-default)] hover:text-[var(--color-magenta)] hover:border-[var(--color-magenta-dim)]",
@@ -191,7 +211,7 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
             </button>
             <div
               className={cn(
-                "px-3 py-1 flex items-center gap-2 np-pixel-flat",
+                "px-2 sm:px-3 py-1 flex items-center gap-2 np-pixel-flat",
                 session.paused
                   ? "border-[var(--color-amber)]"
                   : "border-[var(--color-cyan)]",
@@ -203,15 +223,15 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
                 <span className="w-2 h-2 bg-[var(--color-cyan)] np-pulse" />
               )}
               <span
-                className="np-mono text-[15px] tabular-nums"
+                className="np-mono text-[14px] sm:text-[15px] tabular-nums"
                 style={{ color: session.paused ? "var(--color-amber)" : "var(--color-cyan)" }}
               >
                 {formatHms(session.durationSeconds)}
               </span>
             </div>
-            <PixelButton variant="danger" size="sm" onClick={endSession}>
+            <PixelButton variant="danger" size="sm" onClick={endSession} aria-label="End session">
               <Square size={9} fill="currentColor" />
-              END
+              <span className="hidden sm:inline">END</span>
             </PixelButton>
           </motion.div>
         ) : (
@@ -221,9 +241,10 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <PixelButton variant="primary" size="sm" onClick={() => startSession(null)}>
+            <PixelButton variant="primary" size="sm" onClick={() => startSession(null)} aria-label="Start session">
               <Play size={9} fill="currentColor" />
-              START SESSION
+              <span className="hidden sm:inline">START SESSION</span>
+              <span className="sm:hidden">START</span>
             </PixelButton>
           </motion.div>
         )}

@@ -117,7 +117,7 @@ export function CodexView() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="px-10 py-10 max-w-[1100px]">
+      <div className="px-4 sm:px-10 py-6 sm:py-10 max-w-[1100px]">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="np-mono text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] uppercase mb-2">
             // codex / archive

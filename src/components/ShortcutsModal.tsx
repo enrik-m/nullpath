@@ -47,7 +47,7 @@ export function ShortcutsModal({ open, onClose }: Props) {
       <motion.div
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
-        className="np-pixel rounded-lg w-[480px] max-w-full p-6 border-[var(--color-cyan-dim)]"
+        className="np-pixel rounded-lg w-[480px] max-w-full p-4 sm:p-6 border-[var(--color-cyan-dim)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

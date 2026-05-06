@@ -72,6 +72,10 @@ interface UiState {
   soundEnabled: boolean;
   setScanlines: (v: boolean) => void;
   setSound: (v: boolean) => void;
+
+  // Mobile drawer (sidebar overlay)
+  drawerOpen: boolean;
+  setDrawerOpen: (v: boolean) => void;
 }
 
 export const useUi = create<UiState>((set) => ({
@@ -118,6 +122,9 @@ export const useUi = create<UiState>((set) => ({
     set({ scanlinesEnabled: v });
   },
   setSound: (v) => set({ soundEnabled: v }),
+
+  drawerOpen: false,
+  setDrawerOpen: (v) => set({ drawerOpen: v }),
 }));
 
 // ---------------------------------------------------------------------------

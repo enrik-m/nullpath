@@ -204,6 +204,81 @@ export function RegionView({ regionId }: RegionViewProps) {
     });
   }
 
+  // Touch (mobile): single-finger pan, two-finger pinch-zoom anchored on midpoint.
+  const touchRef = useRef<
+    | { kind: "pan"; x0: number; y0: number; vx0: number; vy0: number }
+    | { kind: "pinch"; startDist: number; startScale: number; startView: View }
+    | null
+  >(null);
+
+  function onTouchStart(e: React.TouchEvent) {
+    if ((e.target as HTMLElement).closest("[data-zone-star]")) return;
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      touchRef.current = {
+        kind: "pan",
+        x0: t.clientX,
+        y0: t.clientY,
+        vx0: view.x,
+        vy0: view.y,
+      };
+    } else if (e.touches.length === 2) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+      touchRef.current = {
+        kind: "pinch",
+        startDist: dist,
+        startScale: view.scale,
+        startView: { ...view },
+      };
+    }
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    const t = touchRef.current;
+    if (!t || !containerRef.current) return;
+    if (t.kind === "pan" && e.touches.length === 1) {
+      const f = e.touches[0];
+      setView((v) => ({
+        ...v,
+        x: t.vx0 + (f.clientX - t.x0),
+        y: t.vy0 + (f.clientY - t.y0),
+      }));
+      e.preventDefault();
+    } else if (t.kind === "pinch" && e.touches.length >= 2) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+      const ratio = dist / t.startDist;
+      const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, t.startScale * ratio));
+      const rect = containerRef.current.getBoundingClientRect();
+      const midX = (a.clientX + b.clientX) / 2 - rect.left;
+      const midY = (a.clientY + b.clientY) / 2 - rect.top;
+      const f = newScale / t.startScale;
+      setView({
+        scale: newScale,
+        x: midX - (midX - t.startView.x) * f,
+        y: midY - (midY - t.startView.y) * f,
+      });
+      e.preventDefault();
+    }
+  }
+
+  function onTouchEnd(e: React.TouchEvent) {
+    if (e.touches.length === 0) {
+      touchRef.current = null;
+    } else if (e.touches.length === 1) {
+      // Pinch ended, single finger remains — switch to pan
+      const t = e.touches[0];
+      touchRef.current = {
+        kind: "pan",
+        x0: t.clientX,
+        y0: t.clientY,
+        vx0: view.x,
+        vy0: view.y,
+      };
+    }
+  }
+
   if (loading || !region) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -219,8 +294,8 @@ export function RegionView({ regionId }: RegionViewProps) {
   return (
     <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
       {/* Region overlay header */}
-      <div className="absolute top-0 left-0 right-0 z-10 px-6 py-4 pointer-events-none flex items-start justify-between">
-        <div className="np-pixel px-4 py-2 pointer-events-auto" style={{ borderColor: accent }}>
+      <div className="absolute top-0 left-0 right-0 z-10 px-3 sm:px-6 py-3 sm:py-4 pointer-events-none flex items-start justify-between gap-3">
+        <div className="np-pixel px-3 sm:px-4 py-2 pointer-events-auto max-w-[60%] sm:max-w-none" style={{ borderColor: accent }}>
           <div className="np-screen text-[10px] tracking-[0.3em] text-[var(--color-fg-3)]">
             // REGION · {region.id}
           </div>
@@ -250,7 +325,12 @@ export function RegionView({ regionId }: RegionViewProps) {
         className={`flex-1 select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
         onMouseDown={onMouseDown}
         onWheel={onWheel}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
         style={{
+          touchAction: "none",
           background: `
             radial-gradient(ellipse 50% 50% at 50% 50%, ${accent}11 0%, transparent 70%),
             repeating-linear-gradient(
