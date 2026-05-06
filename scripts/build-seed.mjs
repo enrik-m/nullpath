@@ -181,11 +181,21 @@ function parse(md) {
         depth = tag.toLowerCase();
         continue;
       }
-      // Combined OWASP/CWE tag: "OWASP A03 / CWE-89" or "OWASP A03"
-      const owaspM = tag.match(/OWASP\s+(A\d+|API\d+|LLM\d+)/i);
-      if (owaspM) owaspTag = owaspM[1].toUpperCase();
-      const cweM = tag.match(/CWE-?(\d+)/i);
-      if (cweM) cweId = `CWE-${cweM[1]}`;
+      // OWASP tags — verified-edition format: A05:2025, API1:2023, LLM01:2025
+      // Also accept legacy "OWASP A03" / "OWASP API1" / "OWASP LLM01" prefix forms.
+      // First match wins (a node can have multiple CWE tags etc.; we keep the
+      // primary one — secondary tags stay searchable in the markdown).
+      if (!owaspTag) {
+        const owaspM = tag.match(/^(?:OWASP\s+)?(A\d+|API\d+|LLM\d+)(?::\d{4})?$/i);
+        if (owaspM) owaspTag = owaspM[1].toUpperCase();
+      }
+      if (!cweId) {
+        const cweM = tag.match(/^CWE-?(\d+)$/i);
+        if (cweM) cweId = `CWE-${cweM[1]}`;
+        // Combined "OWASP A03 / CWE-89" still works for back-compat:
+        const combinedM = tag.match(/CWE-?(\d+)/i);
+        if (!cweId && combinedM) cweId = `CWE-${combinedM[1]}`;
+      }
     }
 
     // Gloss = post-tags trailing text after an em-dash or hyphen.
