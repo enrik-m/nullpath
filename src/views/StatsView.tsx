@@ -41,6 +41,7 @@ export function StatsView() {
   const [handle, setHandle] = useState("operator");
   const [allRegions, setAllRegions] = useState<RegionRow[]>([]);
   const [regionPctById, setRegionPctById] = useState<Record<string, number>>({});
+  const [bestSkill, setBestSkill] = useState<OperatorCardData["bestSkill"]>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -64,6 +65,52 @@ export function StatsView() {
       ).map((k) => db.nodesByKind(k));
       const all = (await Promise.all(allKinds)).flat();
 
+      // ── Best skill calculation ─────────────────────────────────────────
+      // For each top-level node that has sub-techniques, count completed
+      // children. The "best skill" is the one with the highest completion
+      // ratio. Ties broken by absolute completed count.
+      // Threshold: at least 2 completed sub-techniques → "you have a
+      // signature" — otherwise null and we fall back to the specialties
+      // section on the card.
+      const childrenByParent = new Map<string, typeof all>();
+      for (const n of all) {
+        if (n.parent_id) {
+          const arr = childrenByParent.get(n.parent_id) ?? [];
+          arr.push(n);
+          childrenByParent.set(n.parent_id, arr);
+        }
+      }
+      let bestSkill: {
+        id: string;
+        name: string;
+        completed: number;
+        total: number;
+        pct: number;
+        zone_id: string;
+      } | null = null;
+      for (const top of all) {
+        if (top.parent_id) continue; // top-level only
+        const kids = childrenByParent.get(top.id);
+        if (!kids || kids.length === 0) continue;
+        const done = kids.filter((k) => k.status === "complete").length;
+        if (done < 2) continue; // threshold
+        const pct = done / kids.length;
+        if (
+          !bestSkill ||
+          pct > bestSkill.pct ||
+          (pct === bestSkill.pct && done > bestSkill.completed)
+        ) {
+          bestSkill = {
+            id: top.id,
+            name: top.name,
+            completed: done,
+            total: kids.length,
+            pct,
+            zone_id: top.zone_id,
+          };
+        }
+      }
+
       // All regions + completion %, for the operator card
       const regionsAll = await db.getRegions();
       const regionPct: Record<string, number> = {};
@@ -83,6 +130,7 @@ export function StatsView() {
       setAllRegions(regionsAll);
       setRegionPctById(regionPct);
       setHandle(state?.handle ?? "operator");
+      setBestSkill(bestSkill);
       setStreakDays(days);
       setStreak(st);
       setRefreshers(enrichedDue);
@@ -134,6 +182,7 @@ export function StatsView() {
       completedNodes,
       totalNodes,
       topZones: zoneTimes,
+      bestSkill,
       regions: allRegions.map((r) => ({
         id: r.id,
         name: r.name,
@@ -142,7 +191,7 @@ export function StatsView() {
         locked: r.is_locked === 1,
       })),
     }),
-    [handle, level, xp, intoLvl, lvlSpan, streak, totalSeconds, completedNodes, totalNodes, zoneTimes, allRegions, regionPctById],
+    [handle, level, xp, intoLvl, lvlSpan, streak, totalSeconds, completedNodes, totalNodes, zoneTimes, bestSkill, allRegions, regionPctById],
   );
 
   // 56-day heatmap (8 weeks)

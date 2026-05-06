@@ -24,6 +24,19 @@ export interface OperatorCardData {
   totalNodes: number;
   /** zones sorted by user time desc */
   topZones: Array<{ zone_id: string; zone_name: string; seconds: number; total: number; completed: number }>;
+  /**
+   * Highest-mastery top-level skill (most sub-techniques completed).
+   * Null when the user hasn't finished enough sub-techniques to claim one.
+   */
+  bestSkill: {
+    id: string;
+    name: string;
+    completed: number;
+    total: number;
+    pct: number;
+    /** the leaf zone this skill lives in (e.g. "Z04") */
+    zone_id: string;
+  } | null;
   /** kept for back-compat with StatsView callers; no longer rendered on card */
   regions: Array<{ id: string; name: string; pct: number; accent: string; locked: boolean }>;
 }
@@ -213,6 +226,95 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
           </div>
         </div>
 
+        {/* ── Signature skill (highest mastery) ──────────── */}
+        {data.bestSkill && (
+          <div
+            style={{
+              position: "relative",
+              background: "#161b3a",
+              border: "5px solid #ff66e0",
+              boxShadow:
+                "inset 5px 5px 0 0 #ff8af0, inset -5px -5px 0 0 #5a1f60, 0 0 32px rgba(255,102,224,0.25)",
+              padding: "28px 36px",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ position: "absolute", right: 24, top: 24, opacity: 0.16 }}>
+              <PixelSprite name="crown" size={96} color="#ff66e0" />
+            </div>
+            <div
+              style={{
+                fontFamily: "'Silkscreen', monospace",
+                fontSize: 22,
+                letterSpacing: "0.3em",
+                color: "#ff66e0",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <span style={{ display: "inline-block", width: 14, height: 14, background: "#ff66e0" }} />
+              SIGNATURE SKILL
+            </div>
+            <div
+              style={{
+                fontFamily: "Roboto, sans-serif",
+                fontSize: 50,
+                fontWeight: 700,
+                color: "#e8ecff",
+                lineHeight: 1.05,
+                marginTop: 14,
+                position: "relative",
+                wordBreak: "break-word",
+              }}
+            >
+              {data.bestSkill.name}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 16,
+                marginTop: 14,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "'Press Start 2P', monospace",
+                  fontSize: 22,
+                  color: "#ff66e0",
+                }}
+              >
+                {data.bestSkill.id}
+              </span>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 24,
+                  fontWeight: 500,
+                  color: "#7280b0",
+                }}
+              >
+                {data.bestSkill.completed}/{data.bestSkill.total} SUB-TECHNIQUES
+              </span>
+              <span
+                style={{
+                  marginLeft: "auto",
+                  fontFamily: "'Press Start 2P', monospace",
+                  fontSize: 28,
+                  color: "#a8ff5c",
+                  textShadow: "0 0 14px rgba(168,255,92,0.45)",
+                }}
+              >
+                {Math.round(data.bestSkill.pct * 100)}%
+              </span>
+            </div>
+            <div style={{ marginTop: 18 }}>
+              <Segmented value={data.bestSkill.pct} segments={28} color="#ff66e0" trackColor="#2a1840" height={20} />
+            </div>
+          </div>
+        )}
+
         {/* ── XP progress to next level ──────────────────── */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
@@ -248,8 +350,10 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
           <StatTile label="NODES"      value={`${data.completedNodes}/${data.totalNodes}`} accent="#ff66e0" sprite="shield" />
         </div>
 
-        {/* ── Specialties (top zones by hours) ────────────── */}
-        {topZones.length > 0 && (
+        {/* ── Specialties (top zones by hours) ──────────────
+             Only shown when there's no signature skill yet — otherwise the
+             two sections fight for vertical space and overflow the card. */}
+        {!data.bestSkill && topZones.length > 0 && (
           <div>
             <div
               style={{
