@@ -164,16 +164,53 @@ export async function getDatabase(): Promise<SqlJsClient> {
   if (clientPromise) return clientPromise;
 
   clientPromise = (async () => {
-    const SQL = await loadSqlJs();
-    const existing = await loadFromIdb();
-    database = existing ? new SQL.Database(existing) : new SQL.Database();
+    let SQL: SqlJsStatic;
+    try {
+      SQL = await loadSqlJs();
+    } catch (err) {
+      throw new Error(
+        "Could not load the SQLite engine. The app's WASM payload " +
+          "may have been blocked by a network filter or content-security " +
+          "policy. Check your browser's network tab for /sql-wasm.wasm.",
+        { cause: err },
+      );
+    }
 
-    // Run the migration sequence. On a restored DB, only pending
-    // versions apply (the runner reads `_migrations` to decide).
-    await runMigrations(database);
+    let existing: Uint8Array | null = null;
+    try {
+      existing = await loadFromIdb();
+    } catch (err) {
+      // IndexedDB blocked = Safari private browsing, browser cookie
+      // settings, or embedded webview restriction. We still try to
+      // run with an in-memory DB so the user can at least click
+      // around (their session won't persist between reloads).
+      console.warn("[sqljs] IndexedDB unavailable; running in-memory:", err);
+    }
+
+    try {
+      database = existing ? new SQL.Database(existing) : new SQL.Database();
+    } catch (err) {
+      throw new Error(
+        "Could not open the local database. If you upgraded across " +
+          "a major version, try clearing site data and reloading.",
+        { cause: err },
+      );
+    }
+
+    try {
+      await runMigrations(database);
+    } catch (err) {
+      throw new Error("Database migration failed.", { cause: err });
+    }
+
     // Persist the post-migration state immediately on a fresh DB so
-    // the next page load doesn't redo the seed.
-    if (!existing) await persistToIdb();
+    // the next page load doesn't redo the seed. Failures here are
+    // non-fatal — we'll just re-seed next time.
+    if (!existing) {
+      void persistToIdb().catch((err) => {
+        console.warn("[sqljs] initial persist failed:", err);
+      });
+    }
 
     // Best-effort flush on tab close.
     window.addEventListener("beforeunload", flushPendingSave);

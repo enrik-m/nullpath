@@ -308,7 +308,7 @@ export function StatsView() {
         </motion.div>
 
         {/* Two-column layout — stats scroll on the left, card stays put on the right */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[minmax(0,1fr)_380px] gap-4 sm:gap-6 items-start">
           {/* ═══════ LEFT COLUMN — scrolling content ═══════ */}
           <div className="space-y-6 min-w-0">
             {/* Top stats strip */}
@@ -497,7 +497,7 @@ export function StatsView() {
           {/* end left column */}
 
           {/* ═══════ RIGHT COLUMN — sticky operator card ═══════ */}
-          <aside className="lg:sticky lg:top-6 lg:self-start space-y-3">
+          <aside className="md:sticky md:top-6 md:self-start space-y-3">
             <div className="np-pixel-inset p-3">
               <div className="np-screen text-[10px] tracking-[0.25em] uppercase text-[var(--color-fg-2)] mb-2 flex items-center gap-2">
                 <span className="inline-block w-2 h-2 bg-[var(--color-magenta)]" />

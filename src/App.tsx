@@ -18,7 +18,6 @@ import { SettingsView } from "./views/SettingsView";
 import { Toaster } from "./components/Toaster";
 import { useDailyBriefing } from "./hooks/useDailyBriefing";
 import { primeAchievementEngine, startAchievementWatcher } from "./lib/achievements";
-import { toast } from "./lib/toast";
 import * as db from "./db";
 
 function App() {
@@ -61,13 +60,19 @@ function App() {
     return off;
   }, []);
 
-  // Hydrate user prefs once DB is ready + prime achievement engine.
-  // The first attempt can fail if migrations haven't run yet — we retry
-  // once after a tick (any DB call inside the Tauri SQL plugin runs the
-  // migration sequence first), so by then app_state row 1 exists.
+  // DB init gate. The browser DB is local-first (sql.js + IndexedDB);
+  // it can genuinely fail when:
+  //   - IndexedDB is blocked (Safari private browsing, "Block all
+  //     cookies" setting, embedded webviews)
+  //   - The sql-wasm.wasm fetch is blocked by a CSP / network proxy
+  //   - The WASM fails to instantiate (extremely old browser)
+  // When any of those happen we want a real error screen, not the
+  // perpetual "loading..." spinner each view falls into when its DB
+  // call hangs. Stash the error in state and throw during render so
+  // the existing ErrorBoundary catches it.
+  const [bootError, setBootError] = useState<Error | null>(null);
   useEffect(() => {
     let cancelled = false;
-    let retried = false;
     async function hydrate() {
       try {
         const state = await db.getAppState();
@@ -76,14 +81,15 @@ function App() {
         setSound(state.sound_enabled === 1);
         await primeAchievementEngine();
       } catch (err) {
-        if (!retried) {
-          retried = true;
-          window.setTimeout(hydrate, 600);
-          return;
-        }
         if (cancelled) return;
-        console.error("[hydrate] failed after retry:", err);
-        toast.error("Could not load profile. Restart the app if this persists.");
+        console.error("[hydrate] DB init failed:", err);
+        // Re-render and throw so ErrorBoundary picks it up with a
+        // useful message rather than the views falling into limbo.
+        setBootError(
+          err instanceof Error
+            ? err
+            : new Error(`Local database unavailable: ${String(err)}`),
+        );
       }
     }
     hydrate();
@@ -91,6 +97,13 @@ function App() {
       cancelled = true;
     };
   }, [setScanlines, setSound]);
+
+  if (bootError) {
+    // Throw during render so ErrorBoundary's existing fallback UI
+    // takes over. The boundary's copy ("data is safe", reload button)
+    // already covers this case correctly.
+    throw bootError;
+  }
 
   // Keyboard shortcuts
   useEffect(() => {
