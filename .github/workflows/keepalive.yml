@@ -1,0 +1,60 @@
+# Daily keepalive ping to prevent Supabase free-tier project pause.
+#
+# Supabase pauses free-tier projects after 7 days of database inactivity.
+# A single anonymous read against the public `region` table every day is
+# enough to count as activity and keep the project running. The query
+# returns a tiny payload and respects RLS — anonymous reads of `region`
+# are explicitly allowed in the schema.
+#
+# Required secrets (configure in Repo → Settings → Secrets and variables
+# → Actions → New repository secret):
+#   SUPABASE_URL          — e.g. https://abcdef.supabase.co
+#   SUPABASE_ANON_KEY     — the publishable / anon key (NOT the service_role)
+#
+# If the secrets are missing, the job no-ops with a warning rather than
+# failing — that way self-hosters who fork the repo don't see a red CI
+# badge they didn't ask for.
+
+name: Supabase keepalive
+
+on:
+  schedule:
+    # 03:17 UTC daily. Off-hour-ish, non-round-number to not stampede the
+    # Supabase API at the top of the hour with every other free-tier user.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Daily DB ping
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping public.region
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::warning::SUPABASE_URL or SUPABASE_ANON_KEY not configured. Skipping keepalive."
+            exit 0
+          fi
+          # `count=exact` forces postgrest to return a Content-Range header
+          # confirming the query ran. We discard the body — we only care
+          # that the request succeeded.
+          response=$(curl -sS -w "\n%{http_code}" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Range-Unit: items" \
+            -H "Range: 0-0" \
+            "$SUPABASE_URL/rest/v1/region?select=id")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Supabase ping failed with HTTP $http_code"
+            echo "$body"
+            exit 1
+          fi
+          echo "Supabase ping OK (HTTP $http_code)"

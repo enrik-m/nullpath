@@ -106,13 +106,16 @@ export function SignInView() {
 
         <div className="mt-10 flex items-center gap-4 text-[10px] text-[var(--fg-3,var(--fg-2))]">
           <a
-            href="/privacy"
+            href="/privacy.html"
             className="hover:text-[var(--fg-1)] underline-offset-4 hover:underline"
           >
             Privacy
           </a>
           <span aria-hidden>·</span>
-          <a href="/terms" className="hover:text-[var(--fg-1)] underline-offset-4 hover:underline">
+          <a
+            href="/terms.html"
+            className="hover:text-[var(--fg-1)] underline-offset-4 hover:underline"
+          >
             Terms
           </a>
           <span aria-hidden>·</span>

@@ -7,6 +7,66 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Pre-1.0 releases may contain breaking changes within minor bumps; the
 project hasn't reached a stability commitment yet.
 
+## [0.23.0-beta.1] — 2026-05-06
+
+The "cloud accounts" release. Adds an opt-in Supabase backend with
+GitHub OAuth so the hosted nullpath build can sync per-user data
+between devices, while preserving the existing sql.js + IndexedDB path
+for self-hosters and offline use. Mode is decided at build time by the
+presence of `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`.
+
+### Added
+
+- **Supabase Postgres schema** (`supabase/migrations/...initial_schema.sql`):
+  shared read-only `region` / `zone` / `node_def` plus eight
+  RLS-protected per-user tables (`user_app_state`, `user_node_state`,
+  `user_node_resource`, `user_node_note`, `user_streak_day`,
+  `user_refresher`, `user_bounty`, `user_achievement`). Every per-user
+  table enforces `auth.uid() = user_id` on read/insert/update/delete.
+- **Server-side compute functions** (`...functions.sql`): `complete_node`,
+  `current_streak`, `operator_xp`, `evaluate_achievements`,
+  `record_completion_day`, `schedule_refresher`, `ack_refresher`,
+  `due_refreshers_with_node`, `reset_all_progress`. The achievement
+  catalog lives inside `evaluate_achievements` so unlock conditions
+  can't be faked from the client.
+- **`src/db/cloud.ts`** — Supabase implementation of the same public
+  data API the views consume. Auth-gated reads, RPC for server-side
+  compute. Boundary adapters keep the SQLite-shaped types intact.
+- **`src/db/index.ts`** is now a thin router that picks `cloud` or
+  `local` at module-load based on `isCloudMode()`.
+- **`src/lib/supabase.ts`** — singleton Supabase JS client, auth-state
+  cache with `onAuthChange` subscription, GitHub OAuth helper using PKCE.
+- **`src/views/SignInView.tsx`** — single-button GitHub OAuth gate.
+  Cloud-mode users see this before BootView.
+- **Settings → Account** — cloud-mode panel showing GitHub handle, uid
+  prefix, sign-out, two-step account deletion, and a pointer to GitHub
+  for OAuth-grant revocation.
+- **Privacy Policy + Terms of Service** at `/privacy.html` and
+  `/terms.html`, linked from the sign-in screen.
+- **`docs/setup-auth.md`** — step-by-step walkthrough for provisioning
+  Supabase + GitHub OAuth + Vercel env vars.
+- **`.github/workflows/keepalive.yml`** — daily Supabase ping to keep
+  free-tier projects from pausing after 7 days of inactivity.
+
+### Changed
+
+- **`vercel.json` CSP**: `connect-src` now allows
+  `https://*.supabase.co` + `wss://*.supabase.co` (and the `.in`
+  variants for older project URLs); `form-action` allows `github.com`
+  for the OAuth redirect.
+
+### Security notes
+
+- The achievement-faking attack model is closed: in cloud mode, only
+  the server-side `evaluate_achievements` function writes to
+  `user_achievement`. Even if a malicious client forges `unlockAchievement`
+  calls, the gate checks run against authoritative server-side row counts.
+- Account deletion clears every per-user row immediately via
+  `reset_all_progress`. The actual `auth.users` row deletion (which
+  fully revokes the OAuth grant relationship at our side) is left for
+  a follow-up Edge Function — currently sign-out + grant-revocation at
+  github.com/settings/applications is the canonical path.
+
 ## [0.22.0-beta.1] — 2026-05-06
 
 The "no longer a desktop app" release. Pivots Nullpath from a Tauri 2

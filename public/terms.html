@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Terms — Nullpath</title>
+    <meta name="description" content="Terms of service for nullpath." />
+    <meta name="robots" content="index, follow" />
+    <style>
+      :root {
+        --bg: #0a0e0e;
+        --bg-2: #111717;
+        --fg-0: #e6f2f2;
+        --fg-1: #a5b8b8;
+        --fg-2: #788888;
+        --accent: #5af0c8;
+        --border: #243030;
+      }
+      * { box-sizing: border-box; }
+      html, body { background: var(--bg); color: var(--fg-1); margin: 0; }
+      body {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.7;
+        padding: 48px 24px;
+      }
+      .wrap { max-width: 760px; margin: 0 auto; }
+      h1, h2 {
+        color: var(--fg-0);
+        font-family: ui-monospace, monospace;
+        letter-spacing: 0.02em;
+      }
+      h1 { font-size: 28px; margin: 0 0 8px; }
+      h2 { font-size: 16px; margin: 36px 0 8px; padding-top: 14px; border-top: 1px solid var(--border); }
+      p, li { color: var(--fg-1); }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      code, strong { color: var(--fg-0); }
+      strong { font-weight: 600; }
+      em { color: var(--fg-2); font-style: normal; font-size: 12px; display: block; margin-bottom: 24px; }
+      .legal { text-transform: uppercase; font-size: 12px; letter-spacing: 0.04em; line-height: 1.6; }
+      ul { padding-left: 18px; }
+      .crumb {
+        font-size: 11px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--fg-2);
+        margin-bottom: 16px;
+      }
+      .crumb a { color: var(--fg-2); }
+      .crumb a:hover { color: var(--fg-0); }
+      footer {
+        margin-top: 64px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        font-size: 11px;
+        color: var(--fg-2);
+      }
+      footer a { color: var(--fg-2); margin-right: 16px; }
+      footer a:hover { color: var(--fg-0); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="crumb"><a href="/">&larr; back to nullpath</a></div>
+
+      <h1>Terms of Service</h1>
+      <em>Last updated: 2026-05-06.</em>
+
+      <p>
+        These are the terms for using <strong>nullpath</strong> at
+        <a href="https://nullpath-one.vercel.app">nullpath-one.vercel.app</a>.
+        By creating an account and signing in, you agree to them.
+      </p>
+      <p>
+        If you self-host nullpath from the open-source repository, these terms
+        don't apply to your deployment — you're operating it yourself, and you
+        should publish your own terms before going live. The MIT license in
+        <code>LICENSE</code> is what governs your right to use the source code.
+      </p>
+
+      <h2>Plain-English summary</h2>
+      <ul>
+        <li>
+          Nullpath is a free meta-tracker for offensive-security learning. We
+          don't promise it works, we don't promise it's available, we don't
+          promise we'll keep it online.
+        </li>
+        <li>We don't charge you. We don't show you ads. We don't sell your data.</li>
+        <li>
+          Don't use it to do anything illegal. Don't use it to attack systems
+          you don't have permission to attack. Don't try to break the app
+          itself or other accounts.
+        </li>
+        <li>
+          We can shut it down or terminate your account if we have to. You can
+          delete your account anytime.
+        </li>
+        <li>It's provided "as is" with no warranty.</li>
+      </ul>
+      <p>
+        The full terms below say the same thing more carefully. They control
+        in case of conflict with this summary.
+      </p>
+
+      <h2>1. Who we are</h2>
+      <p>
+        Nullpath is operated by <strong>[legal-name]</strong>, located in
+        <strong>[country]</strong>. Contact: <strong>[contact-email]</strong>.
+      </p>
+
+      <h2>2. The service</h2>
+      <p>
+        Nullpath is a single-page web application that helps you track your
+        offensive-security learning progress. You complete nodes, attach
+        resources, write notes, log bounty submissions, and earn achievements.
+      </p>
+      <p>
+        Nullpath does <strong>not</strong> teach you penetration testing,
+        <strong>does not run exploits</strong>,
+        <strong>does not interact with any third-party system on your behalf</strong>,
+        and <strong>does not host hacking labs</strong>. It's a personal
+        tracker with a curated taxonomy. The actual learning happens elsewhere
+        (PortSwigger Web Security Academy, HackTheBox, TryHackMe, books, CTFs).
+      </p>
+
+      <h2>3. Eligibility and accounts</h2>
+      <p>
+        You must be at least 13 years old (16 in the EEA / UK) to use
+        nullpath. If you're younger, please don't sign in.
+      </p>
+      <p>
+        Authentication is delegated to GitHub. Creating a nullpath account
+        means signing in with your GitHub account once. We don't manage
+        passwords. You're responsible for keeping your GitHub account secure
+        (use a strong password and 2FA on GitHub itself).
+      </p>
+      <p>
+        You're responsible for all activity that happens under your account.
+        If you think someone else has accessed your nullpath via your GitHub
+        account, revoke our OAuth grant at
+        <a href="https://github.com/settings/applications">github.com/settings/applications</a>
+        and email us.
+      </p>
+
+      <h2>4. Acceptable use</h2>
+      <p>You agree NOT to use nullpath to:</p>
+      <ul>
+        <li>
+          Submit illegal content, content that infringes someone else's
+          rights, or content depicting CSAM, terrorism, or hate speech.
+        </li>
+        <li>
+          Attempt to compromise the service itself: probe for unintended
+          vulnerabilities (legitimate vuln research goes to
+          <strong>[contact-email]</strong> via the disclosure policy in
+          <code>SECURITY.md</code>), break account isolation, evade rate
+          limits, scrape mass data from other users.
+        </li>
+        <li>
+          Encourage or instruct others to attack systems they don't have
+          authorization to attack.
+        </li>
+        <li>
+          Submit content related to an actual unauthorized intrusion into
+          someone else's system. The bounty ledger is meant for
+          <strong>legal</strong> programs (HackerOne, Bugcrowd, vendor VDPs)
+          — don't use it to log break-ins.
+        </li>
+      </ul>
+      <p>
+        We may remove content or suspend accounts that violate this section,
+        without notice, at our sole discretion.
+      </p>
+
+      <h2>5. Your content</h2>
+      <p>
+        You retain ownership of the notes, resource URLs, and bounty entries
+        you submit. By storing them in nullpath, you grant us only the
+        permissions we need to host the service: store the data on our
+        infrastructure, transmit it back to your browser, and back it up.
+      </p>
+      <p>
+        You can export everything via Settings → Backup → Export backup, and
+        you can delete everything via Settings → Account → Delete account.
+      </p>
+
+      <h2>6. Service availability</h2>
+      <p>
+        Nullpath runs on free tiers (Vercel Hobby, Supabase free). It might
+        be slow. It might be down. It might break for a week while we fix
+        something. We make no uptime promise. If reliability matters to you,
+        self-host.
+      </p>
+      <p>
+        We may pause, change, or shut down the hosted service at any time.
+        If we shut it down permanently, we will give at least 30 days' notice
+        on the GitHub repository and the home page so you can export your
+        data.
+      </p>
+
+      <h2>7. Open source</h2>
+      <p>
+        The source code is published at
+        <a href="https://github.com/seskar/nullpath">github.com/seskar/nullpath</a>
+        under the MIT license. You can fork it, run it yourself, modify it,
+        and redistribute it under those terms. These terms only govern your
+        use of the <strong>hosted</strong> service at nullpath-one.vercel.app.
+      </p>
+
+      <h2>8. Termination</h2>
+      <p>
+        You can delete your account anytime via Settings → Account → Delete
+        account. That permanently removes your rows.
+      </p>
+      <p>
+        We can suspend or delete an account if (a) you materially violate
+        these terms, (b) we're legally required to, or (c) we're shutting
+        down the hosted service. In normal circumstances we'll try to give
+        notice; in cases of abuse or legal compulsion we may not be able to.
+      </p>
+      <p>
+        After termination, sections 5 (your content — to the extent of any
+        backups not yet purged), 9 (warranty disclaimer), 10 (liability),
+        and 11 (governing law) survive.
+      </p>
+
+      <h2>9. No warranty</h2>
+      <p class="legal">
+        Nullpath is provided "as is" and "as available" without warranty of
+        any kind, express or implied, including without limitation any
+        warranties of merchantability, fitness for a particular purpose,
+        non-infringement, availability, accuracy, or absence of errors.
+      </p>
+      <p>
+        We don't promise the achievement gates are tuned correctly, that the
+        skill graph is comprehensive, or that the OWASP / CWE tags on every
+        node are perfectly accurate. The data is curated to the best of our
+        ability, no more.
+      </p>
+
+      <h2>10. Limitation of liability</h2>
+      <p class="legal">
+        To the maximum extent permitted by applicable law, in no event will
+        the operator be liable for any indirect, incidental, special,
+        consequential, or punitive damages, or any loss of profits, revenue,
+        data, or use, arising out of or in connection with the service or
+        these terms, whether in contract, tort, or otherwise, even if
+        advised of the possibility of such damages.
+      </p>
+      <p class="legal">
+        Our total liability for any claim arising out of these terms or the
+        service is limited to <strong>ten united states dollars (US$10)</strong>,
+        or the equivalent in your local currency. (We charge nothing for the
+        service; this cap exists to make the legal posture clean, not to
+        quantify a real refund mechanism.)
+      </p>
+      <p>
+        Some jurisdictions don't allow exclusion of certain warranties or
+        limitation of certain damages. In those jurisdictions, the above
+        disclaimers and limitations apply to the maximum extent permitted by
+        your local law.
+      </p>
+
+      <h2>11. Governing law</h2>
+      <p>
+        These terms are governed by the laws of <strong>[country]</strong>,
+        without regard to conflict-of-law principles. Any dispute arising
+        out of these terms or the service will be resolved in the courts of
+        <strong>[country]</strong>, except that you may bring claims in your
+        local consumer-protection venue where local law gives you that right.
+      </p>
+
+      <h2>12. Changes to these terms</h2>
+      <p>
+        We may revise these terms occasionally. Material changes will get a
+        notice on the home page; the "Last updated" date at the top of this
+        file is authoritative. Your continued use of nullpath after a change
+        means you accept the revised terms.
+      </p>
+      <p>
+        The git history of this document records every revision word-for-word.
+      </p>
+
+      <h2>13. Contact</h2>
+      <p>Email: <strong>[contact-email]</strong>.</p>
+
+      <footer>
+        <a href="/">nullpath</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="https://github.com/seskar/nullpath">GitHub</a>
+      </footer>
+    </div>
+  </body>
+</html>

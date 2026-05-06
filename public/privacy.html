@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy — Nullpath</title>
+    <meta name="description" content="Privacy policy for nullpath." />
+    <meta name="robots" content="index, follow" />
+    <style>
+      :root {
+        --bg: #0a0e0e;
+        --bg-2: #111717;
+        --fg-0: #e6f2f2;
+        --fg-1: #a5b8b8;
+        --fg-2: #788888;
+        --accent: #5af0c8;
+        --border: #243030;
+      }
+      * { box-sizing: border-box; }
+      html, body { background: var(--bg); color: var(--fg-1); margin: 0; }
+      body {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.7;
+        padding: 48px 24px;
+      }
+      .wrap { max-width: 760px; margin: 0 auto; }
+      h1, h2 {
+        color: var(--fg-0);
+        font-family: ui-monospace, monospace;
+        letter-spacing: 0.02em;
+      }
+      h1 { font-size: 28px; margin: 0 0 8px; }
+      h2 { font-size: 16px; margin: 36px 0 8px; padding-top: 14px; border-top: 1px solid var(--border); }
+      p, li { color: var(--fg-1); }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      code, strong { color: var(--fg-0); }
+      strong { font-weight: 600; }
+      em { color: var(--fg-2); font-style: normal; font-size: 12px; display: block; margin-bottom: 24px; }
+      ul { padding-left: 18px; }
+      .crumb {
+        font-size: 11px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--fg-2);
+        margin-bottom: 16px;
+      }
+      .crumb a { color: var(--fg-2); }
+      .crumb a:hover { color: var(--fg-0); }
+      footer {
+        margin-top: 64px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        font-size: 11px;
+        color: var(--fg-2);
+      }
+      footer a { color: var(--fg-2); margin-right: 16px; }
+      footer a:hover { color: var(--fg-0); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="crumb">
+        <a href="/">&larr; back to nullpath</a>
+      </div>
+
+      <h1>Privacy Policy</h1>
+      <em>Last updated: 2026-05-06.</em>
+
+      <p>
+        This is the privacy policy for <strong>nullpath</strong>, a single-page
+        web app hosted at
+        <a href="https://nullpath-one.vercel.app">nullpath-one.vercel.app</a>.
+        This document is short on purpose. The app does very little with your
+        data, and this policy mostly exists so you can confirm that.
+      </p>
+
+      <h2>Who we are</h2>
+      <p>
+        Nullpath is operated by <strong>[legal-name]</strong> (referred to as
+        "we", "us" below). Contact: <strong>[contact-email]</strong>.
+      </p>
+      <p>
+        If you are reading this from the open-source repo and running your own
+        self-hosted copy of nullpath, this policy doesn't bind you — replace
+        this file with your own before going live.
+      </p>
+
+      <h2>What we collect</h2>
+      <p>There are two ways to use nullpath:</p>
+      <ol>
+        <li>
+          <strong>Local mode</strong> (default for self-hosters). The app runs
+          entirely in your browser. We don't see your data, don't have a server
+          that talks to it, and have no way to reach in. Your progress lives in
+          IndexedDB on the device you're using.
+        </li>
+        <li>
+          <strong>Cloud mode</strong> (the hosted nullpath-one.vercel.app
+          build). You sign in with GitHub. Your progress, notes, resources,
+          achievements, and bounty ledger entries are stored in our Postgres
+          database (Supabase).
+        </li>
+      </ol>
+      <p>In cloud mode, we collect:</p>
+      <ul>
+        <li>
+          <strong>Your GitHub user ID</strong> (a stable internal identifier)
+          and your <strong>GitHub login</strong> (the public username you chose
+          on GitHub). We use the user ID to scope data to your account; we
+          display the login as your handle.
+        </li>
+        <li>
+          <strong>Whatever you type into nullpath</strong>: node completions,
+          free-text notes, attached resource URLs and titles, bounty
+          submissions, preferences, streak history. This is the data the
+          product is built around — we couldn't sync it without storing it.
+        </li>
+        <li>
+          <strong>No email address</strong>, <strong>no IP address logging</strong>,
+          <strong>no analytics</strong>, <strong>no advertising identifiers</strong>,
+          <strong>no third-party trackers</strong>. We do not run Google
+          Analytics, Plausible, Sentry, PostHog, or any similar product against
+          the app.
+        </li>
+      </ul>
+      <p>
+        Vercel (our hosting provider) and Supabase (our database / auth
+        provider) keep their own operational logs, including IP addresses of
+        incoming requests, for limited retention windows. We don't read those
+        logs except to debug a specific incident, and we don't have a process
+        that exports them.
+      </p>
+
+      <h2>What we don't collect</h2>
+      <p>To make the negative space explicit:</p>
+      <ul>
+        <li>
+          We don't read your GitHub repositories, organizations, email, or any
+          GitHub data beyond your user ID and login. The OAuth scope we request
+          is the default <code>read:user</code>, nothing else.
+        </li>
+        <li>We don't fingerprint your browser.</li>
+        <li>
+          We don't sell, rent, share, or syndicate any of your data to anyone.
+        </li>
+      </ul>
+
+      <h2>How we use your data</h2>
+      <ul>
+        <li>
+          <strong>To run the product.</strong> Your saved progress is fetched
+          and displayed back to you. Your achievements are evaluated
+          server-side against your row counts. That's the entire pipeline.
+        </li>
+        <li>
+          <strong>For incident response.</strong> If something goes
+          catastrophically wrong (e.g. a security breach, see below), we may
+          need to inspect specific rows or operational logs to understand what
+          happened.
+        </li>
+      </ul>
+
+      <h2>How long we keep it</h2>
+      <p>
+        As long as your account exists.
+        <strong>You can delete everything from Settings → Account → Delete
+          account</strong>
+        at any time, which wipes every row associated with your user ID
+        immediately. You can also revoke our OAuth grant from
+        <a href="https://github.com/settings/applications">github.com/settings/applications</a>,
+        which prevents us from re-authenticating you but doesn't itself delete
+        your data — use the in-app delete for that.
+      </p>
+
+      <h2>Where it lives</h2>
+      <ul>
+        <li>
+          <strong>Vercel</strong> — hosts the static site (United States /
+          global edge network).
+        </li>
+        <li>
+          <strong>Supabase</strong> — hosts the Postgres database and the auth
+          service. Region: <strong>[supabase-region]</strong>.
+        </li>
+      </ul>
+      <p>We don't transfer your data anywhere else. There are no other sub-processors.</p>
+
+      <h2>Security</h2>
+      <ul>
+        <li>
+          Every per-user row in the database is protected by Postgres
+          row-level security. The policy is
+          <code>auth.uid() = user_id</code> — even if a SQL injection landed
+          in a client-issued query, it could not read or modify another user's
+          rows.
+        </li>
+        <li>
+          We never see your GitHub password or any 2FA secret. Authentication
+          goes directly to GitHub.
+        </li>
+        <li>
+          The site sets a strict Content-Security-Policy (no inline scripts,
+          no eval, locked-down origin allowlist) and ships no third-party
+          scripts.
+        </li>
+        <li>All transport is HTTPS (HSTS preloaded).</li>
+      </ul>
+      <p>
+        We are a small project. We don't have a SOC2, we are not certified
+        against ISO 27001, and we make no claims of enterprise-grade security
+        posture. If your threat model requires those certifications, please
+        self-host instead.
+      </p>
+
+      <h2>Breach notification</h2>
+      <p>
+        If we become aware of a breach affecting your data, we will publish a
+        notice on the nullpath repository's GitHub Issues and on the home
+        page, and (if your jurisdiction requires it) attempt to contact you
+        via the email associated with your GitHub account.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>
+        Depending on where you live (GDPR, CCPA, others), you may have rights
+        to access, correct, delete, or export your data, or to object to
+        processing. The in-app
+        <strong>Settings → Account</strong> screen covers most of these
+        directly:
+      </p>
+      <ul>
+        <li>
+          <strong>Access / portability</strong>: Settings → Backup → Export
+          backup gives you a JSON file containing every row attached to your
+          account.
+        </li>
+        <li>
+          <strong>Deletion</strong>: Settings → Account → Delete account.
+        </li>
+        <li>
+          <strong>Correction</strong>: Edit any field through the normal UI.
+        </li>
+      </ul>
+      <p>
+        If you need something the UI doesn't cover, email
+        <strong>[contact-email]</strong>.
+      </p>
+
+      <h2>Changes</h2>
+      <p>
+        We will update the "Last updated" date and post a notice on the home
+        page if we make material changes. The git history of this file is the
+        authoritative record of every revision.
+      </p>
+
+      <h2>Contact</h2>
+      <p>Email: <strong>[contact-email]</strong>.</p>
+
+      <footer>
+        <a href="/">nullpath</a>
+        <a href="/terms.html">Terms</a>
+        <a href="https://github.com/seskar/nullpath">GitHub</a>
+      </footer>
+    </div>
+  </body>
+</html>

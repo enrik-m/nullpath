@@ -12,9 +12,21 @@ PortSwigger Web Security Academy, HackTheBox, TryHackMe, books, CTFs,
 real bug bounties. Nullpath is the dashboard that turns all of it into
 visible progress.
 
-Runs entirely in the browser. Local-first today (your data lives in
-IndexedDB, nothing leaves your machine). User accounts and leaderboards
-are on the roadmap but not shipped yet.
+Runs entirely in the browser. Two modes:
+
+- **Cloud mode** (the hosted build at nullpath-one.vercel.app). Sign
+  in with GitHub, your progress syncs to a Postgres database via
+  Supabase, every per-user row is row-level-security isolated. No
+  passwords on our side — auth is delegated to GitHub.
+- **Local mode** (the default for self-hosters). The app runs entirely
+  in your browser. Your data lives in IndexedDB on your device,
+  nothing leaves your machine. No account, no server.
+
+Mode is selected at build time by the presence of `VITE_SUPABASE_URL`
+
+- `VITE_SUPABASE_ANON_KEY` env vars; absent → local, present → cloud.
+  See [`docs/setup-auth.md`](./docs/setup-auth.md) for the cloud setup
+  walkthrough.
 
 ## Demo
 
@@ -27,16 +39,16 @@ fidelity available as [`docs/demo.mp4`](./docs/demo.mp4) and
 
 ## Screenshots
 
-| Atlas — career disciplines | Web region — constellation |
-| -------------------------- | -------------------------- |
+| Atlas — career disciplines                | Web region — constellation                      |
+| ----------------------------------------- | ----------------------------------------------- |
 | ![Atlas](./docs/screenshots/01-atlas.png) | ![Region](./docs/screenshots/02-region-web.png) |
 
-| Zone graph (skill tree) | Stats + Operator Card |
-| ----------------------- | --------------------- |
+| Zone graph (skill tree)                       | Stats + Operator Card                     |
+| --------------------------------------------- | ----------------------------------------- |
 | ![Zone](./docs/screenshots/03-zone-graph.png) | ![Stats](./docs/screenshots/04-stats.png) |
 
-| Trophy Room (56 achievements) | Codex (resource library) |
-| ----------------------------- | ------------------------ |
+| Trophy Room (56 achievements)                      | Codex (resource library)                  |
+| -------------------------------------------------- | ----------------------------------------- |
 | ![Trophies](./docs/screenshots/05-trophy-room.png) | ![Codex](./docs/screenshots/06-codex.png) |
 
 ## What's in it
@@ -81,10 +93,15 @@ fidelity available as [`docs/demo.mp4`](./docs/demo.mp4) and
 - **@xyflow/react** for the zone-level node graph
 - **Framer Motion** for view transitions, modal animation, and
   reduced-motion awareness
-- **sql.js** (SQLite compiled to WASM) for the data layer; persisted to
-  **IndexedDB** so progress survives reloads. Same SQL queries the
-  desktop version used — no rewrite needed when the project pivoted
-  from Tauri to web.
+- **sql.js** (SQLite compiled to WASM) for the local-mode data layer;
+  persisted to **IndexedDB** so progress survives reloads. Same SQL
+  queries the desktop version used — no rewrite needed when the
+  project pivoted from Tauri to web.
+- **Supabase** (Postgres + GitHub OAuth + RLS) for the cloud-mode data
+  layer. Server-side functions (`evaluate_achievements`, `current_streak`,
+  `complete_node`, …) make the achievement gates and progression math
+  un-fakeable from the browser. Realtime publication on
+  `user_achievement` enables live unlock notifications.
 - **html-to-image** for operator-card export (lazy-loaded)
 - **Web Audio API** for synthesized SFX
 
@@ -113,22 +130,22 @@ GitHub branch) produces a working build with zero further config:
 
 ## Scripts
 
-| Command              | What it does                                              |
-| -------------------- | --------------------------------------------------------- |
-| `npm run dev`        | Start the Vite dev server                                 |
-| `npm run build`      | Type-check + production frontend build                    |
-| `npm run preview`    | Serve the production build locally                        |
-| `npm run typecheck`  | `tsc --noEmit`                                            |
-| `npm run lint`       | ESLint over `src/` + `scripts/`                           |
-| `npm run lint:fix`   | ESLint with `--fix`                                       |
-| `npm run format`     | Prettier write across `src/`                              |
-| `npm test`           | Vitest run (57 tests as of 0.22.0-beta.1)                 |
-| `npm run test:watch` | Vitest watch mode                                         |
-| `npm run test:ui`    | Vitest with the web UI                                    |
-| `npm run seed:build` | Re-emit migration 002 from `plans/web-pentesting.md`      |
-| `npm run build:branding`     | Re-render `public/og-image.png` etc. from the source SVGs |
-| `npm run capture:screenshots`| Playwright captures the README screenshots (needs `npx playwright install chromium` once + dev server running) |
-| `npm run capture:demo`       | Playwright records a `.webm` walkthrough into `docs/`     |
+| Command                       | What it does                                                                                                   |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                 | Start the Vite dev server                                                                                      |
+| `npm run build`               | Type-check + production frontend build                                                                         |
+| `npm run preview`             | Serve the production build locally                                                                             |
+| `npm run typecheck`           | `tsc --noEmit`                                                                                                 |
+| `npm run lint`                | ESLint over `src/` + `scripts/`                                                                                |
+| `npm run lint:fix`            | ESLint with `--fix`                                                                                            |
+| `npm run format`              | Prettier write across `src/`                                                                                   |
+| `npm test`                    | Vitest run (60 tests as of 0.23.0-beta.1)                                                                      |
+| `npm run test:watch`          | Vitest watch mode                                                                                              |
+| `npm run test:ui`             | Vitest with the web UI                                                                                         |
+| `npm run seed:build`          | Re-emit migration 002 from `plans/web-pentesting.md`                                                           |
+| `npm run build:branding`      | Re-render `public/og-image.png` etc. from the source SVGs                                                      |
+| `npm run capture:screenshots` | Playwright captures the README screenshots (needs `npx playwright install chromium` once + dev server running) |
+| `npm run capture:demo`        | Playwright records a `.webm` walkthrough into `docs/`                                                          |
 
 ## Architecture
 
