@@ -1,8 +1,11 @@
 /**
- * OperatorCardPortrait — fixed 1080×1920 (9:16) shareable trainer-card.
+ * OperatorCardPortrait — fixed 1080×1920 (9:16) shareable card.
  *
- * Designed for export, not in-page reading. Use the wrapper component
- * `<OperatorCardPreview>` below to show a scaled-down version inline.
+ * Designed to be readable when scaled down on a phone screen — type sizes
+ * are intentionally large, layout is spacious, decoration is restrained.
+ *
+ * Use the wrapper `<OperatorCardPreview>` for an inline scaled-down preview,
+ * and `<OperatorCardOffscreen>` for the export-target instance.
  */
 
 import { formatHmShort } from "../store";
@@ -21,7 +24,7 @@ export interface OperatorCardData {
   totalNodes: number;
   /** zones sorted by user time desc */
   topZones: Array<{ zone_id: string; zone_name: string; seconds: number; total: number; completed: number }>;
-  /** region rollups: web/red-team/vuln-research with completion pct */
+  /** kept for back-compat with StatsView callers; no longer rendered on card */
   regions: Array<{ id: string; name: string; pct: number; accent: string; locked: boolean }>;
 }
 
@@ -38,12 +41,12 @@ function pickSigil(handle: string): SpriteName {
 
 export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
   const initials = (data.handle || "OP").slice(0, 2).toUpperCase();
-  const pct = data.xpForLvl > 0 ? (data.xpInLvl / data.xpForLvl) * 100 : 0;
+  const xpPct = data.xpForLvl > 0 ? (data.xpInLvl / data.xpForLvl) * 100 : 0;
   const sigil = pickSigil(data.handle);
 
-  // pre-formatted readouts
   const xpFmt = data.xp.toLocaleString();
   const timeFmt = formatHmShort(data.totalSeconds);
+  const topZones = data.topZones.filter((z) => z.seconds > 0).slice(0, 3);
 
   return (
     <div
@@ -52,26 +55,23 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
         height: CARD_H,
         position: "relative",
         background:
-          "radial-gradient(ellipse 80% 50% at 75% 0%, rgba(92,242,255,0.18) 0%, transparent 60%), " +
-          "radial-gradient(ellipse 80% 50% at 25% 100%, rgba(255,102,224,0.18) 0%, transparent 60%), " +
+          "radial-gradient(ellipse 80% 50% at 75% 0%, rgba(92,242,255,0.20) 0%, transparent 60%), " +
+          "radial-gradient(ellipse 80% 50% at 25% 100%, rgba(255,102,224,0.20) 0%, transparent 60%), " +
           "linear-gradient(180deg, #07091a 0%, #050714 100%)",
         fontFamily: "Roboto, system-ui, sans-serif",
         color: "#e8ecff",
         overflow: "hidden",
       }}
     >
-      {/* CRT scanline overlay */}
+      {/* CRT scanlines */}
       <div
         style={{
           position: "absolute",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 0,
+          top: 0, right: 0, bottom: 0, left: 0,
           backgroundImage:
             "repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 2px, transparent 2px, transparent 5px)",
           mixBlendMode: "multiply",
-          opacity: 0.55,
+          opacity: 0.45,
           pointerEvents: "none",
           zIndex: 5,
         }}
@@ -81,90 +81,91 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
       <div
         style={{
           position: "absolute",
-          top: 24,
-          right: 24,
-          bottom: 24,
-          left: 24,
-          border: "6px solid #3a4480",
+          top: 28, right: 28, bottom: 28, left: 28,
+          border: "8px solid #3a4480",
           boxShadow:
-            "inset 6px 6px 0 0 #5a6cb8, inset -6px -6px 0 0 #0a0d1f, 0 0 80px rgba(92,242,255,0.15)",
+            "inset 8px 8px 0 0 #5a6cb8, inset -8px -8px 0 0 #0a0d1f, 0 0 100px rgba(92,242,255,0.18)",
           pointerEvents: "none",
         }}
       />
 
+      {/* Content container — generous padding, vertical flex */}
       <div
         style={{
           position: "absolute",
-          top: 60,
-          right: 60,
-          bottom: 60,
-          left: 60,
+          top: 80, right: 80, bottom: 80, left: 80,
           display: "flex",
           flexDirection: "column",
-          gap: 32,
+          gap: 56,
         }}
       >
-        {/* ── Header band ─────────────────────────────────── */}
-        <div style={{ borderBottom: "4px solid #3a4480", paddingBottom: 20 }}>
+        {/* ── NULLPATH wordmark ──────────────────────────── */}
+        <div
+          style={{
+            paddingBottom: 32,
+            borderBottom: "5px solid #3a4480",
+          }}
+        >
           <div
             style={{
               fontFamily: "'Press Start 2P', monospace",
-              fontSize: 56,
+              fontSize: 96,
               background: "linear-gradient(180deg, #5cf2ff 0%, #ff66e0 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
               letterSpacing: "0.04em",
+              lineHeight: 1,
+              textAlign: "center",
             }}
           >
             NULLPATH
           </div>
         </div>
 
-        {/* ── Avatar + identity block ─────────────────────── */}
-        <div style={{ display: "flex", alignItems: "stretch", gap: 36 }}>
+        {/* ── HERO: avatar + handle + level ──────────────── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 48 }}>
           {/* Avatar tile */}
           <div
             style={{
-              width: 240,
-              height: 240,
-              position: "relative",
+              width: 320,
+              height: 320,
               flexShrink: 0,
+              position: "relative",
               background: "linear-gradient(135deg, #5cf2ff 0%, #ff66e0 100%)",
-              border: "6px solid #5a6cb8",
+              border: "8px solid #5a6cb8",
               boxShadow:
-                "inset 6px 6px 0 0 rgba(255,255,255,0.4), inset -6px -6px 0 0 rgba(0,0,0,0.5), 0 0 32px rgba(92,242,255,0.3)",
+                "inset 8px 8px 0 0 rgba(255,255,255,0.45), inset -8px -8px 0 0 rgba(0,0,0,0.55), 0 0 48px rgba(92,242,255,0.35)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            {/* Inner monogram */}
             <div
               style={{
                 fontFamily: "'Press Start 2P', monospace",
-                fontSize: 96,
+                fontSize: 128,
                 color: "#07091a",
-                textShadow: "4px 4px 0 rgba(255,255,255,0.4)",
+                textShadow: "5px 5px 0 rgba(255,255,255,0.45)",
+                lineHeight: 1,
               }}
             >
               {initials}
             </div>
-            {/* Corner decorations — pixel sigils */}
-            <div style={{ position: "absolute", top: 12, right: 12, opacity: 0.55 }}>
-              <PixelSprite name={sigil} size={28} color="#07091a" />
+            <div style={{ position: "absolute", top: 16, right: 16, opacity: 0.55 }}>
+              <PixelSprite name={sigil} size={36} color="#07091a" />
             </div>
-            <div style={{ position: "absolute", bottom: 12, left: 12, opacity: 0.55 }}>
-              <PixelSprite name="diamond" size={20} color="#07091a" />
+            <div style={{ position: "absolute", bottom: 16, left: 16, opacity: 0.5 }}>
+              <PixelSprite name="diamond" size={26} color="#07091a" />
             </div>
           </div>
 
-          {/* Identity */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 0 }}>
+          {/* Identity column */}
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div
               style={{
                 fontFamily: "'Silkscreen', monospace",
-                fontSize: 16,
+                fontSize: 26,
                 letterSpacing: "0.3em",
                 color: "#7280b0",
               }}
@@ -174,11 +175,11 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
             <div
               style={{
                 fontFamily: "Roboto, sans-serif",
-                fontSize: 56,
+                fontSize: 76,
                 fontWeight: 700,
                 color: "#e8ecff",
                 lineHeight: 1.05,
-                marginTop: 6,
+                marginTop: 10,
                 wordBreak: "break-word",
                 textTransform: "lowercase",
               }}
@@ -186,95 +187,101 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
               {data.handle}
             </div>
 
-            {/* LEVEL + giant number */}
-            <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginTop: 26 }}>
-              <span
-                style={{
-                  fontFamily: "'Silkscreen', monospace",
-                  fontSize: 18,
-                  letterSpacing: "0.3em",
-                  color: "#7280b0",
-                }}
-              >
-                LVL
-              </span>
-              <span
-                style={{
-                  fontFamily: "'Press Start 2P', monospace",
-                  fontSize: 86,
-                  color: "#ff66e0",
-                  textShadow: "0 0 24px rgba(255,102,224,0.45)",
-                  lineHeight: 1,
-                }}
-              >
-                {data.level}
-              </span>
+            <div
+              style={{
+                fontFamily: "'Silkscreen', monospace",
+                fontSize: 26,
+                letterSpacing: "0.3em",
+                color: "#7280b0",
+                marginTop: 36,
+              }}
+            >
+              LEVEL
+            </div>
+            <div
+              style={{
+                fontFamily: "'Press Start 2P', monospace",
+                fontSize: 160,
+                color: "#ff66e0",
+                textShadow: "0 0 32px rgba(255,102,224,0.5)",
+                lineHeight: 0.95,
+                marginTop: 4,
+              }}
+            >
+              {data.level}
             </div>
           </div>
         </div>
 
-        {/* ── XP progress bar ─────────────────────────────── */}
+        {/* ── XP progress to next level ──────────────────── */}
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
             <span
               style={{
                 fontFamily: "'Silkscreen', monospace",
-                fontSize: 14,
+                fontSize: 24,
                 letterSpacing: "0.25em",
                 color: "#7280b0",
               }}
             >
-              XP TO NEXT LEVEL
+              NEXT LEVEL
             </span>
             <span
               style={{
                 fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 18,
+                fontSize: 30,
+                fontWeight: 500,
                 color: "#5cf2ff",
               }}
             >
-              {data.xpInLvl.toLocaleString()} / {data.xpForLvl.toLocaleString()}
+              {data.xpInLvl.toLocaleString()} / {data.xpForLvl.toLocaleString()} XP
             </span>
           </div>
-          <Segmented value={pct / 100} segments={28} color="#5cf2ff" trackColor="#1f2750" />
+          <Segmented value={xpPct / 100} segments={32} color="#5cf2ff" trackColor="#1f2750" height={36} />
         </div>
 
-        {/* ── Stats 2×2 grid ──────────────────────────────── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-          <StatTile label="TOTAL XP" value={xpFmt} accent="#5cf2ff" sprite="bolt" />
-          <StatTile label="STREAK" value={`${data.streak}d`} accent="#ffb84a" sprite="flame" />
-          <StatTile label="TIME LOGGED" value={timeFmt} accent="#a8ff5c" sprite="cog" />
-          <StatTile label="NODES DONE" value={`${data.completedNodes}/${data.totalNodes}`} accent="#ff66e0" sprite="shield" />
+        {/* ── Stats 2×2 ───────────────────────────────────── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+          <StatTile label="TOTAL XP"   value={xpFmt}                                   accent="#5cf2ff" sprite="bolt" />
+          <StatTile label="STREAK"     value={`${data.streak}d`}                       accent="#ffb84a" sprite="flame" />
+          <StatTile label="TIME"       value={timeFmt}                                 accent="#a8ff5c" sprite="cog" />
+          <StatTile label="NODES"      value={`${data.completedNodes}/${data.totalNodes}`} accent="#ff66e0" sprite="shield" />
         </div>
 
-        {/* ── Specialties ────────────────────────────────── */}
-        {data.topZones.some((z) => z.seconds > 0) && (
-          <Section title="SPECIALTIES" accent="#5cf2ff">
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {data.topZones.slice(0, 3).map((z) => (
-                <ZoneRow key={z.zone_id} zone={z} accent="#5cf2ff" />
+        {/* ── Specialties (top zones by hours) ────────────── */}
+        {topZones.length > 0 && (
+          <div>
+            <div
+              style={{
+                fontFamily: "'Silkscreen', monospace",
+                fontSize: 24,
+                letterSpacing: "0.3em",
+                color: "#5cf2ff",
+                marginBottom: 24,
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <span style={{ display: "inline-block", width: 16, height: 16, background: "#5cf2ff" }} />
+              SPECIALTIES
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              {topZones.map((z) => (
+                <SpecialtyRow key={z.zone_id} zone={z} />
               ))}
             </div>
-          </Section>
+          </div>
         )}
 
-        {/* ── Region progress ─────────────────────────────── */}
-        <Section title="REGIONS" accent="#ff66e0">
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {data.regions.map((r) => (
-              <RegionRow key={r.id} region={r} />
-            ))}
-          </div>
-        </Section>
-
-        {/* spacer pushes footer down */}
+        {/* spacer pushes footer to the bottom */}
         <div style={{ flex: 1 }} />
 
         {/* ── Footer ──────────────────────────────────────── */}
         <div
           style={{
-            borderTop: "4px solid #3a4480",
-            paddingTop: 18,
+            borderTop: "5px solid #3a4480",
+            paddingTop: 24,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -282,29 +289,30 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
         >
           <div
             style={{
-              fontFamily: "'Silkscreen', monospace",
-              fontSize: 14,
-              letterSpacing: "0.25em",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 22,
+              fontWeight: 500,
               color: "#7280b0",
             }}
           >
-            {new Date().toISOString().split("T")[0].toUpperCase()}
+            {new Date().toISOString().split("T")[0]}
+          </div>
+          <div
+            style={{
+              fontFamily: "'Silkscreen', monospace",
+              fontSize: 22,
+              letterSpacing: "0.3em",
+              color: "#5cf2ff",
+            }}
+          >
+            NULLPATH
           </div>
           <div
             style={{
               fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 14,
+              fontSize: 22,
+              fontWeight: 500,
               color: "#7280b0",
-            }}
-          >
-            github.com/enrik-m/nullpath
-          </div>
-          <div
-            style={{
-              fontFamily: "'Silkscreen', monospace",
-              fontSize: 14,
-              letterSpacing: "0.25em",
-              color: "#5cf2ff",
             }}
           >
             v{APP_VERSION}
@@ -316,39 +324,8 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
 }
 
 // ===========================================================================
-// Sub-components — kept inline so the card is one self-contained file.
+// Sub-components
 // ===========================================================================
-
-function Section({
-  title,
-  accent,
-  children,
-}: {
-  title: string;
-  accent: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div
-        style={{
-          fontFamily: "'Silkscreen', monospace",
-          fontSize: 16,
-          letterSpacing: "0.3em",
-          color: accent,
-          marginBottom: 14,
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-        }}
-      >
-        <span style={{ display: "inline-block", width: 10, height: 10, background: accent }} />
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-}
 
 function StatTile({
   label,
@@ -366,26 +343,27 @@ function StatTile({
       style={{
         position: "relative",
         background: "#161b3a",
-        border: "4px solid #3a4480",
-        boxShadow:
-          "inset 4px 4px 0 0 #5a6cb8, inset -4px -4px 0 0 #0a0d1f",
-        padding: "20px 24px",
-        height: 130,
+        border: "5px solid #3a4480",
+        boxShadow: "inset 5px 5px 0 0 #5a6cb8, inset -5px -5px 0 0 #0a0d1f",
+        padding: "32px 36px",
+        height: 220,
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
+        justifyContent: "space-between",
         overflow: "hidden",
       }}
     >
-      <div style={{ position: "absolute", right: 12, top: 12, opacity: 0.18 }}>
-        <PixelSprite name={sprite} size={56} color={accent} />
+      {/* Faded background sprite */}
+      <div style={{ position: "absolute", right: 16, top: 16, opacity: 0.18 }}>
+        <PixelSprite name={sprite} size={88} color={accent} />
       </div>
       <div
         style={{
           fontFamily: "'Silkscreen', monospace",
-          fontSize: 13,
-          letterSpacing: "0.25em",
+          fontSize: 22,
+          letterSpacing: "0.3em",
           color: "#7280b0",
+          position: "relative",
         }}
       >
         {label}
@@ -393,11 +371,11 @@ function StatTile({
       <div
         style={{
           fontFamily: "'Press Start 2P', monospace",
-          fontSize: 30,
+          fontSize: 56,
           color: accent,
-          marginTop: 10,
-          textShadow: `0 0 16px ${accent}55`,
+          textShadow: `0 0 20px ${accent}55`,
           lineHeight: 1,
+          position: "relative",
         }}
       >
         {value}
@@ -411,11 +389,13 @@ function Segmented({
   segments,
   color,
   trackColor,
+  height = 28,
 }: {
   value: number;
   segments: number;
   color: string;
   trackColor: string;
+  height?: number;
 }) {
   const v = Math.max(0, Math.min(1, value));
   const filled = Math.round(v * segments);
@@ -423,12 +403,12 @@ function Segmented({
     <div
       style={{
         background: "#0d1126",
-        border: "3px solid #3a4480",
-        boxShadow: "inset 3px 3px 0 0 #0a0d1f, inset -3px -3px 0 0 #5a6cb8",
-        padding: 4,
+        border: "4px solid #3a4480",
+        boxShadow: "inset 4px 4px 0 0 #0a0d1f, inset -4px -4px 0 0 #5a6cb8",
+        padding: 5,
         display: "flex",
-        gap: 2,
-        height: 28,
+        gap: 3,
+        height,
       }}
     >
       {Array.from({ length: segments }).map((_, i) => (
@@ -437,6 +417,7 @@ function Segmented({
           style={{
             flex: 1,
             background: i < filled ? color : trackColor,
+            boxShadow: i < filled ? `0 0 6px ${color}66` : undefined,
           }}
         />
       ))}
@@ -444,50 +425,53 @@ function Segmented({
   );
 }
 
-function ZoneRow({
+function SpecialtyRow({
   zone,
-  accent,
 }: {
   zone: { zone_id: string; zone_name: string; seconds: number; total: number; completed: number };
-  accent: string;
 }) {
-  const pct = zone.total > 0 ? zone.completed / zone.total : 0;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 24,
+        paddingBottom: 14,
+        borderBottom: "2px dotted #2a3358",
+      }}
+    >
       <span
         style={{
           fontFamily: "'Press Start 2P', monospace",
-          fontSize: 14,
-          color: accent,
-          width: 70,
+          fontSize: 22,
+          color: "#5cf2ff",
+          width: 90,
           flexShrink: 0,
         }}
       >
         {zone.zone_id}
       </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontFamily: "Roboto, sans-serif",
-            fontSize: 22,
-            color: "#e8ecff",
-            fontWeight: 600,
-            marginBottom: 4,
-            overflow: "hidden",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {zone.zone_name}
-        </div>
-        <Segmented value={pct} segments={20} color={accent} trackColor="#1f2750" />
-      </div>
+      <span
+        style={{
+          flex: 1,
+          minWidth: 0,
+          fontFamily: "Roboto, sans-serif",
+          fontSize: 30,
+          fontWeight: 600,
+          color: "#e8ecff",
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {zone.zone_name}
+      </span>
       <span
         style={{
           fontFamily: "'JetBrains Mono', monospace",
-          fontSize: 18,
-          color: "#7280b0",
-          width: 110,
+          fontSize: 26,
+          fontWeight: 500,
+          color: "#a8ff5c",
           textAlign: "right",
           flexShrink: 0,
         }}
@@ -498,51 +482,8 @@ function ZoneRow({
   );
 }
 
-function RegionRow({
-  region,
-}: {
-  region: { id: string; name: string; pct: number; accent: string; locked: boolean };
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16, opacity: region.locked ? 0.4 : 1 }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-          <span
-            style={{
-              fontFamily: "'Silkscreen', monospace",
-              fontSize: 14,
-              letterSpacing: "0.2em",
-              color: region.accent,
-              textTransform: "uppercase",
-            }}
-          >
-            {region.locked && "🔒 "}
-            {region.name}
-          </span>
-          <span
-            style={{
-              fontFamily: "'Press Start 2P', monospace",
-              fontSize: 14,
-              color: region.accent,
-            }}
-          >
-            {region.pct}%
-          </span>
-        </div>
-        <Segmented
-          value={region.pct / 100}
-          segments={32}
-          color={region.accent}
-          trackColor="#1f2750"
-        />
-      </div>
-    </div>
-  );
-}
-
 // ===========================================================================
-// Inline preview wrapper — renders the same card scaled down to fit the
-// available width while preserving the 9:16 aspect ratio.
+// Inline preview wrapper — scaled-down version that fits the available width.
 // ===========================================================================
 export function OperatorCardPreview({
   data,
@@ -580,23 +521,11 @@ export function OperatorCardPreview({
   );
 }
 
-// Hidden full-size container — html-to-image targets the INNER div for export.
-//
-// Hiding strategy:
-//   * Outer wrapper: 0×0 with overflow:hidden, position:fixed off-screen.
-//     Visually invisible because clipped to nothing.
-//   * Inner card div (the captured element): full 1080×1920 dimensions,
-//     NO opacity / visibility / display tricks on it. The browser still
-//     lays it out and paints it for the layout tree; html-to-image's
-//     cloneNode(true) gets a clone with no hiding styles → renders
-//     correctly to the canvas.
-//
-// Earlier attempts that produced blank PNGs:
-//   * position:fixed at top/left -10000 — html-to-image bounds calc
-//     produced a blank rect.
-//   * opacity:0 on the captured element — got cloned into the render
-//     and the resulting canvas was fully transparent (which combined
-//     with backgroundColor option painted just the bg color).
+// ===========================================================================
+// Hidden full-size container — html-to-image targets the INNER div.
+// Hide via 0×0 wrapper + overflow:hidden, NOT via opacity on the captured
+// element (opacity:0 leaks into the cloned render and produces a blank PNG).
+// ===========================================================================
 export function OperatorCardOffscreen({
   data,
   containerRef,

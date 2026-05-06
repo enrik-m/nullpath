@@ -264,7 +264,7 @@ export function StatsView() {
         </motion.div>
 
         {/* Two-column layout — stats scroll on the left, card stays put on the right */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">
           {/* ═══════ LEFT COLUMN — scrolling content ═══════ */}
           <div className="space-y-6 min-w-0">
             {/* Top stats strip */}
@@ -430,7 +430,7 @@ export function StatsView() {
                 <span className="inline-block w-2 h-2 bg-[var(--color-magenta)]" />
                 OPERATOR CARD
               </div>
-              <OperatorCardPreview data={cardData} maxWidth={296} />
+              <OperatorCardPreview data={cardData} maxWidth={352} />
               <div className="np-screen text-[9px] tracking-[0.2em] text-[var(--color-fg-3)] mt-2 text-center">
                 EXPORTS AS 1080×1920 PNG
               </div>
