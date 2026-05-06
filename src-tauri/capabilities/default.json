@@ -17,6 +17,7 @@
     "fs:allow-write-file",
     "fs:allow-write-text-file",
     "fs:allow-read-text-file",
+    "updater:default",
     {
       "identifier": "fs:scope",
       "allow": [

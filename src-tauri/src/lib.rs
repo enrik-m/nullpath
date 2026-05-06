@@ -45,6 +45,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        // Updater is opt-in: present in the build but inert until
+        // tauri.conf.json's `plugins.updater.endpoints` is configured
+        // and a signing public key is set. Until then the frontend
+        // call to check() returns "no update available" gracefully.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:nullpath.db", migrations)

@@ -28,6 +28,17 @@
       "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: blob: asset: http://asset.localhost; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost"
     }
   },
+  "plugins": {
+    "updater": {
+      "comment": "Updater is OFF by default. To enable: (1) generate a key pair with `npm run tauri signer generate -- -w ~/.tauri/nullpath.key`, (2) set TAURI_SIGNING_PRIVATE_KEY + TAURI_SIGNING_PRIVATE_KEY_PASSWORD env vars at build time, (3) replace `pubkey` below with the generated public key, (4) set `endpoints` to where you'll host the latest.json manifest, (5) flip `active` to true. See docs/updater.md.",
+      "active": false,
+      "endpoints": [],
+      "pubkey": "",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
