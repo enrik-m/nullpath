@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Nullpath OG image — 1200×630 social-share preview.
+  This SVG is the source-of-truth; scripts/build-og-image.mjs renders
+  it to PNG via sharp because Twitter / Discord / Slack don't preview
+  SVG og:images.
+
+  Design notes:
+    - Deep-void background with corner accent gradients matching the
+      app's body::before treatment.
+    - Scanline overlay (subtle 2px stripes) reinforces the CRT feel.
+    - "NULLPATH" wordmark drawn as <rect> blocks so the file doesn't
+      depend on Press Start 2P being available at render time.
+    - Tagline sits underneath in standard sans, with depth-tag pills
+      and an OWASP / 820-NODES / TROPHIES count to signal what's
+      inside without screenshots.
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1200 630"
+  width="1200"
+  height="630"
+>
+  <defs>
+    <!-- Corner glow gradient (top-right cyan) -->
+    <radialGradient id="cyanGlow" cx="80%" cy="0%" r="60%">
+      <stop offset="0%" stop-color="#5cf2ff" stop-opacity="0.35" />
+      <stop offset="60%" stop-color="#5cf2ff" stop-opacity="0" />
+    </radialGradient>
+    <!-- Corner glow gradient (bottom-left magenta) -->
+    <radialGradient id="magentaGlow" cx="20%" cy="100%" r="60%">
+      <stop offset="0%" stop-color="#ff66e0" stop-opacity="0.35" />
+      <stop offset="60%" stop-color="#ff66e0" stop-opacity="0" />
+    </radialGradient>
+    <!-- Scanline pattern -->
+    <pattern id="scanlines" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="2" fill="#000" fill-opacity="0.18" />
+    </pattern>
+    <!-- Wordmark gradient — cyan top, magenta bottom -->
+    <linearGradient id="wordmarkGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5cf2ff" />
+      <stop offset="100%" stop-color="#ff66e0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background gradient stack -->
+  <rect width="1200" height="630" fill="#07091a" />
+  <rect width="1200" height="630" fill="url(#cyanGlow)" />
+  <rect width="1200" height="630" fill="url(#magentaGlow)" />
+  <rect width="1200" height="630" fill="url(#scanlines)" />
+
+  <!-- Outer chunky pixel frame -->
+  <rect
+    x="32"
+    y="32"
+    width="1136"
+    height="566"
+    fill="none"
+    stroke="#3a4480"
+    stroke-width="6"
+  />
+
+  <!-- ====================================================================
+       NULLPATH wordmark — pixel-art letters built from rects, drawn at
+       y=140..280, centered horizontally at x=600. Each letter is 12 wide
+       (16 with the trailing 4 of spacing) and 140 tall.
+
+       Letters are simplified to chunky strokes on a 12×14 grid, scaled
+       up by 10× (so each "pixel" cell is a 10×10 SVG rect).
+
+       The 8 letters of "NULLPATH" at 12 wide × scale 10 = 120 px each,
+       plus 16 of spacing × 10 = 160 px between starts. Total run:
+       8 × 160 - 40 spacing = 1240 px... too wide. Reducing scale to 8.
+       At scale 8, each letter is 96 wide, 12 spacing × 8 = 96 between.
+       Total 8 × (96 + 32) - 32 = 992 px. Centered: x=104..1096.
+       ==================================================================== -->
+  <g transform="translate(104 175)" fill="url(#wordmarkGrad)">
+    <!-- Letter cell size: 8px per pixel of grid; each letter on a 12×14 grid -->
+
+    <!-- N: x=0..96, columns: left bar, diagonal, right bar -->
+    <g>
+      <rect x="0" y="0" width="16" height="112" />
+      <rect x="80" y="0" width="16" height="112" />
+      <rect x="16" y="0" width="16" height="32" />
+      <rect x="32" y="16" width="16" height="48" />
+      <rect x="48" y="48" width="16" height="48" />
+      <rect x="64" y="80" width="16" height="32" />
+    </g>
+
+    <!-- U: x=128..224 -->
+    <g transform="translate(128 0)">
+      <rect x="0" y="0" width="16" height="96" />
+      <rect x="80" y="0" width="16" height="96" />
+      <rect x="0" y="96" width="96" height="16" />
+    </g>
+
+    <!-- L: x=256..352 -->
+    <g transform="translate(256 0)">
+      <rect x="0" y="0" width="16" height="112" />
+      <rect x="0" y="96" width="96" height="16" />
+    </g>
+
+    <!-- L: x=384..480 -->
+    <g transform="translate(384 0)">
+      <rect x="0" y="0" width="16" height="112" />
+      <rect x="0" y="96" width="96" height="16" />
+    </g>
+
+    <!-- P: x=512..608 -->
+    <g transform="translate(512 0)">
+      <rect x="0" y="0" width="16" height="112" />
+      <rect x="0" y="0" width="96" height="16" />
+      <rect x="80" y="0" width="16" height="64" />
+      <rect x="0" y="48" width="96" height="16" />
+    </g>
+
+    <!-- A: x=640..736 -->
+    <g transform="translate(640 0)">
+      <rect x="0" y="16" width="16" height="96" />
+      <rect x="80" y="16" width="16" height="96" />
+      <rect x="0" y="0" width="96" height="16" />
+      <rect x="0" y="48" width="96" height="16" />
+    </g>
+
+    <!-- T: x=768..864 -->
+    <g transform="translate(768 0)">
+      <rect x="0" y="0" width="96" height="16" />
+      <rect x="40" y="0" width="16" height="112" />
+    </g>
+
+    <!-- H: x=896..992 -->
+    <g transform="translate(896 0)">
+      <rect x="0" y="0" width="16" height="112" />
+      <rect x="80" y="0" width="16" height="112" />
+      <rect x="0" y="48" width="96" height="16" />
+    </g>
+  </g>
+
+  <!-- Blinking cursor underscore — aligned to the right of the wordmark -->
+  <rect x="1100" y="265" width="48" height="16" fill="#a8ff5c" />
+
+  <!-- Divider line under the wordmark -->
+  <rect x="104" y="320" width="992" height="4" fill="#3a4480" />
+
+  <!-- Tagline -->
+  <text
+    x="600"
+    y="380"
+    font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+    font-size="34"
+    font-weight="600"
+    fill="#e8ecff"
+    text-anchor="middle"
+  >Gamified offsec career atlas</text>
+
+  <!-- Subline -->
+  <text
+    x="600"
+    y="425"
+    font-family="ui-monospace, SFMono-Regular, 'Menlo', monospace"
+    font-size="22"
+    fill="#7280b0"
+    text-anchor="middle"
+  >Browser-native SQLite. Local-first. No cloud, no signup.</text>
+
+  <!-- Stat pills row -->
+  <g transform="translate(0 490)">
+    <!-- 23 ZONES -->
+    <g transform="translate(204 0)">
+      <rect width="200" height="56" fill="#161b3a" stroke="#5cf2ff" stroke-width="3" />
+      <text x="100" y="36" font-family="ui-monospace, monospace" font-size="20" font-weight="700" fill="#5cf2ff" text-anchor="middle" letter-spacing="3">23 ZONES</text>
+    </g>
+    <!-- 820 NODES -->
+    <g transform="translate(440 0)">
+      <rect width="240" height="56" fill="#161b3a" stroke="#ff66e0" stroke-width="3" />
+      <text x="120" y="36" font-family="ui-monospace, monospace" font-size="20" font-weight="700" fill="#ff66e0" text-anchor="middle" letter-spacing="3">820 NODES</text>
+    </g>
+    <!-- 56 TROPHIES -->
+    <g transform="translate(716 0)">
+      <rect width="280" height="56" fill="#161b3a" stroke="#a8ff5c" stroke-width="3" />
+      <text x="140" y="36" font-family="ui-monospace, monospace" font-size="20" font-weight="700" fill="#a8ff5c" text-anchor="middle" letter-spacing="3">56 TROPHIES</text>
+    </g>
+  </g>
+
+  <!-- Bottom footer line — version + URL slot -->
+  <text
+    x="104"
+    y="585"
+    font-family="ui-monospace, monospace"
+    font-size="16"
+    fill="#7280b0"
+    letter-spacing="2"
+  >&gt; nullpath_kernel.boot()</text>
+  <text
+    x="1096"
+    y="585"
+    font-family="ui-monospace, monospace"
+    font-size="16"
+    fill="#7280b0"
+    text-anchor="end"
+    letter-spacing="2"
+  >v0.22.0-beta.1</text>
+</svg>
