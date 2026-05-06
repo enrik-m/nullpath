@@ -219,15 +219,17 @@ function emit({ zones, nodes }) {
   out.push("-- Nullpath — Web Pentesting region seed");
   out.push("-- Auto-generated from plans/web-pentesting.md by scripts/build-seed.mjs.");
   out.push("-- Do not edit by hand. Re-run `npm run seed:build` after editing the plan.");
+  out.push("--");
+  out.push("-- IMPORTANT: no BEGIN/COMMIT here — sqlx wraps each migration in its own");
+  out.push("-- transaction, and a nested BEGIN errors silently in the SQL plugin.");
   out.push("-- ==========================================================================");
   out.push("");
-  out.push("BEGIN TRANSACTION;");
-  out.push("");
 
-  // Regions
+  // Regions — INSERT OR IGNORE makes this safe to re-run if a previous boot
+  // partially applied the seed and the migration has to retry.
   out.push("-- Regions");
   out.push(
-    `INSERT INTO region (id, name, tagline, color_accent, sort_order, is_locked) VALUES
+    `INSERT OR IGNORE INTO region (id, name, tagline, color_accent, sort_order, is_locked) VALUES
   ('web',           'Web Pentesting',          'OWASP, APIs, source review, supply chain, AI-backed apps', '#22d3ee', 1, 0),
   ('red-team',      'Red Teaming',             'Internal pentest, AD, C2, OPSEC',                            '#e879f9', 2, 1),
   ('vuln-research', 'Vuln Research / Exploit', 'RE, fuzzing, memory corruption, browser/kernel internals', '#fb7185', 3, 1);`
@@ -237,7 +239,7 @@ function emit({ zones, nodes }) {
   // Zones
   out.push("-- Zones");
   out.push(
-    "INSERT INTO zone (id, region_id, name, sort_order, cx, cy) VALUES"
+    "INSERT OR IGNORE INTO zone (id, region_id, name, sort_order, cx, cy) VALUES"
   );
   zones.forEach((z, i) => {
     const tail = i === zones.length - 1 ? ";" : ",";
@@ -253,7 +255,7 @@ function emit({ zones, nodes }) {
   for (let i = 0; i < nodes.length; i += CHUNK) {
     const chunk = nodes.slice(i, i + CHUNK);
     out.push(
-      "INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES"
+      "INSERT OR IGNORE INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES"
     );
     chunk.forEach((n, idx) => {
       const tail = idx === chunk.length - 1 ? ";" : ",";
@@ -264,8 +266,6 @@ function emit({ zones, nodes }) {
     out.push("");
   }
 
-  out.push("COMMIT;");
-  out.push("");
   return out.join("\n");
 }
 

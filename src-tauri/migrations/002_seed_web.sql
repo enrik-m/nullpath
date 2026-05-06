@@ -2,18 +2,19 @@
 -- Nullpath — Web Pentesting region seed
 -- Auto-generated from plans/web-pentesting.md by scripts/build-seed.mjs.
 -- Do not edit by hand. Re-run `npm run seed:build` after editing the plan.
+--
+-- IMPORTANT: no BEGIN/COMMIT here — sqlx wraps each migration in its own
+-- transaction, and a nested BEGIN errors silently in the SQL plugin.
 -- ==========================================================================
 
-BEGIN TRANSACTION;
-
 -- Regions
-INSERT INTO region (id, name, tagline, color_accent, sort_order, is_locked) VALUES
+INSERT OR IGNORE INTO region (id, name, tagline, color_accent, sort_order, is_locked) VALUES
   ('web',           'Web Pentesting',          'OWASP, APIs, source review, supply chain, AI-backed apps', '#22d3ee', 1, 0),
   ('red-team',      'Red Teaming',             'Internal pentest, AD, C2, OPSEC',                            '#e879f9', 2, 1),
   ('vuln-research', 'Vuln Research / Exploit', 'RE, fuzzing, memory corruption, browser/kernel internals', '#fb7185', 3, 1);
 
 -- Zones
-INSERT INTO zone (id, region_id, name, sort_order, cx, cy) VALUES
+INSERT OR IGNORE INTO zone (id, region_id, name, sort_order, cx, cy) VALUES
   ('Z01', 'web', 'Foundations Plateau', 1, -700, -480),
   ('Z02', 'web', 'Tooling Arsenal', 2, 700, -480),
   ('Z03', 'web', 'Recon Forge', 3, -560, -180),
@@ -39,7 +40,7 @@ INSERT INTO zone (id, region_id, name, sort_order, cx, cy) VALUES
   ('Z23', 'web', 'Capstones', 23, 640, -700);
 
 -- Nodes
-INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
+INSERT OR IGNORE INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
   ('F01', 'Z01', NULL, 'Networking — TCP/IP & OSI', 'model, layers, encapsulation', 'foundation', 'intro', NULL, NULL, 1),
   ('F02', 'Z01', NULL, 'Common ports & protocols', '80/443/22/21/25/53/3306/3389/445/8080/8443/5432/6379/27017/9200/1433/5985', 'foundation', 'intro', NULL, NULL, 2),
   ('F03', 'Z01', NULL, 'DNS deep dive', 'record types (A/AAAA/CNAME/MX/TXT/NS/SOA/CAA), recursive vs iterative, DNSSEC awareness', 'foundation', 'std', NULL, NULL, 3),
@@ -141,7 +142,7 @@ INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, c
   ('R02', 'Z03', NULL, 'Passive recon — DNS records', 'beyond A/CNAME (TXT, MX, SPF, DMARC, DKIM, NS)', 'recon', 'std', NULL, NULL, 2),
   ('R03', 'Z03', NULL, 'Passive recon — ASN / BGP / peering', 'IP block ownership', 'recon', 'adv', NULL, NULL, 3);
 
-INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
+INSERT OR IGNORE INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
   ('R04', 'Z03', NULL, 'Passive recon — Certificate Transparency', 'historical & current cert hunting', 'recon', 'std', NULL, NULL, 4),
   ('R05', 'Z03', NULL, 'Passive recon — Public datasets', 'Rapid7, Project Sonar, Common Crawl', 'recon', 'std', NULL, NULL, 5),
   ('R06', 'Z03', NULL, 'Passive recon — S3/GCS/Azure bucket enumeration', 'public bucket hunting', 'recon', 'std', NULL, NULL, 6),
@@ -243,7 +244,7 @@ INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, c
   ('X22', 'Z05', NULL, 'DOM clobbering', 'id/name attribute hijacking globals', 'vuln', 'adv', NULL, NULL, 22),
   ('X23', 'Z05', NULL, 'Client-side prototype pollution', 'gadgets in jQuery, Lodash, common libs', 'vuln', 'adv', NULL, NULL, 23);
 
-INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
+INSERT OR IGNORE INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
   ('X24', 'Z05', NULL, 'Prototype-pollution-to-XSS gadget chains', NULL, 'vuln', 'adv', NULL, NULL, 24),
   ('X25', 'Z05', NULL, 'Open redirect', 'and chains that escalate it', 'vuln', 'std', NULL, 'CWE-601', 25),
   ('X26', 'Z05', NULL, 'XSSI / JSON hijacking', 'historical Flash, modern UTF-7 quirks', 'vuln', 'adv', NULL, NULL, 26),
@@ -345,7 +346,7 @@ INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, c
   ('AC19', 'Z07', NULL, 'Multi-tenant data leakage', NULL, 'vuln', 'adv', NULL, NULL, 19),
   ('AC20', 'Z07', NULL, 'RBAC vs ABAC implementation flaws', NULL, 'vuln', 'adv', NULL, NULL, 20);
 
-INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
+INSERT OR IGNORE INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
   ('AC21', 'Z07', NULL, 'Authz checks at wrong layer', 'UI hides, API doesn''t enforce', 'vuln', 'std', NULL, NULL, 21),
   ('AC22', 'Z07', NULL, 'Race condition in authz checks', NULL, 'vuln', 'adv', NULL, NULL, 22),
   ('AC23', 'Z07', NULL, 'Authz bypass via TLS/transport tricks', 'mTLS misconfigs', 'vuln', 'adv', NULL, NULL, 23),
@@ -447,7 +448,7 @@ INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, c
   ('C13', 'Z10', NULL, 'CORS-misconfig-enabled CSRF', NULL, 'vuln', 'adv', NULL, NULL, 13),
   ('C14', 'Z10', NULL, 'Cross-Site Tracing (XST)', 'historical', 'vuln', 'res', NULL, NULL, 14);
 
-INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
+INSERT OR IGNORE INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
   ('C15', 'Z10', NULL, 'CSRF via subdomain trust', NULL, 'vuln', 'adv', NULL, NULL, 15),
   ('C16', 'Z10', NULL, 'GraphQL CSRF — mutation via GET / form-encoded', NULL, 'vuln', 'adv', NULL, NULL, 16),
   ('C17', 'Z10', NULL, 'CSRF on file-upload endpoints', NULL, 'vuln', 'adv', NULL, NULL, 17),
@@ -549,7 +550,7 @@ INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, c
   ('SR08', 'Z14', NULL, 'Python patterns — eval/exec, pickle, format strings, Flask templates', NULL, 'methodology', 'adv', NULL, NULL, 8),
   ('SR09', 'Z14', NULL, 'Ruby patterns — Rails mass-assignment, Marshal, eval', NULL, 'methodology', 'adv', NULL, NULL, 9);
 
-INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
+INSERT OR IGNORE INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
   ('SR10', 'Z14', NULL, 'Node.js patterns — eval, vm sandboxes, prototype pollution sinks', NULL, 'methodology', 'adv', NULL, NULL, 10),
   ('SR11', 'Z14', NULL, '.NET patterns — BinaryFormatter, JSON.NET TypeNameHandling, ViewState', NULL, 'methodology', 'adv', NULL, NULL, 11),
   ('SR12', 'Z14', NULL, 'Go patterns — template injection, exec, unsafe', NULL, 'methodology', 'adv', NULL, NULL, 12),
@@ -651,7 +652,7 @@ INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, c
   ('FF15', 'Z18', NULL, 'Alpine.js / Stimulus inline-JS framework risks', NULL, 'vuln', 'adv', NULL, NULL, 14),
   ('FF16', 'Z18', NULL, 'jQuery legacy — selector injection', NULL, 'vuln', 'std', NULL, NULL, 15);
 
-INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
+INSERT OR IGNORE INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
   ('FF17', 'Z18', NULL, 'jQuery legacy — prototype pollution gadgets', NULL, 'vuln', 'adv', NULL, NULL, 16),
   ('FF18', 'Z18', NULL, 'SPA routing flaws', 'client-side route guards, deep-link injection', 'vuln', 'adv', NULL, NULL, 17),
   ('FF19', 'Z18', NULL, 'Build-tool leaks', 'webpack chunk paths, source map exposure', 'vuln', 'std', NULL, NULL, 18),
@@ -753,7 +754,7 @@ INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, c
   ('CAP04', 'Z23', NULL, 'eWPT / eWPTX — INE Web Application Penetration Tester (X = expert)', NULL, 'capstone', 'std', NULL, NULL, 4),
   ('CAP05', 'Z23', NULL, 'First valid bug bounty submission accepted', NULL, 'capstone', 'std', NULL, NULL, 5);
 
-INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
+INSERT OR IGNORE INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, cwe_id, sort_order) VALUES
   ('CAP06', 'Z23', NULL, 'First high / critical bug bounty submission', NULL, 'capstone', 'std', NULL, NULL, 6),
   ('CAP07', 'Z23', NULL, 'First public CVE', NULL, 'capstone', 'std', NULL, NULL, 7),
   ('CAP08', 'Z23', NULL, 'First $1k+ bounty payout', NULL, 'capstone', 'std', NULL, NULL, 8),
@@ -767,5 +768,3 @@ INSERT INTO node (id, zone_id, parent_id, name, gloss, kind, depth, owasp_tag, c
   ('CAP16', 'Z23', NULL, 'Personal portfolio repo with writeups', NULL, 'capstone', 'std', NULL, NULL, 16),
   ('CAP17', 'Z23', NULL, 'First contracted pentest engagement (paid)', NULL, 'capstone', 'std', NULL, NULL, 17),
   ('CAP18', 'Z23', NULL, 'Mentor someone else through Z01-Z05', 'teaching as mastery proof', 'capstone', 'std', NULL, NULL, 18);
-
-COMMIT;
