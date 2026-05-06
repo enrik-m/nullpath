@@ -13,11 +13,16 @@
     "sql:allow-select",
     "dialog:default",
     "dialog:allow-save",
-    "fs:default",
     "fs:allow-write-file",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "**" }]
+      "allow": [
+        { "path": "$DESKTOP/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$PICTURE/**" },
+        { "path": "$HOME/**" }
+      ]
     }
   ]
 }

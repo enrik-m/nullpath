@@ -5,11 +5,12 @@ import {
   BookOpen,
   BarChart3,
   Trophy,
+  Crosshair,
   Search,
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useUi, type Route, formatHmShort, levelForXp, xpForLevel } from "../store";
+import { useUi, type Route, computeOperatorXp, levelForXp, xpForLevel } from "../store";
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
 import * as db from "../db";
@@ -29,15 +30,18 @@ const NAV: NavItem[] = [
   { icon: Map, label: "ATLAS", route: { name: "atlas" }, shortcut: "1" },
   { icon: BookOpen, label: "CODEX", route: { name: "codex" }, shortcut: "2" },
   { icon: BarChart3, label: "STATS", route: { name: "stats" }, shortcut: "3" },
-  { icon: Trophy, label: "BOUNTIES", route: { name: "bounties" }, shortcut: "4" },
+  { icon: Crosshair, label: "BOUNTIES", route: { name: "bounties" }, shortcut: "4" },
+  { icon: Trophy, label: "TROPHIES", route: { name: "achievements" }, shortcut: "5" },
 ];
 
 export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
   const route = useUi((s) => s.route);
   const go = useUi((s) => s.go);
-  const session = useUi((s) => s.activeSession);
   const drawerOpen = useUi((s) => s.drawerOpen);
   const setDrawerOpen = useUi((s) => s.setDrawerOpen);
+  // Subscribing to dataVersion (bumped on completion / streak / settings
+  // mutation) means we don't refetch all 820 nodes on every navigation.
+  const dataVersion = useUi((s) => s.dataVersion);
   const isMobile = useIsMobile();
   const [profile, setProfile] = useState<{ handle: string; level: number; xp: number; xpInLvl: number; xpNeeded: number } | null>(null);
   const [streak, setStreak] = useState(0);
@@ -46,42 +50,34 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
     let cancelled = false;
     async function load() {
       try {
-        const state = await db.getAppState();
-        const totalSeconds = await db.totalStudySeconds();
-        const all = await Promise.all([
-          ...["foundation", "tool", "recon", "vuln", "defense", "methodology", "capstone"].map(
-            (k) => db.nodesByKind(k as any),
-          ),
+        const [state, allNodes, st] = await Promise.all([
+          db.getAppState(),
+          db.getAllNodes(),
+          db.currentStreak(),
         ]);
-        const allNodes = all.flat();
-        const completedXp = allNodes
-          .filter((n) => n.status === "complete")
-          .reduce((s, n) => s + (n.user_xp || 0), 0);
-        const minuteXp = Math.floor(totalSeconds / 60) * 4;
-        const xp = completedXp + minuteXp;
+        const xp = computeOperatorXp(allNodes);
         const lvl = levelForXp(xp);
         const cur = xpForLevel(lvl);
         const next = xpForLevel(lvl + 1);
-        if (!cancelled) {
-          setProfile({
-            handle: state.handle,
-            level: lvl,
-            xp,
-            xpInLvl: xp - cur,
-            xpNeeded: next - cur,
-          });
-        }
-        const st = await db.currentStreak();
-        if (!cancelled) setStreak(st);
+        if (cancelled) return;
+        setProfile({
+          handle: state.handle,
+          level: lvl,
+          xp,
+          xpInLvl: xp - cur,
+          xpNeeded: next - cur,
+        });
+        setStreak(st);
       } catch {
-        // pre-DB-init: ignore
+        // Pre-DB-init: ignore. Migrations apply on the first DB call,
+        // and the subsequent dataVersion bump will retrigger this load.
       }
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [route, session]);
+  }, [dataVersion]);
 
   const isActive = (r: Route) => {
     if (r.name === "atlas" && (route.name === "atlas" || route.name === "region" || route.name === "zone"))
@@ -227,20 +223,6 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
           />
         )}
 
-        {/* Live session indicator */}
-        {session && !session.paused && (
-          <div className="np-pixel-flat px-3 py-2 flex items-center justify-between border-[var(--color-cyan)]">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-[var(--color-cyan)] np-pulse" />
-              <span className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-cyan)]">
-                LIVE
-              </span>
-            </div>
-            <span className="np-mono text-[15px] text-[var(--color-fg-0)]">
-              {formatHmShort(session.durationSeconds)}
-            </span>
-          </div>
-        )}
       </div>
     </>
   );

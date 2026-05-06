@@ -4,16 +4,21 @@
    Body & UI:  Roboto (readable, ubiquitous)
    Mono/data:  JetBrains Mono (programming-grade legibility)
    Display:    Press Start 2P (chunky NES font — used at 24-48px only)
-   Screen:     Silkscreen (tiny all-caps labels at 10px) */
-@import "@fontsource/roboto/400.css";
-@import "@fontsource/roboto/500.css";
-@import "@fontsource/roboto/700.css";
-@import "@fontsource/jetbrains-mono/400.css";
-@import "@fontsource/jetbrains-mono/500.css";
-@import "@fontsource/jetbrains-mono/700.css";
-@import "@fontsource/press-start-2p/400.css";
-@import "@fontsource/silkscreen/400.css";
-@import "@fontsource/silkscreen/700.css";
+   Screen:     Silkscreen (tiny all-caps labels at 10px)
+
+   Subset to `latin` only — the default fontsource entry points pull every
+   subset (cyrillic, greek, vietnamese, math, symbols), which roughly
+   tripled the bundle. Latin covers our copy + most Western European
+   handles. If the user later wants extended Unicode we can opt in. */
+@import "@fontsource/roboto/latin-400.css";
+@import "@fontsource/roboto/latin-500.css";
+@import "@fontsource/roboto/latin-700.css";
+@import "@fontsource/jetbrains-mono/latin-400.css";
+@import "@fontsource/jetbrains-mono/latin-500.css";
+@import "@fontsource/jetbrains-mono/latin-700.css";
+@import "@fontsource/press-start-2p/latin-400.css";
+@import "@fontsource/silkscreen/latin-400.css";
+@import "@fontsource/silkscreen/latin-700.css";
 
 /* ============================================================
    Nullpath OS — pixel-art retro hacker theme
@@ -242,7 +247,7 @@ input::placeholder, textarea::placeholder {
    PIXEL UI PRIMITIVES (CSS classes used by components)
    ============================================================ */
 
-/* PixelFrame — beveled raised panel like an NES dialog box.
+/* Beveled raised panel like an NES dialog box.
    Two layers of inset shadow give the chunky 2-tone bevel. */
 .np-pixel {
   background: var(--color-bg-2);
@@ -402,18 +407,6 @@ input::placeholder, textarea::placeholder {
   background-repeat: repeat-x;
 }
 
-/* Pixel HR — heavier */
-.np-hr {
-  height: 4px;
-  background:
-    linear-gradient(to bottom,
-      var(--color-border-default) 0,
-      var(--color-border-default) 2px,
-      var(--color-border-shadow) 2px,
-      var(--color-border-shadow) 4px
-    );
-}
-
 /* Glows — chunkier than before */
 .np-glow-cyan {
   box-shadow:
@@ -424,11 +417,6 @@ input::placeholder, textarea::placeholder {
   box-shadow:
     0 0 0 2px var(--color-magenta-dim),
     0 0 16px 2px var(--color-magenta-glow);
-}
-.np-glow-lime {
-  box-shadow:
-    0 0 0 2px var(--color-lime-dim),
-    0 0 16px 2px var(--color-lime-glow);
 }
 
 /* Mono / display fonts as utility classes */
@@ -469,17 +457,6 @@ input::placeholder, textarea::placeholder {
   animation: np-flicker 4s steps(1) infinite;
 }
 
-@keyframes np-glitch-shift {
-  0%, 90%, 100% { transform: translate(0, 0); filter: none; }
-  91% { transform: translate(-2px, 1px); filter: hue-rotate(60deg); }
-  92% { transform: translate(2px, -1px); filter: hue-rotate(-60deg); }
-  93% { transform: translate(0, 2px); filter: hue-rotate(0deg); }
-  94% { transform: translate(0, 0); }
-}
-.np-glitch {
-  animation: np-glitch-shift 5s steps(1) infinite;
-}
-
 /* Glitch text duplicate-layer effect */
 .np-glitch-text {
   position: relative;
@@ -515,12 +492,27 @@ input::placeholder, textarea::placeholder {
   97% { transform: translate(0, 0); opacity: 0; }
 }
 
-@keyframes np-marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-.np-marquee {
-  animation: np-marquee 50s linear infinite;
+/* Honor the OS-level reduced-motion preference. We disable our looping
+   decorations (blink cursor, flicker, glitch overlay) and shorten any
+   pure decoration. Framer-motion components additionally check
+   `useReducedMotion()` so their entrance/exit transitions snap rather
+   than tween. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .np-pulse,
+  .np-blink,
+  .np-flicker,
+  .np-glitch-text::before,
+  .np-glitch-text::after {
+    animation: none !important;
+  }
 }
 
 /* react-flow theme overrides for the pixel look */

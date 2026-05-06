@@ -29,7 +29,6 @@ const REGION_DESCRIPTORS: Record<string, { glyph: string; sigil: string; sprite:
 
 export function AtlasView() {
   const go = useUi((s) => s.go);
-  const setRegions = useUi((s) => s.setRegions);
 
   const [cards, setCards] = useState<RegionCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,15 +38,19 @@ export function AtlasView() {
     async function load() {
       const regions = await db.getRegions();
       if (cancelled) return;
-      setRegions(regions);
-      const out: RegionCard[] = [];
-      for (const r of regions) {
-        const zones = await db.getZones(r.id);
-        const stats = await db.getZoneStats(r.id);
-        const totalNodes = stats.reduce((s, z) => s + z.total_nodes, 0);
-        const completedNodes = stats.reduce((s, z) => s + z.completed_nodes, 0);
-        out.push({ region: r, zoneCount: zones.length, totalNodes, completedNodes });
-      }
+      // Fan out per-region zone + stats reads in parallel — these are
+      // independent and the serial loop was visibly slow on cold start.
+      const out = await Promise.all(
+        regions.map(async (r) => {
+          const [zones, stats] = await Promise.all([
+            db.getZones(r.id),
+            db.getZoneStats(r.id),
+          ]);
+          const totalNodes = stats.reduce((s, z) => s + z.total_nodes, 0);
+          const completedNodes = stats.reduce((s, z) => s + z.completed_nodes, 0);
+          return { region: r, zoneCount: zones.length, totalNodes, completedNodes };
+        }),
+      );
       if (!cancelled) {
         setCards(out);
         setLoading(false);
@@ -57,7 +60,7 @@ export function AtlasView() {
     return () => {
       cancelled = true;
     };
-  }, [setRegions]);
+  }, []);
 
   if (loading) {
     return (

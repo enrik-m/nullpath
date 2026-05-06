@@ -5,33 +5,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { ExternalLink, Pin, PinOff, Trash2 } from "lucide-react";
 import * as db from "../db";
 import type { NodeResourceRow, ResourceKind } from "../db/types";
 import { useUi } from "../store";
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
-
-const KIND_LABEL: Record<ResourceKind, string> = {
-  video: "Video",
-  blog: "Blog",
-  writeup: "Writeup",
-  lab: "Lab",
-  tool: "Tool",
-  misc: "Misc",
-};
-
-const KIND_COLOR: Record<ResourceKind, string> = {
-  video: "#fb7185",
-  blog: "#22d3ee",
-  writeup: "#a3e635",
-  lab: "#e879f9",
-  tool: "#fbbf24",
-  misc: "#6b7088",
-};
-
-const ALL_KINDS: ResourceKind[] = ["video", "blog", "writeup", "lab", "tool", "misc"];
+import {
+  RESOURCE_KIND_LABEL as KIND_LABEL,
+  RESOURCE_KIND_COLOR as KIND_COLOR,
+  RESOURCE_KINDS as ALL_KINDS,
+} from "../lib/resourceKinds";
+import { openSafeUrl } from "../lib/url";
+import { toast } from "../lib/toast";
 
 interface ResourceWithNode extends NodeResourceRow {
   node_name: string;
@@ -97,9 +83,10 @@ export function CodexView() {
 
   async function openExternal(url: string) {
     try {
-      await openUrl(url);
+      await openSafeUrl(url);
     } catch {
-      window.open(url, "_blank");
+      sfx.warn();
+      toast.warn("Refused to open link — only http/https URLs allowed.");
     }
   }
 
@@ -170,6 +157,8 @@ export function CodexView() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="filter..."
+            maxLength={200}
+            aria-label="Filter resources"
             className="ml-auto bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-1.5 text-[13px] text-[var(--color-fg-0)] np-mono focus:border-[var(--color-cyan-dim)] focus:outline-none w-48"
           />
         </div>
@@ -219,6 +208,8 @@ export function CodexView() {
                 {r.url && (
                   <button
                     onClick={() => openExternal(r.url!)}
+                    aria-label="Open link"
+                    title="Open link"
                     className="text-[var(--color-fg-3)] hover:text-[var(--color-cyan)] p-1.5"
                   >
                     <ExternalLink size={13} />
@@ -226,12 +217,16 @@ export function CodexView() {
                 )}
                 <button
                   onClick={() => togglePin(r.id)}
+                  aria-label={r.pinned ? "Unpin resource" : "Pin resource"}
+                  title={r.pinned ? "Unpin" : "Pin"}
                   className="text-[var(--color-fg-3)] hover:text-[var(--color-amber)] p-1.5"
                 >
                   {r.pinned ? <PinOff size={13} /> : <Pin size={13} />}
                 </button>
                 <button
                   onClick={() => deleteOne(r.id)}
+                  aria-label="Delete resource"
+                  title="Delete"
                   className="text-[var(--color-fg-3)] hover:text-[var(--color-rose)] p-1.5"
                 >
                   <Trash2 size={13} />

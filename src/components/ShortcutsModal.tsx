@@ -18,6 +18,7 @@ const SHORTCUTS: Array<{ keys: string[]; label: string; group: string }> = [
   { keys: ["2"], label: "Codex", group: "Navigation" },
   { keys: ["3"], label: "Stats", group: "Navigation" },
   { keys: ["4"], label: "Bounties", group: "Navigation" },
+  { keys: ["5"], label: "Trophies", group: "Navigation" },
   { keys: ["Esc"], label: "Back from zone / region", group: "Navigation" },
   { keys: ["?"], label: "Show this help", group: "Navigation" },
 ];
@@ -25,8 +26,8 @@ const SHORTCUTS: Array<{ keys: string[]; label: string; group: string }> = [
 export function ShortcutsModal({ open, onClose }: Props) {
   if (!open) return null;
   const groups = SHORTCUTS.reduce<Record<string, typeof SHORTCUTS>>((acc, s) => {
-    if (!acc[s.group]) acc[s.group] = [];
-    acc[s.group].push(s);
+    const list = acc[s.group] ?? (acc[s.group] = []);
+    list.push(s);
     return acc;
   }, {});
   return (
@@ -62,6 +63,7 @@ export function ShortcutsModal({ open, onClose }: Props) {
               sfx.click();
               onClose();
             }}
+            aria-label="Close shortcuts"
             className="text-[var(--color-fg-2)] hover:text-[var(--color-fg-0)]"
           >
             <X size={16} />

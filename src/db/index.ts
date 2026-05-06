@@ -12,8 +12,6 @@ import type {
   BountySeverity,
   BountyStatus,
   BountySubmissionRow,
-  NodeEdgeRow,
-  NodeKind,
   NodeNoteRow,
   NodeResourceRow,
   NodeRow,
@@ -21,7 +19,6 @@ import type {
   RefresherRow,
   RegionRow,
   ResourceKind,
-  SessionRow,
   StreakDayRow,
   Visibility,
   ZoneRow,
@@ -35,6 +32,33 @@ export async function db(): Promise<Database> {
   if (_db) return _db;
   _db = await Database.load("sqlite:nullpath.db");
   return _db;
+}
+
+// ---------------------------------------------------------------------------
+// Mutation pub/sub
+//
+// Every write (status flip, XP change, streak record, achievement unlock,
+// bounty CRUD, settings update, full reset) calls `notifyMutation()`. UI
+// layers (Sidebar, achievement engine, etc.) subscribe with `onMutation()`
+// and refetch derived stats — no more "useEffect on route change" hacks.
+// ---------------------------------------------------------------------------
+
+type MutationListener = () => void;
+const mutationListeners = new Set<MutationListener>();
+
+export function onMutation(fn: MutationListener): () => void {
+  mutationListeners.add(fn);
+  return () => mutationListeners.delete(fn);
+}
+
+function notifyMutation(): void {
+  for (const fn of mutationListeners) {
+    try {
+      fn();
+    } catch {
+      // A listener throwing must not block other listeners.
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -165,32 +189,48 @@ export async function setNodeStatus(
       [status, nodeId],
     );
   }
+  notifyMutation();
 }
 
 export async function setNodeXp(nodeId: string, xp: number): Promise<void> {
   const conn = await db();
   await conn.execute("UPDATE node SET user_xp = $1 WHERE id = $2", [xp, nodeId]);
+  notifyMutation();
+}
+
+/**
+ * Escape `%`, `_`, and `\\` so user input doesn't act as LIKE metacharacters.
+ * Without this, typing `_` matches every single character, `%` matches
+ * everything, and a typed `\\` fights with the escape clause we add below.
+ */
+function escapeLike(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
 export async function searchNodes(query: string, limit = 50): Promise<NodeRow[]> {
   const conn = await db();
-  const wildcard = `%${query}%`;
+  const wildcard = `%${escapeLike(query)}%`;
   return conn.select<NodeRow[]>(
     `SELECT * FROM node
-     WHERE name LIKE $1 OR gloss LIKE $1 OR id LIKE $1
+     WHERE name LIKE $1 ESCAPE '\\' OR gloss LIKE $1 ESCAPE '\\' OR id LIKE $1 ESCAPE '\\'
      ORDER BY
-       CASE WHEN id LIKE $1 THEN 0 WHEN name LIKE $1 THEN 1 ELSE 2 END,
+       CASE WHEN id LIKE $1 ESCAPE '\\' THEN 0
+            WHEN name LIKE $1 ESCAPE '\\' THEN 1 ELSE 2 END,
        sort_order
      LIMIT $2`,
     [wildcard, limit],
   );
 }
 
-export async function nodesByKind(kind: NodeKind): Promise<NodeRow[]> {
+/**
+ * Single-query fetch of every node in the graph. The canonical way to
+ * load the full node set; replaces the older fan-out-by-kind pattern
+ * that used to live in several views.
+ */
+export async function getAllNodes(): Promise<NodeRow[]> {
   const conn = await db();
   return conn.select<NodeRow[]>(
-    "SELECT * FROM node WHERE kind = $1 ORDER BY zone_id, sort_order",
-    [kind],
+    "SELECT * FROM node ORDER BY zone_id, sort_order",
   );
 }
 
@@ -229,12 +269,14 @@ export async function addResource(input: {
       input.visibility ?? "private",
     ],
   );
+  notifyMutation();
   return r.lastInsertId ?? 0;
 }
 
 export async function deleteResource(id: number): Promise<void> {
   const conn = await db();
   await conn.execute("DELETE FROM node_resource WHERE id = $1", [id]);
+  notifyMutation();
 }
 
 export async function togglePinResource(id: number): Promise<void> {
@@ -243,6 +285,7 @@ export async function togglePinResource(id: number): Promise<void> {
     "UPDATE node_resource SET pinned = 1 - pinned WHERE id = $1",
     [id],
   );
+  notifyMutation();
 }
 
 export async function getAllResources(filterKind?: ResourceKind): Promise<NodeResourceRow[]> {
@@ -274,93 +317,53 @@ export async function upsertNote(nodeId: string, body: string): Promise<void> {
      ON CONFLICT(node_id) DO UPDATE SET body_md = excluded.body_md, updated_at = excluded.updated_at`,
     [nodeId, body, nowIso()],
   );
-}
-
-// ---------------------------------------------------------------------------
-// Sessions
-// ---------------------------------------------------------------------------
-
-export async function startSession(focusNodeId: string | null): Promise<number> {
-  const conn = await db();
-  const r = await conn.execute(
-    "INSERT INTO session (started_at, focus_node_id) VALUES ($1, $2)",
-    [nowIso(), focusNodeId],
-  );
-  return r.lastInsertId ?? 0;
-}
-
-export async function updateSession(
-  id: number,
-  patch: { duration_seconds?: number; idle_seconds?: number; focus_node_id?: string | null; note?: string | null },
-): Promise<void> {
-  const conn = await db();
-  const sets: string[] = [];
-  const args: unknown[] = [];
-  let i = 1;
-  for (const [k, v] of Object.entries(patch)) {
-    sets.push(`${k} = $${i}`);
-    args.push(v);
-    i++;
-  }
-  if (sets.length === 0) return;
-  args.push(id);
-  await conn.execute(`UPDATE session SET ${sets.join(", ")} WHERE id = $${i}`, args);
-}
-
-export async function endSession(
-  id: number,
-  duration_seconds: number,
-  idle_seconds: number,
-  auto_ended: boolean,
-): Promise<void> {
-  const conn = await db();
-  await conn.execute(
-    `UPDATE session
-     SET ended_at = $1, duration_seconds = $2, idle_seconds = $3, auto_ended = $4
-     WHERE id = $5`,
-    [nowIso(), duration_seconds, idle_seconds, auto_ended ? 1 : 0, id],
-  );
-}
-
-export async function recentSessions(limit = 20): Promise<SessionRow[]> {
-  const conn = await db();
-  return conn.select<SessionRow[]>(
-    "SELECT * FROM session WHERE ended_at IS NOT NULL ORDER BY started_at DESC LIMIT $1",
-    [limit],
-  );
-}
-
-export async function totalStudySeconds(): Promise<number> {
-  const conn = await db();
-  const rows = await conn.select<{ total: number }[]>(
-    "SELECT COALESCE(SUM(duration_seconds), 0) AS total FROM session",
-  );
-  return rows[0]?.total ?? 0;
-}
-
-export async function studySecondsByZone(): Promise<Array<{ zone_id: string; seconds: number }>> {
-  const conn = await db();
-  return conn.select<Array<{ zone_id: string; seconds: number }>>(
-    `SELECT n.zone_id AS zone_id, COALESCE(SUM(s.duration_seconds), 0) AS seconds
-     FROM session s
-     JOIN node n ON n.id = s.focus_node_id
-     WHERE s.ended_at IS NOT NULL
-     GROUP BY n.zone_id`,
-  );
+  notifyMutation();
 }
 
 // ---------------------------------------------------------------------------
 // Streak
 // ---------------------------------------------------------------------------
 
-export async function recordStudyDay(seconds: number): Promise<void> {
+/**
+ * Wipes all user-generated data while preserving the seeded skill graph.
+ * Single transaction so a partial reset can't leave orphans.
+ */
+export async function resetAllProgress(): Promise<void> {
+  const conn = await db();
+  // sqlx-tauri-plugin doesn't expose multi-statement transactions cleanly,
+  // so issue each statement; SQLite implicit-transaction-per-stmt is fine
+  // here — DELETE order respects FK cascades, all dependents go first.
+  await conn.execute("DELETE FROM node_resource");
+  await conn.execute("DELETE FROM node_note");
+  await conn.execute("DELETE FROM node_edge");
+  await conn.execute("DELETE FROM refresher");
+  await conn.execute("DELETE FROM bounty_submission");
+  await conn.execute("DELETE FROM streak_day");
+  await conn.execute("DELETE FROM achievement");
+  await conn.execute(
+    "UPDATE node SET status='available', user_xp=0, completed_at=NULL, started_at=NULL",
+  );
+  await conn.execute(
+    "UPDATE app_state SET freeze_tokens=0, last_freeze_award_week=NULL WHERE id=1",
+  );
+  notifyMutation();
+}
+
+/**
+ * Record one node-completion event for today's date. Drives the streak
+ * counter and the 8-week heatmap. The streak_day.sessions column counts
+ * completion events; first event of the day inserts, subsequent events
+ * bump the counter.
+ */
+export async function recordCompletionDay(): Promise<void> {
   const conn = await db();
   const day = localDayKey();
   await conn.execute(
-    `INSERT INTO streak_day (day, sessions, seconds_studied) VALUES ($1, 1, $2)
-     ON CONFLICT(day) DO UPDATE SET sessions = sessions + 1, seconds_studied = seconds_studied + excluded.seconds_studied`,
-    [day, seconds],
+    `INSERT INTO streak_day (day, sessions) VALUES ($1, 1)
+     ON CONFLICT(day) DO UPDATE SET sessions = sessions + 1`,
+    [day],
   );
+  notifyMutation();
 }
 
 export async function getStreakDays(limit = 90): Promise<StreakDayRow[]> {
@@ -379,7 +382,7 @@ export async function currentStreak(): Promise<number> {
   // Walk back from today (or yesterday if no entry today yet); allow days
   // that used a freeze token to bridge the gap.
   let count = 0;
-  let cursor = new Date();
+  const cursor = new Date();
   const todayKey = localDayKey(cursor);
   const map = new Map(days.map((d) => [d.day, d]));
 
@@ -407,8 +410,35 @@ export async function currentStreak(): Promise<number> {
 export async function getAppState(): Promise<AppStateRow> {
   const conn = await db();
   const rows = await conn.select<AppStateRow[]>("SELECT * FROM app_state WHERE id = 1");
-  return rows[0]!;
+  // Migration 001 seeds row id=1, so this should always exist. If we're
+  // ever called against a DB where it doesn't (corrupted file, manual
+  // deletion), fail loud with a useful message instead of crashing on
+  // `rows[0]!.handle` two levels down the stack.
+  const row = rows[0];
+  if (!row) {
+    throw new Error(
+      "app_state row id=1 missing — DB may be corrupted or migrations didn't run",
+    );
+  }
+  return row;
 }
+
+/**
+ * Whitelist of `app_state` columns that callers are allowed to patch.
+ * Anything not in this set is silently dropped — defense-in-depth against
+ * a future caller passing through user-influenced keys to the SQL builder.
+ */
+const APP_STATE_UPDATABLE: ReadonlySet<string> = new Set([
+  "handle",
+  "idle_threshold_seconds",
+  "idle_hard_cap_seconds",
+  "scanlines_enabled",
+  "sound_enabled",
+  "freeze_tokens",
+  "freeze_tokens_max",
+  "last_freeze_award_week",
+  "onboarded_at",
+]);
 
 export async function updateAppState(patch: Partial<AppStateRow>): Promise<void> {
   const conn = await db();
@@ -416,13 +446,14 @@ export async function updateAppState(patch: Partial<AppStateRow>): Promise<void>
   const args: unknown[] = [];
   let i = 1;
   for (const [k, v] of Object.entries(patch)) {
-    if (k === "id") continue;
+    if (!APP_STATE_UPDATABLE.has(k)) continue;
     sets.push(`${k} = $${i}`);
     args.push(v);
     i++;
   }
   if (sets.length === 0) return;
   await conn.execute(`UPDATE app_state SET ${sets.join(", ")} WHERE id = 1`, args);
+  notifyMutation();
 }
 
 // ---------------------------------------------------------------------------
@@ -457,6 +488,7 @@ export async function unlockAchievement(input: {
       [input.id, input.name, input.description ?? null, input.icon ?? null, nowIso()],
     );
   }
+  notifyMutation();
   return true;
 }
 
@@ -499,8 +531,22 @@ export async function addBounty(input: {
       input.notes ?? null,
     ],
   );
+  notifyMutation();
   return r.lastInsertId ?? 0;
 }
+
+/** Same idea as `APP_STATE_UPDATABLE` — explicit allowlist on the patch keys. */
+const BOUNTY_UPDATABLE: ReadonlySet<string> = new Set([
+  "program",
+  "title",
+  "severity",
+  "status",
+  "payout_usd",
+  "submitted_at",
+  "cve_id",
+  "related_node",
+  "notes",
+]);
 
 export async function updateBounty(
   id: number,
@@ -511,7 +557,7 @@ export async function updateBounty(
   const args: unknown[] = [];
   let i = 1;
   for (const [k, v] of Object.entries(patch)) {
-    if (k === "id") continue;
+    if (!BOUNTY_UPDATABLE.has(k)) continue;
     sets.push(`${k} = $${i}`);
     args.push(v);
     i++;
@@ -519,11 +565,13 @@ export async function updateBounty(
   if (sets.length === 0) return;
   args.push(id);
   await conn.execute(`UPDATE bounty_submission SET ${sets.join(", ")} WHERE id = $${i}`, args);
+  notifyMutation();
 }
 
 export async function deleteBounty(id: number): Promise<void> {
   const conn = await db();
   await conn.execute("DELETE FROM bounty_submission WHERE id = $1", [id]);
+  notifyMutation();
 }
 
 export async function bountyTotals(): Promise<{
@@ -550,11 +598,14 @@ export async function bountyTotals(): Promise<{
 // Spaced repetition refresher queue
 // ---------------------------------------------------------------------------
 
-const REFRESHER_INTERVALS_DAYS = [1, 3, 7, 21, 60, 180];
+const REFRESHER_INTERVALS_DAYS = [1, 3, 7, 21, 60, 180] as const;
 
 function refresherDueDate(streak: number): string {
   const idx = Math.min(streak, REFRESHER_INTERVALS_DAYS.length - 1);
-  const days = REFRESHER_INTERVALS_DAYS[idx];
+  // The literal-tuple `as const` plus the clamped idx makes this provably
+  // in-range; the `?? 1` fallback satisfies noUncheckedIndexedAccess
+  // without ever firing in practice.
+  const days = REFRESHER_INTERVALS_DAYS[idx] ?? 1;
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d.toISOString();
@@ -569,6 +620,7 @@ export async function scheduleRefresher(nodeId: string): Promise<void> {
      ON CONFLICT(node_id) DO UPDATE SET streak = 0, due_at = excluded.due_at`,
     [nodeId, due],
   );
+  notifyMutation();
 }
 
 export async function dueRefreshers(limit = 10): Promise<RefresherRow[]> {
@@ -577,6 +629,89 @@ export async function dueRefreshers(limit = 10): Promise<RefresherRow[]> {
     "SELECT * FROM refresher WHERE due_at <= datetime('now') ORDER BY due_at ASC LIMIT $1",
     [limit],
   );
+}
+
+/**
+ * Same as `dueRefreshers` but joins each row with its node in a single
+ * query. Replaces the N+1 pattern of fetching refreshers then doing
+ * `Promise.all(rows.map(r => getNode(r.node_id)))`.
+ */
+export async function dueRefreshersWithNode(
+  limit = 10,
+): Promise<Array<RefresherRow & { node: NodeRow | null }>> {
+  const conn = await db();
+  // Aliased columns so node fields don't collide with refresher fields.
+  // We rebuild the shape on the JS side rather than relying on dialect.
+  const rows = await conn.select<
+    Array<{
+      id: number;
+      node_id: string;
+      streak: number;
+      last_at: string | null;
+      due_at: string;
+      n_id: string | null;
+      n_zone_id: string | null;
+      n_parent_id: string | null;
+      n_kind: NodeRow["kind"] | null;
+      n_depth: NodeRow["depth"] | null;
+      n_status: NodeRow["status"] | null;
+      n_name: string | null;
+      n_gloss: string | null;
+      n_owasp_tag: string | null;
+      n_cwe_id: string | null;
+      n_sort_order: number | null;
+      n_user_xp: number | null;
+      n_completed_at: string | null;
+      n_started_at: string | null;
+    }>
+  >(
+    `SELECT r.id, r.node_id, r.streak, r.last_at, r.due_at,
+            n.id          AS n_id,
+            n.zone_id     AS n_zone_id,
+            n.parent_id   AS n_parent_id,
+            n.kind        AS n_kind,
+            n.depth       AS n_depth,
+            n.status      AS n_status,
+            n.name        AS n_name,
+            n.gloss       AS n_gloss,
+            n.owasp_tag   AS n_owasp_tag,
+            n.cwe_id      AS n_cwe_id,
+            n.sort_order  AS n_sort_order,
+            n.user_xp     AS n_user_xp,
+            n.completed_at AS n_completed_at,
+            n.started_at   AS n_started_at
+       FROM refresher r
+       LEFT JOIN node n ON n.id = r.node_id
+      WHERE r.due_at <= datetime('now')
+      ORDER BY r.due_at ASC
+      LIMIT $1`,
+    [limit],
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    node_id: r.node_id,
+    streak: r.streak,
+    last_at: r.last_at,
+    due_at: r.due_at,
+    node: r.n_id
+      ? {
+          id: r.n_id,
+          zone_id: r.n_zone_id!,
+          parent_id: r.n_parent_id,
+          kind: r.n_kind!,
+          depth: r.n_depth!,
+          status: r.n_status!,
+          name: r.n_name!,
+          gloss: r.n_gloss,
+          owasp_tag: r.n_owasp_tag,
+          cwe_id: r.n_cwe_id,
+          sort_order: r.n_sort_order ?? 0,
+          user_xp: r.n_user_xp ?? 0,
+          completed_at: r.n_completed_at,
+          started_at: r.n_started_at,
+        }
+      : null,
+  }));
 }
 
 export async function ackRefresher(nodeId: string, recalled: boolean): Promise<void> {
@@ -592,19 +727,6 @@ export async function ackRefresher(nodeId: string, recalled: boolean): Promise<v
     "UPDATE refresher SET streak = $1, last_at = $2, due_at = $3 WHERE node_id = $4",
     [newStreak, nowIso(), refresherDueDate(newStreak), nodeId],
   );
+  notifyMutation();
 }
 
-// ---------------------------------------------------------------------------
-// Edges (for Trail mode and graph rendering)
-// ---------------------------------------------------------------------------
-
-export async function getEdgesForZone(zoneId: string): Promise<NodeEdgeRow[]> {
-  const conn = await db();
-  return conn.select<NodeEdgeRow[]>(
-    `SELECT e.from_id, e.to_id FROM node_edge e
-     JOIN node f ON f.id = e.from_id
-     JOIN node t ON t.id = e.to_id
-     WHERE f.zone_id = $1 AND t.zone_id = $1`,
-    [zoneId],
-  );
-}

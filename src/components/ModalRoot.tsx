@@ -1,51 +1,85 @@
 /**
  * ModalRoot — single mount point that listens to ui.modal and renders the
- * right modal. Handles backdrop, escape key, focus trap basics.
+ * right modal. Handles backdrop and escape key.
  *
- * Modal types: echo-prompt, idle-resume, session-end, level-up, achievement,
- * daily-briefing.
+ * Modal kinds: echo-prompt, level-up, achievement, daily-briefing.
  */
 
-import { type PropsWithChildren, useEffect, useState } from "react";
+import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Coffee, Zap, Trophy, Sparkles, X, Save } from "lucide-react";
-import { useUi, formatHmShort, formatHms } from "../store";
+import { CheckCircle2, Zap, Trophy, Sparkles, Save } from "lucide-react";
+import { useUi } from "../store";
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
 import * as db from "../db";
 import type { NodeRow } from "../db/types";
 import { Button } from "./ui/Button";
+import { LIMITS } from "../lib/limits";
+import { resolveAchievementIcon } from "../lib/achievementIcons";
+
+/** All focusable selectors we tab between when a modal is open. */
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export function ModalRoot() {
   const modal = useUi((s) => s.modal);
   const showModal = useUi((s) => s.showModal);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
 
-  // Esc dismisses (where safe)
+  // Esc dismisses + focus trap. While a modal is mounted we cycle Tab
+  // within `containerRef` and restore focus to whatever was focused before
+  // the modal opened on dismiss (standard accessibility pattern).
   useEffect(() => {
+    if (!modal) return;
+    lastFocusedRef.current = document.activeElement as HTMLElement | null;
+
+    // Defer to give framer-motion time to mount the modal DOM
+    const focusTimer = window.setTimeout(() => {
+      const root = containerRef.current;
+      if (!root) return;
+      const first = root.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      first?.focus();
+    }, 60);
+
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && modal) {
-        // Idle-resume modal must be acknowledged — Esc treats as "Resume"
-        if (modal.kind === "idle-resume") return;
+      if (e.key === "Escape") {
         showModal(null);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const root = containerRef.current;
+      if (!root) return;
+      const items = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!first || !last) {
+        e.preventDefault();
+        return;
+      }
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && (active === first || !root.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !root.contains(active))) {
+        e.preventDefault();
+        first.focus();
       }
     }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener("keydown", onKey);
+      // Restore focus to whatever opened the modal
+      lastFocusedRef.current?.focus?.();
+    };
   }, [modal, showModal]);
 
   return (
     <AnimatePresence>
       {modal && (
-        <Backdrop>
+        <Backdrop containerRef={containerRef}>
           {modal.kind === "echo-prompt" && <EchoPromptModal nodeId={modal.nodeId} />}
-          {modal.kind === "idle-resume" && <IdleResumeModal idleSeconds={modal.idleSeconds} />}
-          {modal.kind === "session-end" && (
-            <SessionEndModal
-              durationSeconds={modal.durationSeconds}
-              xpEarned={modal.xpEarned}
-              nodeId={modal.nodeId}
-            />
-          )}
           {modal.kind === "level-up" && (
             <LevelUpModal oldLevel={modal.oldLevel} newLevel={modal.newLevel} />
           )}
@@ -54,6 +88,7 @@ export function ModalRoot() {
               id={modal.id}
               name={modal.name}
               description={modal.description}
+              icon={modal.icon}
             />
           )}
           {modal.kind === "daily-briefing" && <DailyBriefingModal />}
@@ -63,9 +98,14 @@ export function ModalRoot() {
   );
 }
 
-function Backdrop({ children }: PropsWithChildren) {
+function Backdrop({
+  children,
+  containerRef,
+}: PropsWithChildren<{ containerRef: React.RefObject<HTMLDivElement | null> }>) {
   return (
     <motion.div
+      role="dialog"
+      aria-modal="true"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -77,6 +117,7 @@ function Backdrop({ children }: PropsWithChildren) {
       }}
     >
       <motion.div
+        ref={containerRef}
         initial={{ opacity: 0, scale: 0.95, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 6 }}
@@ -140,6 +181,8 @@ function EchoPromptModal({ nodeId }: { nodeId: string }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="In your own words..."
+        maxLength={LIMITS.noteBody}
+        aria-label="Echo summary"
         className="w-full mt-3 bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-2 text-[14px] text-[var(--color-fg-0)] np-mono focus:border-[var(--color-cyan-dim)] focus:outline-none min-h-[100px] resize-y"
       />
       <div className="flex gap-2 justify-end mt-4">
@@ -148,160 +191,6 @@ function EchoPromptModal({ nodeId }: { nodeId: string }) {
         </Button>
         <Button variant="primary" size="sm" onClick={save}>
           <Save size={12} /> Save echo
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ===========================================================================
-// Idle Resume modal — fires when OS idle threshold crosses while session live
-// ===========================================================================
-function IdleResumeModal({ idleSeconds }: { idleSeconds: number }) {
-  const showModal = useUi((s) => s.showModal);
-  const session = useUi((s) => s.activeSession);
-  const setSession = useUi((s) => s.setSession);
-  const patchSession = useUi((s) => s.patchSession);
-
-  async function resume() {
-    sfx.click();
-    if (session) {
-      // Discard nothing: keep counting from where we paused
-      patchSession({ paused: false, pausedAtMs: null });
-    }
-    showModal(null);
-  }
-
-  async function discardBreak() {
-    sfx.click();
-    if (session) {
-      // Subtract the idle gap from durationSeconds so it reads as "didn't count"
-      const gapSeconds = session.pausedAtMs
-        ? Math.floor((Date.now() - session.pausedAtMs) / 1000)
-        : idleSeconds;
-      const newDuration = Math.max(0, session.durationSeconds - gapSeconds);
-      patchSession({
-        paused: false,
-        pausedAtMs: null,
-        durationSeconds: newDuration,
-        idleSeconds: session.idleSeconds + gapSeconds,
-      });
-      await db.updateSession(session.id, {
-        duration_seconds: newDuration,
-        idle_seconds: session.idleSeconds + gapSeconds,
-      });
-    }
-    showModal(null);
-  }
-
-  async function endNow() {
-    sfx.complete();
-    if (session) {
-      await db.endSession(session.id, session.durationSeconds, session.idleSeconds, false);
-      await db.recordStudyDay(session.durationSeconds);
-      const xp = Math.floor(session.durationSeconds / 60) * 4;
-      setSession(null);
-      showModal({
-        kind: "session-end",
-        durationSeconds: session.durationSeconds,
-        xpEarned: xp,
-        nodeId: session.focusNodeId,
-      });
-    } else {
-      showModal(null);
-    }
-  }
-
-  return (
-    <div className="np-pixel rounded-lg w-[480px] max-w-full p-4 sm:p-6 border-[var(--color-amber)] shadow-[0_0_24px_color-mix(in_oklab,var(--color-amber)_30%,transparent)]">
-      <div className="flex items-center gap-2">
-        <Coffee size={16} className="text-[var(--color-amber)]" />
-        <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-amber)]">
-          IDLE DETECTED · {formatHmShort(idleSeconds)}
-        </div>
-      </div>
-      <div className="mt-2 text-xl font-bold text-[var(--color-fg-0)] tracking-tight">
-        Still in there?
-      </div>
-      <div className="text-[var(--color-fg-2)] text-[14px] mt-3 leading-relaxed">
-        No keyboard or mouse activity detected on the system. Session is paused.
-        Pick how to handle the gap:
-      </div>
-      <div className="flex flex-col gap-2 mt-4">
-        <Button variant="primary" size="md" onClick={resume}>
-          Resume — keep counting
-        </Button>
-        <Button variant="ghost" size="md" onClick={discardBreak}>
-          That was a break — discard the idle gap
-        </Button>
-        <Button variant="danger" size="md" onClick={endNow}>
-          End session
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ===========================================================================
-// Session End summary
-// ===========================================================================
-function SessionEndModal({
-  durationSeconds,
-  xpEarned,
-  nodeId,
-}: {
-  durationSeconds: number;
-  xpEarned: number;
-  nodeId: string | null;
-}) {
-  const showModal = useUi((s) => s.showModal);
-  const [node, setNode] = useState<NodeRow | null>(null);
-  const [streak, setStreak] = useState(0);
-
-  useEffect(() => {
-    if (nodeId) db.getNode(nodeId).then(setNode);
-    db.currentStreak().then(setStreak);
-  }, [nodeId]);
-
-  return (
-    <div className="np-pixel rounded-lg w-[480px] max-w-full p-4 sm:p-6 border-[var(--color-cyan-dim)] np-glow-cyan">
-      <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-cyan)]">
-        // session ended
-      </div>
-      <div className="mt-2 text-3xl font-bold text-[var(--color-fg-0)] tabular-nums tracking-tight">
-        {formatHms(durationSeconds)}
-      </div>
-      <div className="np-divider my-4" />
-      <div className="grid grid-cols-3 gap-3 np-mono">
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-fg-3)]">
-            xp earned
-          </div>
-          <div className="text-xl text-[var(--color-cyan)]">+{xpEarned}</div>
-        </div>
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-fg-3)]">
-            streak
-          </div>
-          <div className="text-xl text-[var(--color-amber)]">{streak}d</div>
-        </div>
-        <div>
-          <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-fg-3)]">
-            focus
-          </div>
-          <div className="text-xs text-[var(--color-fg-1)] truncate">
-            {node ? `${node.id}` : "—"}
-          </div>
-        </div>
-      </div>
-      {node && (
-        <div className="mt-3 np-mono text-[12px] text-[var(--color-fg-2)] truncate">
-          {node.name}
-        </div>
-      )}
-      <div className="flex justify-end mt-5">
-        <Button variant="primary" size="md" onClick={() => showModal(null)}>
-          OK
         </Button>
       </div>
     </div>
@@ -348,25 +237,49 @@ function LevelUpModal({ oldLevel, newLevel }: { oldLevel: number; newLevel: numb
 function AchievementModal({
   name,
   description,
+  icon,
 }: {
   id: string;
   name: string;
   description: string;
+  icon: string;
 }) {
   const showModal = useUi((s) => s.showModal);
+  // Lazy-required to avoid a circular import (achievements.ts → ModalRoot
+  // would loop). resolveAchievementIcon is pure synchronous string→component.
+  const Icon = resolveAchievementIcon(icon);
   useEffect(() => {
     sfx.success();
   }, []);
   return (
     <div className="np-pixel rounded-lg w-[440px] max-w-full p-4 sm:p-6 border-[var(--color-amber)] shadow-[0_0_28px_color-mix(in_oklab,var(--color-amber)_35%,transparent)]">
       <div className="flex items-center gap-2">
-        <Trophy size={16} className="text-[var(--color-amber)]" />
+        <Trophy size={14} className="text-[var(--color-amber)]" />
         <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-amber)]">
           ACHIEVEMENT UNLOCKED
         </div>
       </div>
-      <div className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight">{name}</div>
-      <div className="text-[var(--color-fg-2)] text-[14px] mt-3 leading-relaxed">
+
+      {/* Trophy badge — themed icon on a chunky pixel tile, amber glow. */}
+      <div className="flex items-center gap-4 mt-4">
+        <div
+          className="np-pixel-flat shrink-0 w-16 h-16 flex items-center justify-center"
+          style={{
+            borderColor: "var(--color-amber)",
+            background: "color-mix(in oklab, var(--color-amber) 12%, var(--color-bg-2))",
+            boxShadow: "0 0 18px color-mix(in oklab, var(--color-amber) 40%, transparent)",
+          }}
+        >
+          <Icon size={30} className="text-[var(--color-amber)]" strokeWidth={2.4} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-2xl font-bold text-[var(--color-fg-0)] tracking-tight leading-tight">
+            {name}
+          </div>
+        </div>
+      </div>
+
+      <div className="text-[var(--color-fg-2)] text-[14px] mt-4 leading-relaxed">
         {description}
       </div>
       <div className="flex justify-end mt-4">
@@ -400,10 +313,7 @@ function DailyBriefingModal() {
 
       // Pick 3 suggestions: 1 from your weakest in-progress zone, 2 from
       // available std-depth in zones you've started.
-      const allKinds = (
-        ["foundation", "tool", "recon", "vuln", "defense", "methodology", "capstone"] as const
-      ).map((k) => db.nodesByKind(k));
-      const all = (await Promise.all(allKinds)).flat();
+      const all = await db.getAllNodes();
       const open = all.filter((n) => n.status === "available" && (n.depth === "std" || n.depth === "intro"));
       const inProg = all.filter((n) => n.status === "in_progress");
       const picks: NodeRow[] = [];
@@ -412,16 +322,18 @@ function DailyBriefingModal() {
       // Then random open with std depth
       while (picks.length < 3 && open.length > 0) {
         const idx = Math.floor(Math.random() * open.length);
-        picks.push(open[idx]);
+        const pick = open[idx];
+        if (!pick) break;
+        picks.push(pick);
         open.splice(idx, 1);
       }
       setSuggestions(picks.slice(0, 3));
 
       // Hot zone — rotates by day-of-year so it's deterministic per day
       const zones = await db.getZones("web");
-      if (zones.length > 0) {
-        const dayIdx = Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % zones.length;
-        const z = zones[dayIdx];
+      const dayIdx = Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % zones.length;
+      const z = zones[dayIdx];
+      if (z) {
         setHotZone({ id: z.id, name: z.name, accent: "#22d3ee" });
       }
     }
@@ -505,6 +417,3 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
     </div>
   );
 }
-
-// Just to satisfy unused-var detector for the X import; keep it for use in other modals
-void X;

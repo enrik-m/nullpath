@@ -12,12 +12,10 @@
 
 import { useCallback, useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   X,
   CheckCircle2,
   PlayCircle,
-  Target,
   Plus,
   Pin,
   PinOff,
@@ -29,8 +27,15 @@ import * as db from "../db";
 import type { NodeRow, NodeResourceRow, ResourceKind } from "../db/types";
 import { useUi, xpForCompletingNode } from "../store";
 import { sfx } from "../lib/sfx";
-import { evaluateAchievements } from "../lib/achievements";
 import { cn } from "../lib/cn";
+import {
+  RESOURCE_KIND_LABEL,
+  RESOURCE_KIND_COLOR,
+  RESOURCE_KINDS,
+} from "../lib/resourceKinds";
+import { isSafeUrl, openSafeUrl } from "../lib/url";
+import { toast } from "../lib/toast";
+import { LIMITS } from "../lib/limits";
 import { DepthTag, StatusTag, KindTag } from "./ui/Tag";
 import { Button } from "./ui/Button";
 import { useIsMobile } from "../hooks/useMediaQuery";
@@ -42,29 +47,8 @@ interface NodePanelProps {
   onChanged: () => void;
 }
 
-const RESOURCE_KIND_LABEL: Record<ResourceKind, string> = {
-  video: "Video",
-  blog: "Blog",
-  writeup: "Writeup",
-  lab: "Lab",
-  tool: "Tool",
-  misc: "Misc",
-};
-
-const RESOURCE_KIND_COLOR: Record<ResourceKind, string> = {
-  video: "#fb7185",
-  blog: "#22d3ee",
-  writeup: "#a3e635",
-  lab: "#e879f9",
-  tool: "#fbbf24",
-  misc: "#6b7088",
-};
-
 export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps) {
   const showModal = useUi((s) => s.showModal);
-  const session = useUi((s) => s.activeSession);
-  const setSession = useUi((s) => s.setSession);
-  const patchSession = useUi((s) => s.patchSession);
   const selectNode = useUi((s) => s.selectNode);
   const isMobile = useIsMobile();
 
@@ -135,12 +119,13 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
     await db.setNodeStatus(node.id, "complete");
     await db.setNodeXp(node.id, (node.user_xp || 0) + xp);
     await db.scheduleRefresher(node.id);
+    await db.recordCompletionDay();
     await reload();
     onChanged();
-    // Echo Mode prompt — fires first, then achievement engine after dismiss
+    // Echo Mode prompt — fires immediately. The achievement engine is
+    // wired to db.onMutation in App.tsx so any unlocks queue behind this
+    // modal automatically; no manual dispatch needed.
     showModal({ kind: "echo-prompt", nodeId: node.id });
-    // Evaluate after a short delay so the echo modal stacks first
-    window.setTimeout(() => evaluateAchievements(), 4000);
   }
 
   async function markAvailable() {
@@ -151,42 +136,24 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
     onChanged();
   }
 
-  // Session focus
-  async function setAsFocus() {
-    if (!node) return;
-    sfx.success();
-    if (session) {
-      await db.updateSession(session.id, { focus_node_id: node.id });
-      patchSession({ focusNodeId: node.id });
-    } else {
-      const id = await db.startSession(node.id);
-      setSession({
-        id,
-        startedAtMs: Date.now(),
-        durationSeconds: 0,
-        idleSeconds: 0,
-        paused: false,
-        focusNodeId: node.id,
-        huntMode: false,
-        pausedAtMs: null,
-      });
-    }
-    if (node.status === "available") {
-      await db.setNodeStatus(node.id, "in_progress");
-      await reload();
-      onChanged();
-    }
-  }
-
   // Resource actions
   async function addResource() {
     if (!newRes.title.trim()) return;
+    const rawUrl = newRes.url.trim();
+    // Reject anything that isn't an http/https URL — `javascript:`,
+    // `file://`, custom-protocol nonsense are XSS / footgun vectors
+    // when later passed to the OS opener.
+    if (rawUrl && !isSafeUrl(rawUrl)) {
+      sfx.warn();
+      toast.error("URL must start with http:// or https://");
+      return;
+    }
     sfx.click();
     await db.addResource({
       node_id: nodeId,
       kind: newRes.kind,
       title: newRes.title.trim(),
-      url: newRes.url.trim() || null,
+      url: rawUrl || null,
       note: newRes.note.trim() || null,
     });
     setNewRes({ kind: newRes.kind, title: "", url: "", note: "" });
@@ -211,9 +178,13 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
 
   async function openExternal(url: string) {
     try {
-      await openUrl(url);
+      await openSafeUrl(url);
     } catch {
-      window.open(url, "_blank");
+      // openSafeUrl throws on disallowed schemes — surface a click sound
+      // and a toast, but don't fall back to window.open (same scheme
+      // constraints apply).
+      sfx.warn();
+      toast.warn("Refused to open link — only http/https URLs allowed.");
     }
   }
 
@@ -316,10 +287,6 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
               RE-OPEN
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={setAsFocus}>
-            <Target size={11} />
-            FOCUS
-          </Button>
         </div>
 
         {/* Scrollable body */}
@@ -385,7 +352,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                 className="np-pixel-flat p-3 mb-3 space-y-2"
               >
                 <div className="flex gap-1.5 flex-wrap">
-                  {(["video", "blog", "writeup", "lab", "tool", "misc"] as ResourceKind[]).map(
+                  {RESOURCE_KINDS.map(
                     (k) => (
                       <button
                         key={k}
@@ -414,18 +381,25 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                   placeholder="Title"
                   value={newRes.title}
                   onChange={(e) => setNewRes({ ...newRes, title: e.target.value })}
+                  maxLength={LIMITS.resourceTitle}
+                  aria-label="Resource title"
                   className="w-full bg-[var(--color-bg-3)] border border-[var(--color-border-default)] rounded px-2 py-1.5 text-sm text-[var(--color-fg-0)] focus:border-[var(--color-cyan-dim)]"
                 />
                 <input
                   placeholder="URL (optional)"
                   value={newRes.url}
                   onChange={(e) => setNewRes({ ...newRes, url: e.target.value })}
+                  maxLength={LIMITS.resourceUrl}
+                  aria-label="Resource URL"
+                  type="url"
                   className="w-full bg-[var(--color-bg-3)] border border-[var(--color-border-default)] rounded px-2 py-1.5 text-[13px] text-[var(--color-fg-1)] np-mono focus:border-[var(--color-cyan-dim)]"
                 />
                 <input
                   placeholder="Quick note (optional)"
                   value={newRes.note}
                   onChange={(e) => setNewRes({ ...newRes, note: e.target.value })}
+                  maxLength={LIMITS.resourceNote}
+                  aria-label="Resource note"
                   className="w-full bg-[var(--color-bg-3)] border border-[var(--color-border-default)] rounded px-2 py-1.5 text-[13px] text-[var(--color-fg-1)] focus:border-[var(--color-cyan-dim)]"
                 />
                 <div className="flex gap-2 justify-end">
@@ -479,6 +453,8 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                           sfx.click();
                           openExternal(r.url!);
                         }}
+                        aria-label="Open link"
+                        title="Open link"
                         className="text-[var(--color-fg-3)] hover:text-[var(--color-cyan)] p-1"
                       >
                         <ExternalLink size={12} />
@@ -486,12 +462,16 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                     )}
                     <button
                       onClick={() => togglePin(r.id)}
+                      aria-label={r.pinned ? "Unpin resource" : "Pin resource"}
+                      title={r.pinned ? "Unpin" : "Pin"}
                       className="text-[var(--color-fg-3)] hover:text-[var(--color-amber)] p-1"
                     >
                       {r.pinned ? <PinOff size={12} /> : <Pin size={12} />}
                     </button>
                     <button
                       onClick={() => deleteResource(r.id)}
+                      aria-label="Delete resource"
+                      title="Delete"
                       className="text-[var(--color-fg-3)] hover:text-[var(--color-rose)] p-1"
                     >
                       <Trash2 size={12} />
@@ -519,6 +499,8 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
               onChange={(e) => onNoteChange(e.target.value)}
               onBlur={flushNote}
               placeholder="freeform markdown notes — concepts, payloads, links, anything"
+              maxLength={LIMITS.noteBody}
+              aria-label="Node notes"
               className="np-pixel-inset w-full px-3 py-2 text-[14px] text-[var(--color-fg-0)] np-mono leading-[1.55] focus:outline-none min-h-[140px] resize-y"
             />
           </section>

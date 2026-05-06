@@ -14,7 +14,7 @@ import type {
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
 import { Button } from "../components/ui/Button";
-import { evaluateAchievements } from "../lib/achievements";
+import { LIMITS } from "../lib/limits";
 
 const SEVERITY_COLOR: Record<BountySeverity, string> = {
   info: "var(--color-fg-3)",
@@ -165,12 +165,16 @@ export function BountiesView() {
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => setEditing(b)}
+                        aria-label="Edit bounty"
+                        title="Edit"
                         className="text-[var(--color-fg-3)] hover:text-[var(--color-cyan)] p-1"
                       >
                         <Edit3 size={12} />
                       </button>
                       <button
                         onClick={() => deleteItem(b.id)}
+                        aria-label="Delete bounty"
+                        title="Delete"
                         className="text-[var(--color-fg-3)] hover:text-[var(--color-rose)] p-1"
                       >
                         <Trash2 size={12} />
@@ -241,7 +245,7 @@ function BountyForm({
   );
   const [cve, setCve] = useState(existing?.cve_id ?? "");
   const [submittedAt, setSubmittedAt] = useState(
-    existing?.submitted_at ? existing.submitted_at.split("T")[0] : new Date().toISOString().split("T")[0],
+    (existing?.submitted_at ?? new Date().toISOString()).split("T")[0] ?? "",
   );
   const [notes, setNotes] = useState(existing?.notes ?? "");
 
@@ -255,7 +259,9 @@ function BountyForm({
       status,
       payout_usd: payout ? parseInt(payout, 10) : null,
       cve_id: cve.trim() || null,
-      submitted_at: new Date(submittedAt).toISOString(),
+      submitted_at: submittedAt
+        ? new Date(submittedAt).toISOString()
+        : new Date().toISOString(),
       notes: notes.trim() || null,
     };
     if (existing) {
@@ -263,8 +269,8 @@ function BountyForm({
     } else {
       await db.addBounty(payload);
     }
-    // Re-evaluate achievements for first-bounty / first-payout milestones
-    window.setTimeout(() => evaluateAchievements(), 500);
+    // Achievement engine is wired to db.onMutation in App.tsx — the
+    // addBounty/updateBounty mutations above will fire it automatically.
     onSaved();
   }
 
@@ -289,7 +295,11 @@ function BountyForm({
           <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-cyan)]">
             // {existing ? "edit submission" : "log submission"}
           </div>
-          <button onClick={onClose} className="text-[var(--color-fg-2)] hover:text-[var(--color-fg-0)]">
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="text-[var(--color-fg-2)] hover:text-[var(--color-fg-0)]"
+          >
             <X size={16} />
           </button>
         </div>
@@ -303,6 +313,8 @@ function BountyForm({
               value={program}
               onChange={(e) => setProgram(e.target.value)}
               placeholder="HackerOne — Acme Corp"
+              maxLength={LIMITS.bountyProgram}
+              aria-label="Bounty program"
               className="w-full mt-1 bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-2 text-sm text-[var(--color-fg-0)] np-mono focus:border-[var(--color-cyan-dim)] focus:outline-none"
             />
           </div>
@@ -314,6 +326,8 @@ function BountyForm({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="IDOR in /api/v2/users → cross-tenant data read"
+              maxLength={LIMITS.bountyTitle}
+              aria-label="Bounty title"
               className="w-full mt-1 bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-2 text-sm text-[var(--color-fg-0)] focus:border-[var(--color-cyan-dim)] focus:outline-none"
             />
           </div>
@@ -383,6 +397,8 @@ function BountyForm({
                 value={cve}
                 onChange={(e) => setCve(e.target.value)}
                 placeholder="CVE-2026-..."
+                maxLength={LIMITS.bountyCveId}
+                aria-label="CVE identifier"
                 className="w-full mt-1 bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-2 text-sm text-[var(--color-fg-0)] np-mono focus:border-[var(--color-cyan-dim)] focus:outline-none"
               />
             </div>
@@ -395,6 +411,8 @@ function BountyForm({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Optional notes — root-cause, technique used, time-to-resolution..."
+              maxLength={LIMITS.bountyNotes}
+              aria-label="Bounty notes"
               className="w-full mt-1 bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-2 text-sm text-[var(--color-fg-0)] focus:border-[var(--color-cyan-dim)] focus:outline-none min-h-[80px] resize-y"
             />
           </div>

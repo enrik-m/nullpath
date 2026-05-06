@@ -30,28 +30,33 @@ export function useDailyBriefing() {
 
     async function run() {
       const today = new Date();
-      const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const todayKey = db.localDayKey(today);
       const last = localStorage.getItem(LS_LAST_BRIEFING_DAY);
       if (last === todayKey) return;
 
-      // Wait a beat so we don't pop modal at the exact moment the boot fade ends
+      // Wait a beat so we don't pop the modal at the exact moment the
+      // boot fade ends.
       await new Promise((r) => setTimeout(r, 1100));
 
-      // Only fire if onboarded
+      // Single read of app_state — used both to gate the modal on onboarding
+      // and to drive the weekly freeze-token award. Pre-DB-init failure
+      // here is expected on first launch (migrations haven't run yet);
+      // we silently skip and try again on the next mount.
+      let state: Awaited<ReturnType<typeof db.getAppState>>;
       try {
-        const state = await db.getAppState();
-        if (!state.onboarded_at) return;
+        state = await db.getAppState();
       } catch {
         return;
       }
+      if (!state.onboarded_at) return;
 
       localStorage.setItem(LS_LAST_BRIEFING_DAY, todayKey);
       showModal({ kind: "daily-briefing" });
 
-      // Weekly freeze-token award
+      // Weekly freeze-token award. Failure here is non-fatal but worth
+      // logging — the user just won't see their token bumped this week.
       try {
-        const state = await db.getAppState();
-        const week = isoWeek(today);
+        const week = db.isoWeek(today);
         if (
           state.last_freeze_award_week !== week &&
           state.freeze_tokens < state.freeze_tokens_max
@@ -61,24 +66,11 @@ export function useDailyBriefing() {
             last_freeze_award_week: week,
           });
         }
-      } catch {
-        // Ignore
+      } catch (err) {
+        console.error("[freeze-award] failed:", err);
       }
     }
 
     run();
   }, [route, showModal]);
-}
-
-function isoWeek(d: Date): string {
-  const target = new Date(d.valueOf());
-  const dayNr = (d.getDay() + 6) % 7;
-  target.setDate(target.getDate() - dayNr + 3);
-  const firstThursday = target.valueOf();
-  target.setMonth(0, 1);
-  if (target.getDay() !== 4) {
-    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-  }
-  const week = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 }

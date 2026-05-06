@@ -34,12 +34,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
       setHighlight(0);
       setTimeout(() => inputRef.current?.focus(), 30);
       // Show recently in-progress as default state
-      Promise.all(
-        (
-          ["foundation", "tool", "recon", "vuln", "defense", "methodology", "capstone"] as const
-        ).map((k) => db.nodesByKind(k)),
-      ).then((groups) => {
-        const all = groups.flat();
+      db.getAllNodes().then((all) => {
         const inProg = all.filter((n) => n.status === "in_progress");
         const recent = all
           .filter((n) => n.completed_at)
@@ -120,6 +115,8 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search 700+ nodes — try 'sqli', 'jwt', 'ssrf', or an id like W01"
+            maxLength={200}
+            aria-label="Search nodes"
             className="flex-1 bg-transparent border-none outline-none text-[15px] text-[var(--color-fg-0)] np-mono placeholder:text-[var(--color-fg-3)]"
           />
           <kbd className="np-mono text-[10px] text-[var(--color-fg-3)] border border-[var(--color-border-default)] rounded px-1.5 py-0.5">
