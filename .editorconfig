@@ -1,0 +1,28 @@
+# EditorConfig — https://editorconfig.org
+# Tells most editors which indent / eol / charset to use without
+# everyone having to configure their IDE individually. Prettier still
+# owns final formatting; this just covers the no-Prettier files
+# (like .md, .toml, .sql, .rs).
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Rust uses 4-space indents per rustfmt convention
+[*.rs]
+indent_size = 4
+
+# Markdown — preserve trailing whitespace because two-space line
+# breaks are sometimes intentional
+[*.md]
+trim_trailing_whitespace = false
+
+# Go-style 1-tab indent for Makefiles (in case we add one)
+[Makefile]
+indent_style = tab

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "nullpath",
+  "productName": "Nullpath",
   "version": "0.21.0-beta.1",
   "identifier": "com.nullpath.app",
   "build": {
