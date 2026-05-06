@@ -2,10 +2,18 @@
  * Nullpath database access layer.
  *
  * All queries flow through here so the rest of the app never imports
- * the SQL plugin directly. Single connection, lazy-initialized.
+ * the SQL backend directly. Single connection, lazy-initialized.
+ *
+ * Backend: sql.js (SQLite compiled to WASM) with the database file
+ * persisted to IndexedDB on every write. The interface exposed below
+ * is identical to the desktop version that ran against
+ * `tauri-plugin-sql`, so views never had to change when we pivoted
+ * from Tauri to browser. When the project gets a real backend with
+ * auth + leaderboards, this single file becomes an HTTP client and
+ * the views still don't have to change.
  */
 
-import Database from "@tauri-apps/plugin-sql";
+import { getDatabase, type SqlJsClient } from "./sqljs";
 import type {
   AchievementRow,
   AppStateRow,
@@ -25,13 +33,14 @@ import type {
   ZoneStats,
 } from "./types";
 
-let _db: Database | null = null;
-
-/** Open (or return existing) connection to the local SQLite file. */
-export async function db(): Promise<Database> {
-  if (_db) return _db;
-  _db = await Database.load("sqlite:nullpath.db");
-  return _db;
+/**
+ * Open (or return existing) connection. Renamed from a SQL-plugin
+ * `Database` instance to the more interface-y `SqlJsClient`, but the
+ * methods exposed (`select`, `execute`) are identical so callers below
+ * read the same.
+ */
+export async function db(): Promise<SqlJsClient> {
+  return getDatabase();
 }
 
 // ---------------------------------------------------------------------------

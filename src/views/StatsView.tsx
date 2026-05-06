@@ -249,38 +249,35 @@ export function StatsView() {
         throw new Error("html-to-image returned an empty data URL");
       }
 
-      // 3. Convert the data URL to raw bytes for writeFile().
+      // 3. Browser download — convert the data URL to a Blob and
+      //    trigger an anchor click. The OS's "save as..." prompt
+      //    appears (or the file lands in ~/Downloads, depending on
+      //    the user's browser config — same UX as any web app).
+      const today = new Date().toISOString().split("T")[0];
+      const safeHandle =
+        (handle || "operator").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "operator";
+      const filename = `nullpath-${safeHandle}-${today}.png`;
+
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
       const binary = atob(base64);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-
-      // 4. Suggest a filename using the user's actual handle.
-      const today = new Date().toISOString().split("T")[0];
-      const safeHandle =
-        (handle || "operator").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "operator";
-      const defaultName = `nullpath-${safeHandle}-${today}.png`;
-
-      // 5. Open the native save dialog so the user picks the location.
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const path = await save({
-        title: "Export operator card",
-        defaultPath: defaultName,
-        filters: [{ name: "PNG image", extensions: ["png"] }],
-      });
-
-      if (!path) {
-        // User canceled — silent
-        setExporting(false);
-        return;
+      const blob = new Blob([bytes], { type: "image/png" });
+      const objectUrl = URL.createObjectURL(blob);
+      try {
+        const a = document.createElement("a");
+        a.href = objectUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } finally {
+        // Defer revocation a tick so the browser has a chance to
+        // start the download before we yank the URL.
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
       }
 
-      // 6. Write the PNG to the chosen path.
-      const { writeFile } = await import("@tauri-apps/plugin-fs");
-      await writeFile(path, bytes);
-
       sfx.success();
-      const filename = path.split(/[\\/]/).pop() || path;
       toast.success(`Saved → ${filename}`);
     } catch (err) {
       console.error("[export] operator card failed:", err);

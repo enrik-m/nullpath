@@ -7,6 +7,76 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Pre-1.0 releases may contain breaking changes within minor bumps; the
 project hasn't reached a stability commitment yet.
 
+## [0.22.0-beta.1] — 2026-05-06
+
+The "no longer a desktop app" release. Pivots Nullpath from a Tauri 2
+desktop bundle to a pure browser app deployable on any static host
+(Vercel free tier targeted). All progress data still lives locally —
+the SQLite store moves from `tauri-plugin-sql` to `sql.js` (SQLite
+compiled to WASM) backed by IndexedDB.
+
+### Added
+
+- **sql.js + IndexedDB** as the new storage backend. The full SQL
+  query layer (~70 functions in `src/db/index.ts`) and all five
+  migrations carry over **unchanged** — only the connection swaps.
+- **`src/db/sqljs.ts`** — sql.js client with the same `select` /
+  `execute` surface the Tauri plugin had. Persists the full SQLite
+  file to IndexedDB on every write (debounced 500 ms) and on
+  `beforeunload`. Restores from IndexedDB on next load.
+- **`src/db/migrations.ts`** — browser-side migration runner that
+  mirrors the Tauri plugin's `_migrations` bookkeeping table.
+- **`vercel.json`** — SPA rewrite + cache headers for Vercel.
+- **`docs/`** removed (was Tauri-specific code-signing + updater
+  walkthroughs); web app doesn't need either.
+
+### Changed
+
+- **Browser-native file I/O** replaces every Tauri save/open dialog:
+  - Operator card export → `URL.createObjectURL` + anchor click
+  - Backup export → same blob-download pattern
+  - Backup import → hidden `<input type="file">` clicked
+    programmatically, resolves to a `File` via Promise
+- **`openSafeUrl`** in `lib/url.ts` now uses
+  `window.open(url, "_blank", "noopener,noreferrer")` instead of
+  `tauri-plugin-opener.openUrl`. Same scheme allowlist, same
+  rejection behavior.
+- **Vitest config** uses regex-based `resolve.alias` to stub out
+  `sql.js` and the WASM `?url` import so the test suite doesn't
+  load the real WASM payload.
+
+### Removed
+
+- **`src-tauri/`** directory — the entire Rust shell, all five
+  migration files (copied to `src/db/migrations/`), the
+  `tauri-plugin-*` registrations, the `idle.rs` history (already
+  empty), `Cargo.lock`. Anyone wanting the desktop history can
+  `git log` it.
+- **`@tauri-apps/api`**, **`@tauri-apps/cli`**,
+  **`@tauri-apps/plugin-dialog`**, **`@tauri-apps/plugin-fs`**,
+  **`@tauri-apps/plugin-opener`**, **`@tauri-apps/plugin-sql`**,
+  **`@tauri-apps/plugin-updater`** removed from package.json.
+- **`npm run tauri`** script removed.
+- **CI Rust job** removed from `.github/workflows/ci.yml` — no
+  Rust to build anymore.
+- **`docs/code-signing.md`** and **`docs/updater.md`** removed.
+- **Cargo entry** removed from `dependabot.yml`.
+- **Tauri plugin mocks** in `src/__mocks__/` (`tauri-plugin-sql.ts`,
+  `tauri-plugin-opener.ts`) replaced with `sql-js.ts` +
+  `empty-string.ts`.
+
+### Migration notes
+
+- This is a one-way pivot. Existing desktop installs cannot import
+  their `.db` file directly into the web app via the UI — the
+  schema is identical but the storage backend is different. (The
+  raw SQLite file from the desktop install can be loaded into the
+  browser by reading it as bytes and constructing
+  `new SQL.Database(bytes)` in dev tools, but no UI shortcut for
+  that yet — it's a one-time, one-user transition.)
+- All v0.21.0-beta.1 backup JSON files are forward-compatible —
+  Settings → Backup → Import works the same in the web app.
+
 ## [0.21.0-beta.1] — 2026-05-06
 
 The "feels-like-a-game" release. Removes the time-tracking subsystem and

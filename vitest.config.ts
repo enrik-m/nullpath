@@ -3,8 +3,19 @@
  * doesn't pull in the test runner.
  *
  * Most tests are pure-logic (XP math, URL safety, length limits, the
- * derived check on achievements) so they don't need DOM or Tauri
- * mocks. The few that touch React state run in jsdom.
+ * derived check on achievements) so they don't need DOM. The few that
+ * touch React state run in jsdom.
+ *
+ * Aliases live in `resolve.alias` (not `test.alias`) because they're
+ * module-resolution concerns — Vite's resolver runs them before the
+ * Vitest-specific transformers see the file:
+ *   - sql.js → a tiny stub so tests don't load the WASM binary
+ *   - the .wasm ?url import → empty-string.ts so the import resolves
+ *     at parse time without trying to fetch the real .wasm asset
+ *
+ * The db/sqljs client itself is never invoked by the current test
+ * suite; the stubs just keep the import graph valid so test files
+ * that transitively reach `db/index.ts` don't fail on parse.
  */
 
 import { defineConfig } from "vitest/config";
@@ -15,23 +26,24 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     include: ["src/**/*.test.{ts,tsx}"],
-    // The store and a few helpers import from "@tauri-apps/plugin-sql"
-    // and "@tauri-apps/plugin-opener" at module load. We don't want to
-    // run real Tauri code in tests; alias them to lightweight mocks.
-    alias: {
-      "@tauri-apps/plugin-sql": path.resolve(
-        __dirname,
-        "src/__mocks__/tauri-plugin-sql.ts",
-      ),
-      "@tauri-apps/plugin-opener": path.resolve(
-        __dirname,
-        "src/__mocks__/tauri-plugin-opener.ts",
-      ),
-    },
   },
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      {
+        find: "@",
+        replacement: path.resolve(__dirname, "./src"),
+      },
+      {
+        // Catches the `?url` query-string suffix Vite adds — a
+        // plain-string alias on the bare path wouldn't fire because
+        // the resolver compares the full request including the query.
+        find: /^sql\.js\/dist\/sql-wasm\.wasm/,
+        replacement: path.resolve(__dirname, "src/__mocks__/empty-string.ts"),
+      },
+      {
+        find: /^sql\.js$/,
+        replacement: path.resolve(__dirname, "src/__mocks__/sql-js.ts"),
+      },
+    ],
   },
 });

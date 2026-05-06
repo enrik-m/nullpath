@@ -65,10 +65,13 @@ export function SettingsView() {
   }
 
   /**
-   * Export every user-generated row as a JSON file the user picks the
-   * location of. Skill graph rows (region/zone/node definitions) are
-   * excluded because they're seeded by migration; we only export the
-   * per-user state attached to them.
+   * Export every user-generated row as a JSON file. Skill graph rows
+   * (region/zone/node definitions) are excluded because they're seeded
+   * by migration; we only export the per-user state attached to them.
+   *
+   * Browser flow: serialize → blob → object URL → anchor click. The
+   * OS save dialog appears (Chrome/Firefox/Edge respect the suggested
+   * filename via `download=`).
    */
   async function exportBackup() {
     try {
@@ -78,19 +81,22 @@ export function SettingsView() {
       const safeHandle = (snap.appState.handle || "operator")
         .replace(/[^a-z0-9_-]/gi, "")
         .toLowerCase();
-      const defaultName = `nullpath-${safeHandle}-${today}.json`;
+      const filename = `nullpath-${safeHandle}-${today}.json`;
 
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const path = await save({
-        title: "Export Nullpath backup",
-        defaultPath: defaultName,
-        filters: [{ name: "JSON", extensions: ["json"] }],
-      });
-      if (!path) return;
-      const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-      await writeTextFile(path, text);
+      const blob = new Blob([text], { type: "application/json" });
+      const objectUrl = URL.createObjectURL(blob);
+      try {
+        const a = document.createElement("a");
+        a.href = objectUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      }
+
       sfx.success();
-      const filename = path.split(/[\\/]/).pop() || path;
       toast.success(`Backup saved → ${filename}`);
     } catch (err) {
       console.error("[backup] export failed:", err);
@@ -100,23 +106,16 @@ export function SettingsView() {
   }
 
   /**
-   * Import a previously-exported JSON backup. Wipes existing user state
-   * first; the snapshot becomes the new source of truth. The user is
-   * prompted to confirm before the wipe happens.
+   * Import a previously-exported JSON backup via a hidden
+   * `<input type="file">` we click programmatically. Wipes existing
+   * user state and replays the snapshot; the user is prompted to
+   * confirm before the wipe happens.
    */
   async function importBackup() {
     try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const path = await open({
-        title: "Import Nullpath backup",
-        multiple: false,
-        directory: false,
-        filters: [{ name: "JSON", extensions: ["json"] }],
-      });
-      if (!path || typeof path !== "string") return;
-
-      const { readTextFile } = await import("@tauri-apps/plugin-fs");
-      const text = await readTextFile(path);
+      const file = await pickJsonFile();
+      if (!file) return;
+      const text = await file.text();
       const snap = JSON.parse(text) as db.BackupSnapshot;
 
       if (
@@ -137,6 +136,34 @@ export function SettingsView() {
       sfx.warn();
       toast.error(`Import failed — ${err instanceof Error ? err.message : String(err)}`);
     }
+  }
+
+  /**
+   * Browser file picker for a single .json — wraps a hidden
+   * `<input>` in a Promise that resolves with the chosen File or
+   * null on cancel. Avoids a runtime dep just for this.
+   */
+  function pickJsonFile(): Promise<File | null> {
+    return new Promise((resolve) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "application/json,.json";
+      input.style.display = "none";
+      // `cancel` fires on dismiss in modern browsers; `change` fires
+      // on selection. If neither fires within a long timeout we
+      // resolve null defensively.
+      let resolved = false;
+      const finish = (file: File | null) => {
+        if (resolved) return;
+        resolved = true;
+        input.remove();
+        resolve(file);
+      };
+      input.addEventListener("change", () => finish(input.files?.[0] ?? null));
+      input.addEventListener("cancel", () => finish(null));
+      document.body.appendChild(input);
+      input.click();
+    });
   }
 
   return (

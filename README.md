@@ -1,12 +1,16 @@
 # Nullpath
 
-> Gamified offsec career atlas. Tauri + React + SQLite.
+> Gamified offsec career atlas. Browser app, Vite + React + SQLite-in-WASM.
 
-A desktop app that turns offensive-security learning into a constellation of
-skills you explore, complete, and revisit. Learning happens **outside** the
-app — PortSwigger Web Security Academy, HackTheBox, TryHackMe, books, CTFs,
+Turns offensive-security learning into a constellation of skills you
+explore, complete, and revisit. Learning happens **outside** the app —
+PortSwigger Web Security Academy, HackTheBox, TryHackMe, books, CTFs,
 real bug bounties. Nullpath is the dashboard that turns all of it into
 visible progress.
+
+Runs entirely in the browser. Local-first today (your data lives in
+IndexedDB, nothing leaves your machine). User accounts and leaderboards
+are on the roadmap but not shipped yet.
 
 ## What's in it
 
@@ -28,56 +32,72 @@ visible progress.
   refresher queue.
 - **Daily Briefing** — first-launch-of-day modal with streak, freeze tokens,
   hot zone, three suggested quests.
-- **Random Kick** — "I have N minutes, what should I do?" → pulls a
-  size-fitted quest from your active zones.
-- **Trail Mode** — a heuristic suggested path through unblocked nodes, drawn
-  as animated edges in the zone view.
-- **Achievements** — milestone catalog: nodes / zones cleared, streaks,
-  levels, first bounty, first payout.
+- **Trail Mode** — a heuristic suggested path through unblocked nodes,
+  drawn as animated edges in the zone view.
+- **Trophy Room** — 56 achievements across 13 categories, with live
+  progress bars on locked tiles.
 - **Bounty Ledger** — track real submissions: program, severity, status,
   payout, CVE.
 - **Codex** — global archive aggregating every resource you've attached
-  anywhere in the graph.
+  anywhere in the graph (virtualized for large libraries).
 - **Operator Card** — exportable 1080×1920 PNG identity card with handle /
-  level / streak / signature skill / per-zone progress.
-- **CRT boot sequence** on first launch, optional scanline overlay.
-- **Synthesized SFX** — hover / click / success / level-up — no audio files
-  shipped.
+  level / streak / signature skill / zone progress.
+- **CRT boot sequence**, optional scanline overlay.
+- **Synthesized SFX** — non-melodic NES-style chiptune punctuation, no
+  audio files shipped.
+- **Backup / restore** — JSON export / import via browser download +
+  file picker. Move between machines or snapshot before a risky reset.
 
 ## Stack
 
-- **Tauri 2** desktop shell (Rust)
-- **React 19 + TypeScript + Tailwind v4** frontend
+- **React 19 + TypeScript + Tailwind v4** frontend (Vite)
 - **@xyflow/react** for the zone-level node graph
-- **Framer Motion** for view transitions, modal animation, and reduced-motion
-  awareness
-- **SQLite** via `tauri-plugin-sql` for local persistence
+- **Framer Motion** for view transitions, modal animation, and
+  reduced-motion awareness
+- **sql.js** (SQLite compiled to WASM) for the data layer; persisted to
+  **IndexedDB** so progress survives reloads. Same SQL queries the
+  desktop version used — no rewrite needed when the project pivoted
+  from Tauri to web.
 - **html-to-image** for operator-card export (lazy-loaded)
 - **Web Audio API** for synthesized SFX
 
 ## Run locally
 
-Requires Rust 1.78+ and Node 20+.
+Requires Node 20+.
 
 ```bash
 npm install
-npm run tauri dev
+npm run dev
 ```
 
-First boot compiles a debug binary (~2 minutes). Subsequent boots are
-instant.
+Open the URL Vite prints (default `http://localhost:1420`).
+
+## Deploying to Vercel
+
+The repo is set up so `vercel deploy` (or pushing to a Vercel-connected
+GitHub branch) produces a working build with zero further config:
+
+- Vercel auto-detects Vite as the framework.
+- `vercel.json` declares the SPA rewrite (any path → `index.html`)
+  plus aggressive cache headers for fingerprinted assets and the
+  WASM payload.
+- The Vite output (`dist/`) is fully static — no serverless functions
+  required at this stage. Hobby tier is enough.
 
 ## Scripts
 
 | Command              | What it does                                              |
 | -------------------- | --------------------------------------------------------- |
-| `npm run dev`        | Start Vite dev server (frontend only, no shell)           |
-| `npm run tauri dev`  | Full app — Rust shell + frontend                          |
+| `npm run dev`        | Start the Vite dev server                                 |
 | `npm run build`      | Type-check + production frontend build                    |
+| `npm run preview`    | Serve the production build locally                        |
 | `npm run typecheck`  | `tsc --noEmit`                                            |
 | `npm run lint`       | ESLint over `src/` + `scripts/`                           |
 | `npm run lint:fix`   | ESLint with `--fix`                                       |
 | `npm run format`     | Prettier write across `src/`                              |
+| `npm test`           | Vitest run (57 tests as of 0.22.0-beta.1)                 |
+| `npm run test:watch` | Vitest watch mode                                         |
+| `npm run test:ui`    | Vitest with the web UI                                    |
 | `npm run seed:build` | Re-emit migration 002 from `plans/web-pentesting.md`      |
 
 ## Architecture
@@ -85,10 +105,15 @@ instant.
 ```
 src/
   App.tsx                root + routes + global keys + reduced-motion
+  main.tsx               ReactDOM root
   store.ts               zustand UI store + XP/level math
   styles.css             tailwind v4 + theme tokens + animations
   db/
-    index.ts             sqlite access layer + mutation pub/sub
+    sqljs.ts             sql.js client + IndexedDB persistence
+    migrations.ts        runs SQL migrations on first load
+    migrations/*.sql     001 schema, 002 seed (820 nodes), 003 bounties,
+                         004 spaced-rep, 005 drop session columns
+    index.ts             query helpers + mutation pub/sub
     types.ts             row interfaces for every table
   components/
     Sidebar / TopBar     shell chrome
@@ -96,43 +121,47 @@ src/
     ModalRoot            single mount point for echo / level-up / achievement
     Toaster              global toast queue
     OperatorCardPortrait lazy-loaded export card (1080×1920 PNG)
+    VirtualList          react-window wrapper used by the Codex
     pixel/               PixelButton / PixelTag / PixelSprite primitives
   views/
-    Atlas / Region / Zone / Codex / Stats / Bounties / Settings
+    Atlas / Region / Zone / Codex / Stats / Bounties /
+    Achievements (Trophy Room) / Settings
   hooks/                 useDailyBriefing, useMediaQuery
-  lib/                   sfx, achievements, toast, url, limits, resourceKinds
-
-src-tauri/
-  src/lib.rs             Tauri host + SQL plugin wiring
-  migrations/
-    001_initial_schema   region/zone/node/streak/app_state
-    002_seed_web         23 zones, 820 nodes
-    003_bounties         bounty_submission ledger
-    004_repetition       spaced-repetition refresher queue
-    005_drop_session     drop dead session table + idle/seconds columns
-  capabilities/default.json  scoped fs/sql/dialog/opener perms
-  tauri.conf.json        app config + CSP
+  lib/
+    sfx.ts               non-melodic NES SFX with round-robin variants
+    achievements.ts      catalog + engine + db.onMutation watcher
+    achievementIcons.ts  icon-name → Lucide component map
+    toast.ts             zustand toast store
+    url.ts               http/https-only safe URL opener
+    limits.ts            input length caps
+    resourceKinds.ts     ResourceKind labels + colors
 
 plans/
   00-overview.md         design decisions + locked stack
   web-pentesting.md      source-of-truth skill graph for migration 002
-
 scripts/
   build-seed.mjs         re-emit migration 002 from the plan markdown
+.github/
+  workflows/ci.yml       typecheck / lint / test / build / format check
+  ISSUE_TEMPLATE/        bug + feature templates
+  PULL_REQUEST_TEMPLATE.md
+  dependabot.yml         npm + github-actions weekly upgrades
 ```
 
 ## Security posture
 
-- CSP set in `tauri.conf.json` (`default-src 'self' ipc: ...`)
-- `fs:scope` narrowed to `$DESKTOP/$DOCUMENT/$DOWNLOAD/$PICTURE/$HOME` only
+- CSP via Vercel + Vite — no `unsafe-eval`, `unsafe-inline` only on
+  styles (Tailwind requires it)
 - URL opens are scheme-locked to http/https (`lib/url.ts`); javascript:,
-  file://, and custom protocols are refused
+  file://, data:, custom protocols are refused
 - LIKE wildcards in user search are escaped with `ESCAPE '\\'`
-- Dynamic SQL builders (updateAppState, updateBounty) have explicit column
-  allowlists — keys not in the set are silently dropped
+- Dynamic SQL builders (updateAppState, updateBounty) have explicit
+  column allowlists — keys not in the set are silently dropped
 - Input length limits centralized in `lib/limits.ts` and enforced via
   `maxLength` on every text field
-- All DB mutations are parameterized (`$1`, `$2`); no string concatenation
+- All DB mutations are parameterized (`$1`, `$2`); no string
+  concatenation
+- See [`SECURITY.md`](./SECURITY.md) for the disclosure policy
 
 ## Re-seeding from the plan
 
@@ -143,7 +172,7 @@ then:
 npm run seed:build
 ```
 
-This rewrites `src-tauri/migrations/002_seed_web.sql` with the current node
+This rewrites `src/db/migrations/002_seed_web.sql` with the current node
 tree.
 
 ## Future regions
@@ -153,8 +182,6 @@ Two more career disciplines are stubbed as locked tiles on the Atlas:
 - **Red Teaming** — internal pentest, AD, C2, OPSEC
 - **Vuln Research / Exploit Dev** — RE, fuzzing, memory corruption,
   browser / kernel internals
-
-Drafted as their own skeleton files when the user reaches them.
 
 ## License
 
