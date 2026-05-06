@@ -23,10 +23,9 @@ Runs entirely in the browser. Two modes:
   nothing leaves your machine. No account, no server.
 
 Mode is selected at build time by the presence of `VITE_SUPABASE_URL`
-
-- `VITE_SUPABASE_ANON_KEY` env vars; absent → local, present → cloud.
-  See [`docs/setup-auth.md`](./docs/setup-auth.md) for the cloud setup
-  walkthrough.
+and `VITE_SUPABASE_ANON_KEY` env vars; absent → local, present → cloud.
+See [`docs/setup-auth.md`](./docs/setup-auth.md) for the cloud setup
+walkthrough.
 
 ## Demo
 
