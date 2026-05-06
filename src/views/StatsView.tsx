@@ -10,9 +10,13 @@ import * as db from "../db";
 import type { RegionRow, StreakDayRow, RefresherRow, NodeRow } from "../db/types";
 import { formatHmShort, levelForXp, xpForLevel } from "../store";
 import { sfx } from "../lib/sfx";
-import { cn } from "../lib/cn";
 import { Button } from "../components/ui/Button";
 import { useUi } from "../store";
+import {
+  OperatorCardPreview,
+  OperatorCardOffscreen,
+  type OperatorCardData,
+} from "../components/OperatorCardPortrait";
 
 interface ZoneTime {
   zone_id: string;
@@ -23,7 +27,7 @@ interface ZoneTime {
 }
 
 export function StatsView() {
-  const [region, setRegion] = useState<RegionRow | null>(null);
+  const [, setRegion] = useState<RegionRow | null>(null);
   const [zoneTimes, setZoneTimes] = useState<ZoneTime[]>([]);
   const [totalSeconds, setTotalSeconds] = useState(0);
   const [streakDays, setStreakDays] = useState<StreakDayRow[]>([]);
@@ -34,6 +38,9 @@ export function StatsView() {
   const [completedNodes, setCompletedNodes] = useState(0);
   const [totalNodes, setTotalNodes] = useState(0);
   const [xp, setXp] = useState(0);
+  const [handle, setHandle] = useState("operator");
+  const [allRegions, setAllRegions] = useState<RegionRow[]>([]);
+  const [regionPctById, setRegionPctById] = useState<Record<string, number>>({});
   const cardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -57,9 +64,25 @@ export function StatsView() {
       ).map((k) => db.nodesByKind(k));
       const all = (await Promise.all(allKinds)).flat();
 
+      // All regions + completion %, for the operator card
+      const regionsAll = await db.getRegions();
+      const regionPct: Record<string, number> = {};
+      for (const reg of regionsAll) {
+        const rs = await db.getZoneStats(reg.id);
+        const totalN = rs.reduce((s, z) => s + z.total_nodes, 0);
+        const doneN = rs.reduce((s, z) => s + z.completed_nodes, 0);
+        regionPct[reg.id] = totalN > 0 ? Math.round((doneN / totalN) * 100) : 0;
+      }
+
+      // App-state for handle
+      const state = await db.getAppState().catch(() => null);
+
       if (cancelled) return;
 
       setRegion(r);
+      setAllRegions(regionsAll);
+      setRegionPctById(regionPct);
+      setHandle(state?.handle ?? "operator");
       setStreakDays(days);
       setStreak(st);
       setRefreshers(enrichedDue);
@@ -95,6 +118,32 @@ export function StatsView() {
   const intoLvl = xp - curThreshold;
   const lvlSpan = nextThreshold - curThreshold;
   const lvlPct = lvlSpan > 0 ? (intoLvl / lvlSpan) * 100 : 0;
+
+  // Build the data object that drives both the inline preview and the
+  // hidden export-target card. Memoized so the offscreen DOM doesn't keep
+  // re-rendering at every store update.
+  const cardData = useMemo<OperatorCardData>(
+    () => ({
+      handle,
+      level,
+      xp,
+      xpInLvl: intoLvl,
+      xpForLvl: lvlSpan,
+      streak,
+      totalSeconds,
+      completedNodes,
+      totalNodes,
+      topZones: zoneTimes,
+      regions: allRegions.map((r) => ({
+        id: r.id,
+        name: r.name,
+        pct: regionPctById[r.id] ?? 0,
+        accent: r.color_accent,
+        locked: r.is_locked === 1,
+      })),
+    }),
+    [handle, level, xp, intoLvl, lvlSpan, streak, totalSeconds, completedNodes, totalNodes, zoneTimes, allRegions, regionPctById],
+  );
 
   // 56-day heatmap (8 weeks)
   const heatmap = useMemo(() => {
@@ -220,20 +269,17 @@ export function StatsView() {
           />
         </div>
 
-        {/* Operator Card (also exportable) */}
-        <div ref={cardRef}>
-          <OperatorCard
-            handle="operator"
-            level={level}
-            xp={xp}
-            streak={streak}
-            totalSeconds={totalSeconds}
-            completedNodes={completedNodes}
-            totalNodes={totalNodes}
-            topZones={zoneTimes.slice(0, 3)}
-            accent={region?.color_accent ?? "#22d3ee"}
-          />
+        {/* Operator Card — small inline preview of the export */}
+        <div className="np-pixel-inset p-4 sm:p-6 mb-2">
+          <div className="np-screen text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-2)] mb-3 flex items-center gap-2">
+            <span className="inline-block w-2 h-2 bg-[var(--color-magenta)]" />
+            OPERATOR CARD · 1080×1920 PORTRAIT (PNG EXPORT)
+          </div>
+          <OperatorCardPreview data={cardData} maxWidth={420} />
         </div>
+
+        {/* Hidden full-size card — html-to-image targets this on Export */}
+        <OperatorCardOffscreen data={cardData} containerRef={cardRef} />
 
         {/* Refreshers due */}
         {refreshers.length > 0 && (
@@ -402,115 +448,6 @@ function Stat({
         {value}
       </div>
       {sub && <div className="np-mono text-[10px] text-[var(--color-fg-3)] mt-1">{sub}</div>}
-    </div>
-  );
-}
-
-function OperatorCard({
-  handle,
-  level,
-  xp,
-  streak,
-  totalSeconds,
-  completedNodes,
-  totalNodes,
-  topZones,
-  accent,
-}: {
-  handle: string;
-  level: number;
-  xp: number;
-  streak: number;
-  totalSeconds: number;
-  completedNodes: number;
-  totalNodes: number;
-  topZones: ZoneTime[];
-  accent: string;
-}) {
-  return (
-    <div
-      className="rounded-lg p-6 relative overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(135deg, var(--color-bg-2) 0%, var(--color-bg-1) 100%)",
-        border: `1px solid ${accent}55`,
-        boxShadow: `0 0 32px ${accent}22, inset 0 0 0 1px var(--color-border-default)`,
-      }}
-    >
-      <div
-        className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30"
-        style={{ background: accent }}
-      />
-      <div className="relative">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="np-mono text-[10px] tracking-[0.4em] uppercase text-[var(--color-fg-3)]">
-              // OPERATOR · NULLPATH
-            </div>
-            <div className="text-3xl font-bold tracking-tight text-[var(--color-fg-0)] mt-1">
-              {handle}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
-              level
-            </div>
-            <div className="np-mono text-5xl font-bold" style={{ color: accent }}>
-              {level}
-            </div>
-          </div>
-        </div>
-
-        <div className="np-divider my-4" />
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 np-mono">
-          <div>
-            <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">XP</div>
-            <div className="text-base text-[var(--color-fg-0)]">{xp.toLocaleString()}</div>
-          </div>
-          <div>
-            <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">streak</div>
-            <div className="text-base text-[var(--color-amber)]">{streak}d</div>
-          </div>
-          <div>
-            <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">time</div>
-            <div className="text-base text-[var(--color-lime)]">{formatHmShort(totalSeconds)}</div>
-          </div>
-          <div>
-            <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">nodes</div>
-            <div className="text-base text-[var(--color-cyan)]">
-              {completedNodes}/{totalNodes}
-            </div>
-          </div>
-        </div>
-
-        {topZones.some((z) => z.seconds > 0) && (
-          <>
-            <div className="np-divider my-4" />
-            <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-3)] mb-2">
-              specialties
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {topZones
-                .filter((z) => z.seconds > 0)
-                .map((z) => (
-                  <span
-                    key={z.zone_id}
-                    className={cn(
-                      "np-mono text-[10px] tracking-[0.15em] uppercase px-2 py-1 rounded border",
-                    )}
-                    style={{
-                      borderColor: accent + "55",
-                      color: accent,
-                    }}
-                  >
-                    {z.zone_id} · {z.zone_name}
-                  </span>
-                ))}
-            </div>
-          </>
-        )}
-      </div>
     </div>
   );
 }
