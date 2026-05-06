@@ -580,13 +580,23 @@ export function OperatorCardPreview({
   );
 }
 
-// Hidden full-size container — html-to-image targets this for export.
+// Hidden full-size container — html-to-image targets the INNER div for export.
 //
-// Earlier this used position: fixed at -10000/-10000 to park the card outside
-// the viewport, but html-to-image's bounds calculation produced a blank canvas
-// for that case. The robust pattern is to keep the element in the document
-// flow at (0,0), invisible via opacity: 0 + pointer-events: none + z-index:
-// -1. The card renders normally, fonts load, and capture works reliably.
+// Hiding strategy:
+//   * Outer wrapper: 0×0 with overflow:hidden, position:fixed off-screen.
+//     Visually invisible because clipped to nothing.
+//   * Inner card div (the captured element): full 1080×1920 dimensions,
+//     NO opacity / visibility / display tricks on it. The browser still
+//     lays it out and paints it for the layout tree; html-to-image's
+//     cloneNode(true) gets a clone with no hiding styles → renders
+//     correctly to the canvas.
+//
+// Earlier attempts that produced blank PNGs:
+//   * position:fixed at top/left -10000 — html-to-image bounds calc
+//     produced a blank rect.
+//   * opacity:0 on the captured element — got cloned into the render
+//     and the resulting canvas was fully transparent (which combined
+//     with backgroundColor option painted just the bg color).
 export function OperatorCardOffscreen({
   data,
   containerRef,
@@ -596,21 +606,27 @@ export function OperatorCardOffscreen({
 }) {
   return (
     <div
-      ref={containerRef}
       style={{
-        position: "absolute",
+        position: "fixed",
         top: 0,
         left: 0,
-        width: CARD_W,
-        height: CARD_H,
-        opacity: 0,
+        width: 0,
+        height: 0,
+        overflow: "hidden",
         pointerEvents: "none",
         zIndex: -1,
-        overflow: "hidden",
       }}
       aria-hidden
     >
-      <OperatorCardPortrait data={data} />
+      <div
+        ref={containerRef}
+        style={{
+          width: CARD_W,
+          height: CARD_H,
+        }}
+      >
+        <OperatorCardPortrait data={data} />
+      </div>
     </div>
   );
 }

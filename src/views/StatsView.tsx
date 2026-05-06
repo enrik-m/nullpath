@@ -174,16 +174,40 @@ export function StatsView() {
     setExporting(true);
     setExportMsg(null);
     try {
-      // 1. Render the operator card to a high-res PNG via html-to-image.
-      //    pixelRatio: 2 gives retina-quality output at the same logical size.
+      // 0. Make sure web fonts (Press Start 2P, Silkscreen, JetBrains Mono,
+      //    Roboto) are fully loaded before capture, otherwise text in the
+      //    rasterized PNG falls back to system fonts or vanishes.
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+
+      // 1. Quick sanity log — if dimensions are 0, we're capturing nothing.
+      const rect = cardRef.current.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        throw new Error(
+          `card ref has 0 dimensions (${rect.width}×${rect.height}) — render not reaching the browser layout`,
+        );
+      }
+
+      // 2. Render the operator card to a high-res PNG via html-to-image.
+      //    Explicit width/height ensure the canvas matches the card box even
+      //    if the parent wrapper is 0×0 (our hide trick). pixelRatio 2 gives
+      //    retina-quality output.
       const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(cardRef.current, {
+        width: 1080,
+        height: 1920,
         pixelRatio: 2,
         backgroundColor: "#07091a",
         cacheBust: true,
+        skipFonts: false,
       });
 
-      // 2. Convert the data URL to raw bytes for writeFile().
+      if (!dataUrl || dataUrl === "data:," || dataUrl.length < 200) {
+        throw new Error("html-to-image returned an empty data URL");
+      }
+
+      // 3. Convert the data URL to raw bytes for writeFile().
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
       const binary = atob(base64);
       const bytes = new Uint8Array(binary.length);
