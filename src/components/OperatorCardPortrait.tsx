@@ -64,7 +64,10 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
           backgroundImage:
             "repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 2px, transparent 2px, transparent 5px)",
           mixBlendMode: "multiply",
@@ -78,7 +81,10 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
       <div
         style={{
           position: "absolute",
-          inset: 24,
+          top: 24,
+          right: 24,
+          bottom: 24,
+          left: 24,
           border: "6px solid #3a4480",
           boxShadow:
             "inset 6px 6px 0 0 #5a6cb8, inset -6px -6px 0 0 #0a0d1f, 0 0 80px rgba(92,242,255,0.15)",
@@ -89,7 +95,10 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
       <div
         style={{
           position: "absolute",
-          inset: 60,
+          top: 60,
+          right: 60,
+          bottom: 60,
+          left: 60,
           display: "flex",
           flexDirection: "column",
           gap: 32,

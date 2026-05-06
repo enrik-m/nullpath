@@ -1,6 +1,6 @@
 [package]
 name = "nullpath"
-version = "0.1.0"
+version = "0.5.0"
 description = "Nullpath — gamified offsec career atlas"
 authors = ["enrik-m"]
 edition = "2021"
