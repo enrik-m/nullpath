@@ -189,7 +189,7 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
             {(profile?.handle ?? "OP").slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="np-pixel-text text-[13px] text-[var(--color-fg-0)] truncate">
+            <div className="text-[13px] font-medium text-[var(--color-fg-0)] truncate">
               {profile?.handle ?? "operator"}
             </div>
             <div className="np-screen text-[10px] tracking-[0.15em] text-[var(--color-fg-3)] flex items-center gap-1">
