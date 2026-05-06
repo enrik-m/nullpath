@@ -6,6 +6,7 @@
  */
 
 import { formatHmShort } from "../store";
+import { APP_VERSION } from "../lib/version";
 import { PixelSprite, type SpriteName } from "./pixel/PixelSprite";
 
 export interface OperatorCardData {
@@ -27,17 +28,7 @@ export interface OperatorCardData {
 const CARD_W = 1080;
 const CARD_H = 1920;
 
-// Title that scales with level so the "rank" feels earned.
-function rankTitle(level: number): string {
-  if (level >= 25) return "ARCHITECT";
-  if (level >= 15) return "OPERATOR";
-  if (level >= 8)  return "JOURNEYMAN";
-  if (level >= 3)  return "SCOUT";
-  return "RECRUIT";
-}
-
-// Pick a sprite for the avatar based on handle length / hash so it feels
-// personal but deterministic.
+// Pick a sprite for the avatar deterministically from the handle hash.
 function pickSigil(handle: string): SpriteName {
   const sprites: SpriteName[] = ["shield", "shrine", "key", "crown", "bolt", "flame", "brain", "skull"];
   let h = 0;
@@ -49,7 +40,6 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
   const initials = (data.handle || "OP").slice(0, 2).toUpperCase();
   const pct = data.xpForLvl > 0 ? (data.xpInLvl / data.xpForLvl) * 100 : 0;
   const sigil = pickSigil(data.handle);
-  const title = rankTitle(data.level);
 
   // pre-formatted readouts
   const xpFmt = data.xp.toLocaleString();
@@ -106,23 +96,11 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
         }}
       >
         {/* ── Header band ─────────────────────────────────── */}
-        <div style={{ borderBottom: "4px solid #3a4480", paddingBottom: 18 }}>
-          <div
-            style={{
-              fontFamily: "'Press Start 2P', monospace",
-              fontSize: 14,
-              letterSpacing: "0.4em",
-              color: "#7280b0",
-              textTransform: "uppercase",
-            }}
-          >
-            // NULLPATH OPERATOR DOSSIER
-          </div>
+        <div style={{ borderBottom: "4px solid #3a4480", paddingBottom: 20 }}>
           <div
             style={{
               fontFamily: "'Press Start 2P', monospace",
               fontSize: 56,
-              marginTop: 14,
               background: "linear-gradient(180deg, #5cf2ff 0%, #ff66e0 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
@@ -131,17 +109,6 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
             }}
           >
             NULLPATH
-          </div>
-          <div
-            style={{
-              fontFamily: "'Silkscreen', monospace",
-              fontSize: 18,
-              letterSpacing: "0.25em",
-              color: "#5cf2ff",
-              marginTop: 10,
-            }}
-          >
-            ◇ OFFENSIVE-SECURITY ATLAS ◇
           </div>
         </div>
 
@@ -202,27 +169,16 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
                 fontWeight: 700,
                 color: "#e8ecff",
                 lineHeight: 1.05,
-                marginTop: 4,
+                marginTop: 6,
                 wordBreak: "break-word",
                 textTransform: "lowercase",
               }}
             >
               {data.handle}
             </div>
-            <div
-              style={{
-                fontFamily: "'Silkscreen', monospace",
-                fontSize: 18,
-                letterSpacing: "0.3em",
-                color: "#5cf2ff",
-                marginTop: 14,
-              }}
-            >
-              {title}
-            </div>
 
             {/* LEVEL + giant number */}
-            <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginTop: 18 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginTop: 26 }}>
               <span
                 style={{
                   fontFamily: "'Silkscreen', monospace",
@@ -342,7 +298,7 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
               color: "#5cf2ff",
             }}
           >
-            v0.1.0
+            v{APP_VERSION}
           </div>
         </div>
       </div>
@@ -615,7 +571,13 @@ export function OperatorCardPreview({
   );
 }
 
-// Hidden offscreen full-size container — html-to-image targets this for export.
+// Hidden full-size container — html-to-image targets this for export.
+//
+// Earlier this used position: fixed at -10000/-10000 to park the card outside
+// the viewport, but html-to-image's bounds calculation produced a blank canvas
+// for that case. The robust pattern is to keep the element in the document
+// flow at (0,0), invisible via opacity: 0 + pointer-events: none + z-index:
+// -1. The card renders normally, fonts load, and capture works reliably.
 export function OperatorCardOffscreen({
   data,
   containerRef,
@@ -626,17 +588,16 @@ export function OperatorCardOffscreen({
   return (
     <div
       ref={containerRef}
-      // Park it off the visible area but still in the rendered DOM so html-to-image
-      // can capture it. position: fixed + far-offscreen avoids layout cost on the
-      // main flow.
       style={{
-        position: "fixed",
-        top: -10000,
-        left: -10000,
+        position: "absolute",
+        top: 0,
+        left: 0,
         width: CARD_W,
         height: CARD_H,
+        opacity: 0,
         pointerEvents: "none",
         zIndex: -1,
+        overflow: "hidden",
       }}
       aria-hidden
     >

@@ -14,6 +14,7 @@ import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
 import * as db from "../db";
 import { useIsMobile } from "../hooks/useMediaQuery";
+import { APP_VERSION } from "../lib/version";
 import { PixelBar } from "./pixel/PixelBar";
 import { PixelSprite } from "./pixel/PixelSprite";
 
@@ -28,7 +29,7 @@ const NAV: NavItem[] = [
   { icon: Map, label: "ATLAS", route: { name: "atlas" }, shortcut: "1" },
   { icon: BookOpen, label: "CODEX", route: { name: "codex" }, shortcut: "2" },
   { icon: BarChart3, label: "STATS", route: { name: "stats" }, shortcut: "3" },
-  { icon: Trophy, label: "QUESTS", route: { name: "bounties" }, shortcut: "4" },
+  { icon: Trophy, label: "BOUNTIES", route: { name: "bounties" }, shortcut: "4" },
 ];
 
 export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
@@ -111,7 +112,7 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
             <span className="np-blink ml-1">_</span>
           </div>
           <div className="np-screen text-[10px] tracking-[0.3em] text-[var(--color-fg-3)] mt-2">
-            v0.1.0 · OPERATOR OS
+            v{APP_VERSION}
           </div>
         </button>
         {isMobile && (

@@ -80,18 +80,14 @@ export function AtlasView() {
           className="mb-10"
         >
           <div className="np-screen text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] mb-3">
-            // ATLAS · OFFENSIVE-SECURITY MAP
+            // ATLAS
           </div>
-          <h1 className="np-display text-3xl text-[var(--color-fg-0)]">
-            <span className="np-glitch-text" data-text="THREE REGIONS.">
-              THREE REGIONS.
-            </span>
-            <br />
-            <span className="text-[var(--color-cyan)] mt-2 inline-block">ONE OPERATOR.</span>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-fg-0)]">
+            Career disciplines
           </h1>
-          <p className="text-[var(--color-fg-2)] mt-4 text-sm max-w-xl">
-            Each region is a constellation of skills. Pick one to enter. Locked regions reveal
-            as you complete the prior ones.
+          <p className="text-[var(--color-fg-2)] mt-3 text-sm max-w-xl">
+            Each region is a graph of skills. Pick one to enter. Locked regions
+            unlock once you complete the prior ones.
           </p>
         </motion.div>
 

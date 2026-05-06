@@ -55,7 +55,7 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
         trail.push({ label: "STATS", route: null });
       } else if (route.name === "bounties") {
         trail.length = 0;
-        trail.push({ label: "QUEST LOG", route: null });
+        trail.push({ label: "BOUNTIES", route: null });
       } else if (route.name === "settings") {
         trail.length = 0;
         trail.push({ label: "SETTINGS", route: null });
@@ -170,10 +170,10 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
         ))}
       </div>
 
-      {/* Encounter — icon-only on mobile to save space */}
-      <PixelButton variant="ghost" size="sm" onClick={onRandomKick} aria-label="Random encounter">
+      {/* Random Kick — pulls a size-fitted quest */}
+      <PixelButton variant="ghost" size="sm" onClick={onRandomKick} aria-label="Random kick">
         <Zap size={11} />
-        <span className="hidden sm:inline">ENCOUNTER</span>
+        <span className="hidden sm:inline">RANDOM</span>
       </PixelButton>
 
       {/* Session controls */}

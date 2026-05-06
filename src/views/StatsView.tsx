@@ -228,58 +228,32 @@ export function StatsView() {
   }
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="px-4 sm:px-10 py-6 sm:py-10 max-w-[1100px]">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-end justify-between flex-wrap gap-4">
-          <div>
-            <div className="np-mono text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] uppercase mb-2">
-              // stats
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--color-fg-0)]">
-              Operator dossier
-            </h1>
+    <div className="flex-1 overflow-auto relative">
+      <div className="px-4 sm:px-10 py-6 sm:py-10 max-w-[1400px] mx-auto">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <div className="np-mono text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] uppercase mb-2">
+            // stats
           </div>
-          <div className="flex items-center gap-3">
-            {exportMsg && (
-              <span
-                className="np-screen text-[10px] tracking-[0.15em]"
-                style={{
-                  color: exportMsg.ok ? "var(--color-lime)" : "var(--color-rose)",
-                }}
-              >
-                {exportMsg.text}
-              </span>
-            )}
-            <Button variant="outline" size="sm" onClick={exportCard} disabled={exporting}>
-              <Camera size={12} />
-              {exporting ? "RENDERING…" : "EXPORT CARD"}
-            </Button>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-fg-0)]">
+            Operator dossier
+          </h1>
         </motion.div>
 
-        {/* Top stats strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <Stat label="Level" value={`${level}`} accent="var(--color-magenta)" sub={`${Math.round(lvlPct)}% to ${level + 1}`} />
-          <Stat label="Total XP" value={`${xp.toLocaleString()}`} accent="var(--color-cyan)" />
-          <Stat label="Streak" value={`${streak}d`} accent="var(--color-amber)" />
-          <Stat
-            label="Time logged"
-            value={formatHmShort(totalSeconds)}
-            accent="var(--color-lime)"
-          />
-        </div>
-
-        {/* Operator Card — small inline preview of the export */}
-        <div className="np-pixel-inset p-4 sm:p-6 mb-2">
-          <div className="np-screen text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-2)] mb-3 flex items-center gap-2">
-            <span className="inline-block w-2 h-2 bg-[var(--color-magenta)]" />
-            OPERATOR CARD · 1080×1920 PORTRAIT (PNG EXPORT)
-          </div>
-          <OperatorCardPreview data={cardData} maxWidth={420} />
-        </div>
-
-        {/* Hidden full-size card — html-to-image targets this on Export */}
-        <OperatorCardOffscreen data={cardData} containerRef={cardRef} />
+        {/* Two-column layout — stats scroll on the left, card stays put on the right */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
+          {/* ═══════ LEFT COLUMN — scrolling content ═══════ */}
+          <div className="space-y-6 min-w-0">
+            {/* Top stats strip */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Stat label="Level" value={`${level}`} accent="var(--color-magenta)" sub={`${Math.round(lvlPct)}% to ${level + 1}`} />
+              <Stat label="Total XP" value={`${xp.toLocaleString()}`} accent="var(--color-cyan)" />
+              <Stat label="Streak" value={`${streak}d`} accent="var(--color-amber)" />
+              <Stat
+                label="Time logged"
+                value={formatHmShort(totalSeconds)}
+                accent="var(--color-lime)"
+              />
+            </div>
 
         {/* Refreshers due */}
         {refreshers.length > 0 && (
@@ -423,6 +397,43 @@ export function StatsView() {
             })}
           </div>
         </div>
+          </div>{/* end left column */}
+
+          {/* ═══════ RIGHT COLUMN — sticky operator card ═══════ */}
+          <aside className="lg:sticky lg:top-6 lg:self-start space-y-3">
+            <div className="np-pixel-inset p-3">
+              <div className="np-screen text-[10px] tracking-[0.25em] uppercase text-[var(--color-fg-2)] mb-2 flex items-center gap-2">
+                <span className="inline-block w-2 h-2 bg-[var(--color-magenta)]" />
+                OPERATOR CARD
+              </div>
+              <OperatorCardPreview data={cardData} maxWidth={296} />
+              <div className="np-screen text-[9px] tracking-[0.2em] text-[var(--color-fg-3)] mt-2 text-center">
+                EXPORTS AS 1080×1920 PNG
+              </div>
+            </div>
+
+            <Button variant="primary" size="md" onClick={exportCard} disabled={exporting} className="w-full">
+              <Camera size={13} />
+              {exporting ? "RENDERING…" : "EXPORT CARD"}
+            </Button>
+
+            {exportMsg && (
+              <div
+                className="np-screen text-[10px] tracking-[0.15em] text-center px-2 py-2"
+                style={{
+                  color: exportMsg.ok ? "var(--color-lime)" : "var(--color-rose)",
+                  borderTop: `2px solid ${exportMsg.ok ? "var(--color-lime-dim)" : "var(--color-rose-dim)"}`,
+                  borderBottom: `2px solid ${exportMsg.ok ? "var(--color-lime-dim)" : "var(--color-rose-dim)"}`,
+                }}
+              >
+                {exportMsg.text}
+              </div>
+            )}
+          </aside>
+        </div>{/* end grid */}
+
+        {/* Hidden full-size card — html-to-image targets this on Export */}
+        <OperatorCardOffscreen data={cardData} containerRef={cardRef} />
       </div>
     </div>
   );
