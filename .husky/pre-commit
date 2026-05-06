@@ -1,0 +1,13 @@
+# Pre-commit hook — fast feedback before the commit lands.
+#
+# - lint-staged runs prettier + eslint --fix on the staged files only
+#   (cheap, catches formatting & most lint errors)
+# - typecheck + test run on the whole project (slower, but tests are
+#   ~3s and tsc --noEmit is fast)
+#
+# Skip with `git commit --no-verify` if you genuinely need to bypass
+# (e.g. a WIP commit on a feature branch).
+
+npx lint-staged
+npm run typecheck
+npm test
