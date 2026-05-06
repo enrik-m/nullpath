@@ -29,7 +29,7 @@
     "@fontsource/silkscreen": "^5.2.8",
     "@supabase/supabase-js": "^2.105.3",
     "@tailwindcss/vite": "^4.2.4",
-    "@types/react-window": "^1.8.8",
+    "@types/react-window": "^2.0.0",
     "@xyflow/react": "^12.10.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
