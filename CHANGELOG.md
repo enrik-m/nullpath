@@ -7,12 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Pre-1.0 releases may contain breaking changes within minor bumps; the
 project hasn't reached a stability commitment yet.
 
-## [0.17.0-beta.1] — 2026-05-06
+## [0.21.0-beta.1] — 2026-05-06
 
 The "feels-like-a-game" release. Removes the time-tracking subsystem and
-replaces session-driven mechanics with completion-driven ones, then layers
-an audit/security/a11y pass on top. Adds a 56-achievement Trophy Room
-with live progress bars.
+replaces session-driven mechanics with completion-driven ones, layers an
+audit / security / a11y pass on top, adds a 56-achievement Trophy Room
+with live progress bars, and rounds the project out with the standard
+shipping infrastructure: tests, CI, lint + format, virtualization,
+backup / restore, and the auto-update plugin (inert until the project
+generates a signing key).
 
 ### Added
 
@@ -108,3 +111,43 @@ with live progress bars.
   protocols refused.
 - Dynamic SQL builders enforce per-table column allowlists.
 - CSP set; `fs:scope` narrowed; capability surface reduced.
+
+### Tooling
+
+- **Vitest** + 35 unit tests across the core modules (XP / level
+  curve, URL safety, length limits, achievement catalog + isUnlocked).
+  jsdom + tiny stubs for the Tauri SQL / opener plugins so tests run
+  without the shell.
+- **GitHub Actions CI** (`.github/workflows/ci.yml`): three parallel
+  jobs — frontend (typecheck → lint → vitest → vite build), Rust
+  (cargo check + clippy with `-D warnings`), and a Prettier
+  format-check.
+- **Prettier-formatted codebase** — one-time `prettier --write` pass
+  applied to all `src/**/*.{ts,tsx,css,json}` so the CI format check
+  passes from day one.
+
+### Performance
+
+- **List virtualization** — `react-window` 2.x added behind a
+  `<MaybeVirtualList>` wrapper. Codex resource list flips to
+  virtualized rendering above 100 entries; below that it stays as a
+  plain column to avoid the resize-observer overhead.
+
+### Data
+
+- **JSON backup / restore** — Settings → Backup exports every
+  user-generated row (per-node user_xp / status / timestamps,
+  resources, notes, refreshers, bounties, streak days, achievements,
+  app_state) to a portable JSON file via the native save dialog.
+  Import wipes existing user state, replays the snapshot, reloads.
+  Schema version pinned at 1; future shape changes will be
+  backwards-compatibly migrated.
+
+### Distribution
+
+- **Auto-update plugin** (`tauri-plugin-updater`) wired in but inert
+  until `tauri.conf.json → plugins.updater.active` is set to true.
+  See `docs/updater.md` for the signing-key + manifest setup.
+- **Code-signing docs** at `docs/code-signing.md` covering Apple
+  Developer ID + notarization and Microsoft Authenticode flows.
+  No certificates are committed.
