@@ -122,7 +122,7 @@ function parse(md) {
   const nodes = [];
 
   // Match a zone heading line: "## Z04 — Injection Caves"
-  const RX_ZONE = /^##\s+(Z\d{2})\s+[—\-]\s+(.+?)\s*$/;
+  const RX_ZONE = /^##\s+(Z\d{2})\s+[—-]\s+(.+?)\s*$/;
   // Match a leaf bullet (top-level OR sub-node — distinguished by indent):
   //   "- **W01 SQL Injection** `[std]` `[OWASP A03 / CWE-89]` — server-side SQL injection"
   //   "  - **W01a Error-based** `[std]` — leak data via DBMS errors"
@@ -131,7 +131,7 @@ function parse(md) {
   let currentZone = null;
   let currentZoneSortOrder = 0;
   let currentTop = null; // { id, sort } — most recently seen top-level node
-  let nodeSortByZone = new Map(); // zone_id → counter for sort_order
+  const nodeSortByZone = new Map(); // zone_id → counter for sort_order
 
   for (const line of lines) {
     const zm = line.match(RX_ZONE);
@@ -200,7 +200,7 @@ function parse(md) {
 
     // Gloss = post-tags trailing text after an em-dash or hyphen.
     let gloss = null;
-    const dashSplit = rest.split(/\s+[—\-]\s+/);
+    const dashSplit = rest.split(/\s+[—-]\s+/);
     if (dashSplit.length > 1) {
       gloss = dashSplit.slice(1).join(" — ").trim();
       // Strip any leftover backtick tags from gloss

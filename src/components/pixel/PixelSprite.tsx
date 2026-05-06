@@ -177,6 +177,7 @@ export function PixelSprite({
     const out: { x: number; y: number; c: string }[] = [];
     for (let y = 0; y < rows; y++) {
       const row = sprite[y];
+      if (!row) continue;
       for (let x = 0; x < cols; x++) {
         const ch = row[x];
         if (ch === "#") out.push({ x, y, c: color });

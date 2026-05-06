@@ -215,6 +215,7 @@ export function RegionView({ regionId }: RegionViewProps) {
     if ((e.target as HTMLElement).closest("[data-zone-star]")) return;
     if (e.touches.length === 1) {
       const t = e.touches[0];
+      if (!t) return;
       touchRef.current = {
         kind: "pan",
         x0: t.clientX,
@@ -223,7 +224,9 @@ export function RegionView({ regionId }: RegionViewProps) {
         vy0: view.y,
       };
     } else if (e.touches.length === 2) {
-      const [a, b] = [e.touches[0], e.touches[1]];
+      const a = e.touches[0];
+      const b = e.touches[1];
+      if (!a || !b) return;
       const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
       touchRef.current = {
         kind: "pinch",
@@ -239,6 +242,7 @@ export function RegionView({ regionId }: RegionViewProps) {
     if (!t || !containerRef.current) return;
     if (t.kind === "pan" && e.touches.length === 1) {
       const f = e.touches[0];
+      if (!f) return;
       setView((v) => ({
         ...v,
         x: t.vx0 + (f.clientX - t.x0),
@@ -246,7 +250,9 @@ export function RegionView({ regionId }: RegionViewProps) {
       }));
       e.preventDefault();
     } else if (t.kind === "pinch" && e.touches.length >= 2) {
-      const [a, b] = [e.touches[0], e.touches[1]];
+      const a = e.touches[0];
+      const b = e.touches[1];
+      if (!a || !b) return;
       const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
       const ratio = dist / t.startDist;
       const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, t.startScale * ratio));
@@ -269,6 +275,7 @@ export function RegionView({ regionId }: RegionViewProps) {
     } else if (e.touches.length === 1) {
       // Pinch ended, single finger remains — switch to pan
       const t = e.touches[0];
+      if (!t) return;
       touchRef.current = {
         kind: "pan",
         x0: t.clientX,

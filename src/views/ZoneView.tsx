@@ -124,9 +124,13 @@ const STATUS_FILL: Record<NodeStatus, string> = {
   complete: "#0e2a14",
 };
 
+interface SkillNodeData {
+  row: NodeRow;
+  isSub: boolean;
+}
+
 function SkillNode({ data, selected }: NodeProps) {
-  const row = (data as any).row as NodeRow;
-  const isSub = (data as any).isSub as boolean;
+  const { row, isSub } = data as unknown as SkillNodeData;
   const ring = DEPTH_RING[row.depth];
   const fill = STATUS_FILL[row.status];
 
@@ -234,7 +238,7 @@ export function ZoneView({ zoneId }: ZoneViewProps) {
     if (filter === "all") return nodes;
     return nodes.map((n) => ({
       ...n,
-      hidden: ((n.data as any).row as NodeRow).status !== filter,
+      hidden: (n.data as unknown as SkillNodeData).row.status !== filter,
     }));
   }, [nodes, filter]);
 
@@ -245,10 +249,13 @@ export function ZoneView({ zoneId }: ZoneViewProps) {
     const tops = rows.filter((r) => !r.parent_id && r.status !== "complete");
     const trail: Edge[] = [];
     for (let i = 0; i < tops.length - 1; i++) {
+      const a = tops[i];
+      const b = tops[i + 1];
+      if (!a || !b) continue;
       trail.push({
-        id: `trail-${tops[i].id}-${tops[i + 1].id}`,
-        source: tops[i].id,
-        target: tops[i + 1].id,
+        id: `trail-${a.id}-${b.id}`,
+        source: a.id,
+        target: b.id,
         type: "straight",
         animated: true,
         style: { stroke: "#a3e635", strokeWidth: 2 },
@@ -258,7 +265,7 @@ export function ZoneView({ zoneId }: ZoneViewProps) {
   }, [trailMode, edges, rows]);
 
   const onNodeClick = useCallback(
-    (_e: any, n: Node) => {
+    (_e: React.MouseEvent, n: Node) => {
       sfx.click();
       selectNode(n.id);
     },
@@ -307,7 +314,7 @@ export function ZoneView({ zoneId }: ZoneViewProps) {
             pannable
             zoomable
             nodeColor={(n) => {
-              const row = (n.data as any).row as NodeRow;
+              const { row } = n.data as unknown as SkillNodeData;
               if (row.status === "complete") return "#a8ff5c";
               if (row.status === "in_progress") return "#5cf2ff";
               return "#3a4480";
@@ -362,14 +369,16 @@ export function ZoneView({ zoneId }: ZoneViewProps) {
   );
 }
 
+type FilterValue = "all" | "available" | "in_progress" | "complete";
+
 function FilterButtons({
   value,
   onChange,
 }: {
-  value: "all" | "available" | "in_progress" | "complete";
-  onChange: (v: any) => void;
+  value: FilterValue;
+  onChange: (v: FilterValue) => void;
 }) {
-  const items: Array<{ id: any; label: string }> = [
+  const items: Array<{ id: FilterValue; label: string }> = [
     { id: "all", label: "All" },
     { id: "available", label: "Open" },
     { id: "in_progress", label: "Active" },
