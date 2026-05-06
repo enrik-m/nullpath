@@ -53,35 +53,51 @@ const ZONE_KIND = {
 };
 
 // ---------------------------------------------------------------------------
-// Layout: arrange the 23 zones on a stylized 2D map for the constellation
-// view. Coordinates are in arbitrary units; the renderer scales them.
-// Hand-tuned for visual balance — methodology + capstones flanking the
-// vuln cluster, foundations top-left as the entry, tooling top-right.
+// Layout: serpentine path. Zones are placed in 4 rows, alternating direction,
+// so the journey reads as one continuous trail from Z01 (top-left) through
+// to Z23 (bottom-left), with each row connecting tail-to-head with the next.
+//
+//    Z01 → Z02 → Z03 → Z04 → Z05 → Z06         (row 0, left → right)
+//                                  ↓
+//    Z12 ← Z11 ← Z10 ← Z09 ← Z08 ← Z07         (row 1, right → left)
+//     ↓
+//    Z13 → Z14 → Z15 → Z16 → Z17 → Z18         (row 2, left → right)
+//                                  ↓
+//          Z23 ← Z22 ← Z21 ← Z20 ← Z19         (row 3, right → left)
+//
+// Spacing: 280 horizontal × 320 vertical — comfortable breathing room.
 // ---------------------------------------------------------------------------
 const ZONE_LAYOUT = {
-  Z01: { cx: -700, cy: -480 }, //  Foundations
-  Z02: { cx:  700, cy: -480 }, //  Tooling
-  Z03: { cx: -560, cy: -180 }, //  Recon
-  Z04: { cx:    0, cy: -300 }, //  Injection
-  Z05: { cx:  560, cy: -180 }, //  Client-Side
-  Z06: { cx: -800, cy:   80 }, //  Auth
-  Z07: { cx: -380, cy:    0 }, //  Access Control
-  Z08: { cx:    0, cy:   60 }, //  Server-Side
-  Z09: { cx:  380, cy:    0 }, //  HTTP/Cache
-  Z10: { cx:  800, cy:   80 }, //  CSRF
-  Z11: { cx: -240, cy:  300 }, //  API
-  Z12: { cx:  240, cy:  300 }, //  Misconfig
-  Z13: { cx:  640, cy:  340 }, //  Business Logic
-  Z14: { cx: -640, cy:  340 }, //  Source Review
-  Z15: { cx: -880, cy:  600 }, //  Supply Chain
-  Z16: { cx: -440, cy:  600 }, //  Cloud-Native
-  Z17: { cx:    0, cy:  600 }, //  WAF/CDN Bypass
-  Z18: { cx:  440, cy:  600 }, //  Frontend Frameworks
-  Z19: { cx:  880, cy:  600 }, //  Modern Browser
-  Z20: { cx: -200, cy:  860 }, //  AI/LLM
-  Z21: { cx:  200, cy:  860 }, //  Defenses
-  Z22: { cx: -640, cy: -700 }, //  Methodology
-  Z23: { cx:  640, cy: -700 }, //  Capstones
+  // Row 0: Foundations → Recon → Injection → Client-Side
+  Z01: { cx: -700, cy: -480 },
+  Z02: { cx: -420, cy: -480 },
+  Z03: { cx: -140, cy: -480 },
+  Z04: { cx:  140, cy: -480 },
+  Z05: { cx:  420, cy: -480 },
+  Z06: { cx:  700, cy: -480 },
+
+  // Row 1 (right → left): Auth → Access → Server-Side → HTTP → CSRF → API
+  Z07: { cx:  700, cy: -160 },
+  Z08: { cx:  420, cy: -160 },
+  Z09: { cx:  140, cy: -160 },
+  Z10: { cx: -140, cy: -160 },
+  Z11: { cx: -420, cy: -160 },
+  Z12: { cx: -700, cy: -160 },
+
+  // Row 2 (left → right): Misconfig → Business → Source → Supply → Cloud → WAF
+  Z13: { cx: -700, cy:  160 },
+  Z14: { cx: -420, cy:  160 },
+  Z15: { cx: -140, cy:  160 },
+  Z16: { cx:  140, cy:  160 },
+  Z17: { cx:  420, cy:  160 },
+  Z18: { cx:  700, cy:  160 },
+
+  // Row 3 (right → left): Frontend → Modern Browser → AI → Defenses → Methodology → Capstones
+  Z19: { cx:  700, cy:  480 },
+  Z20: { cx:  420, cy:  480 },
+  Z21: { cx:  140, cy:  480 },
+  Z22: { cx: -140, cy:  480 },
+  Z23: { cx: -420, cy:  480 },
 };
 
 // ---------------------------------------------------------------------------

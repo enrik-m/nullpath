@@ -1,22 +1,24 @@
 /**
  * RegionView — the constellation map for a single region.
  *
- * Renders zones as nodes on a pannable/zoomable SVG canvas, drawn at the
- * coordinates seeded by the build-seed.mjs layout table. Each star pulses
- * when in-progress, glows lime when complete, and on hover reveals a panel
- * with name + progress + node counts.
+ * Renders the 23 zones as stars on a single connected serpentine path —
+ * the natural progression order, top to bottom. Pan/zoom is hand-rolled
+ * because we want the dragging to feel right and not fight react-flow's
+ * graph semantics here.
  *
- * No graph library — a hand-rolled SVG plus a small pan/zoom hook. We control
- * the styling end-to-end and the perf cost is trivial for ~25 zones.
+ * Pan model: a `<g>` transform that translates+scales world coords. The SVG
+ * has no viewBox, so 1 SVG unit = 1 screen pixel. World coords are in the
+ * `<g>`. To pan we add screen-pixel deltas to view.x / view.y. To zoom we
+ * scale the `<g>` and adjust translation so the cursor's world point stays
+ * fixed.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import * as db from "../db";
 import type { ZoneRow, ZoneStats, RegionRow } from "../db/types";
 import { useUi } from "../store";
 import { sfx } from "../lib/sfx";
-import { cn } from "../lib/cn";
 
 interface RegionViewProps {
   regionId: string;
@@ -27,9 +29,17 @@ interface ZoneNode {
   stats: ZoneStats | null;
 }
 
-const VIEWPORT_W = 1800; // logical map width
-const VIEWPORT_H = 1600;
 const STAR_RADIUS = 38;
+
+interface View {
+  x: number;
+  y: number;
+  scale: number;
+}
+
+const DEFAULT_VIEW: View = { x: 0, y: 0, scale: 1 };
+const MIN_SCALE = 0.35;
+const MAX_SCALE = 2.5;
 
 export function RegionView({ regionId }: RegionViewProps) {
   const go = useUi((s) => s.go);
@@ -38,12 +48,9 @@ export function RegionView({ regionId }: RegionViewProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Pan/zoom state for the SVG viewBox
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(
-    null,
-  );
+  const [view, setView] = useState<View>(DEFAULT_VIEW);
+  const dragRef = useRef<{ x0: number; y0: number; vx0: number; vy0: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Load
@@ -65,69 +72,130 @@ export function RegionView({ regionId }: RegionViewProps) {
     };
   }, [regionId]);
 
-  // Build edges: connect zones within the same row/column visually for atlas feel
-  const edges = useMemo(() => {
-    if (zones.length === 0) return [];
-    // Hand-curated connection lines for the layout — keeps the constellation
-    // readable instead of a fully connected graph.
-    const groups: string[][] = [
-      ["Z01", "Z03", "Z06", "Z14", "Z15", "Z16"], // left spine
-      ["Z02", "Z05", "Z10", "Z13", "Z19"], // right spine
-      ["Z01", "Z04", "Z02"], // top web
-      ["Z03", "Z04", "Z05"], // top web inner
-      ["Z06", "Z07", "Z08", "Z09", "Z10"], // mid arc
-      ["Z07", "Z11", "Z12"], // central column
-      ["Z11", "Z16", "Z20"], // left descent
-      ["Z12", "Z17", "Z21"], // central descent
-      ["Z13", "Z18", "Z19"], // right descent
-      ["Z22", "Z01"], // methodology link
-      ["Z23", "Z02"], // capstones link
-      ["Z14", "Z16"], // source review to cloud
-      ["Z15", "Z14"], // supply chain to source review
-      ["Z21", "Z19"], // defenses to modern browser
-      ["Z20", "Z21"], // ai to defenses
-      ["Z17", "Z18"], // waf to frontend
-    ];
-    const lines: { from: string; to: string }[] = [];
-    for (const g of groups) {
-      for (let i = 0; i < g.length - 1; i++) {
-        lines.push({ from: g[i], to: g[i + 1] });
+  // Center the path on first paint and on container resize.
+  useLayoutEffect(() => {
+    if (!containerRef.current || zones.length === 0) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    // Compute world bounds from zone coords
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const z of zones) {
+      const x = z.zone.cx ?? 0;
+      const y = z.zone.cy ?? 0;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    const worldW = maxX - minX + 200; // padding for star radius + name labels
+    const worldH = maxY - minY + 240;
+    const fitScale = Math.min(rect.width / worldW, rect.height / worldH, 1);
+
+    const worldCx = (minX + maxX) / 2;
+    const worldCy = (minY + maxY) / 2;
+
+    setView({
+      scale: fitScale,
+      x: rect.width / 2 - worldCx * fitScale,
+      y: rect.height / 2 - worldCy * fitScale,
+    });
+  }, [zones]);
+
+  // ---------------------------------------------------------------------
+  // Sequential edges: connect each zone to the next by sort_order.
+  // This produces the serpentine path from Z01 → Z23.
+  // ---------------------------------------------------------------------
+  const edgePath = useMemo(() => {
+    if (zones.length < 2) return "";
+    const ordered = [...zones].sort((a, b) => a.zone.sort_order - b.zone.sort_order);
+    const points = ordered.map((z) => ({ x: z.zone.cx ?? 0, y: z.zone.cy ?? 0 }));
+
+    // Build a smooth path: straight horizontal segments along rows,
+    // gentle quadratic curves around row corners.
+    let d = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const cur = points[i];
+      const sameRow = Math.abs(prev.y - cur.y) < 1;
+      if (sameRow) {
+        d += ` L ${cur.x} ${cur.y}`;
+      } else {
+        // Vertical drop between rows — round the corner using a quadratic
+        // curve via the midpoint to give a "river bend" feel.
+        const mx = (prev.x + cur.x) / 2;
+        const my = (prev.y + cur.y) / 2;
+        d += ` Q ${prev.x} ${my} ${mx} ${my}`;
+        d += ` Q ${cur.x} ${my} ${cur.x} ${cur.y}`;
       }
     }
-    return lines;
+    return d;
   }, [zones]);
 
-  // Map zone id to coords
-  const zoneById = useMemo(() => {
-    const m = new Map<string, ZoneNode>();
-    for (const z of zones) m.set(z.zone.id, z);
-    return m;
-  }, [zones]);
-
-  // Pan handlers
+  // ---------------------------------------------------------------------
+  // Pan / zoom
+  // ---------------------------------------------------------------------
   function onMouseDown(e: React.MouseEvent) {
+    // Don't start panning on a star or a button
     if ((e.target as HTMLElement).closest("[data-zone-star]")) return;
-    dragRef.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y };
+    if (e.button !== 0) return;
+    dragRef.current = {
+      x0: e.clientX,
+      y0: e.clientY,
+      vx0: view.x,
+      vy0: view.y,
+    };
+    setIsDragging(true);
+    e.preventDefault();
   }
-  function onMouseMove(e: React.MouseEvent) {
+
+  const onMouseMove = useCallback((e: MouseEvent) => {
     const d = dragRef.current;
     if (!d) return;
-    setPan({ x: d.panX + (e.clientX - d.startX), y: d.panY + (e.clientY - d.startY) });
-  }
-  function onMouseUp() {
-    dragRef.current = null;
-  }
-  function onWheel(e: React.WheelEvent) {
-    e.preventDefault();
-    const next = Math.max(0.4, Math.min(2.5, zoom * (1 + (e.deltaY < 0 ? 0.08 : -0.08))));
-    setZoom(next);
-  }
+    setView((v) => ({
+      ...v,
+      x: d.vx0 + (e.clientX - d.x0),
+      y: d.vy0 + (e.clientY - d.y0),
+    }));
+  }, []);
 
-  // Recenter on load
+  const onMouseUp = useCallback(() => {
+    if (dragRef.current) {
+      dragRef.current = null;
+      setIsDragging(false);
+    }
+  }, []);
+
+  // Bind drag listeners to window so dragging continues even if the cursor
+  // briefly leaves the SVG. Bug source #1 in the previous version: drag
+  // state was lost on element-leave.
   useEffect(() => {
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [onMouseMove, onMouseUp]);
+
+  function onWheel(e: React.WheelEvent) {
     if (!containerRef.current) return;
-    setPan({ x: containerRef.current.clientWidth / 2, y: containerRef.current.clientHeight / 2 });
-  }, [zones]);
+    e.preventDefault();
+    const rect = containerRef.current.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    setView((v) => {
+      const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, v.scale * factor));
+      const f = newScale / v.scale;
+      // Keep the world point under the cursor anchored
+      return {
+        scale: newScale,
+        x: cx - (cx - v.x) * f,
+        y: cy - (cy - v.y) * f,
+      };
+    });
+  }
 
   if (loading || !region) {
     return (
@@ -139,6 +207,8 @@ export function RegionView({ regionId }: RegionViewProps) {
     );
   }
 
+  const accent = region.color_accent;
+
   return (
     <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
       {/* Region overlay header */}
@@ -149,7 +219,7 @@ export function RegionView({ regionId }: RegionViewProps) {
           </div>
           <div
             className="text-2xl font-bold tracking-tight"
-            style={{ color: region.color_accent }}
+            style={{ color: accent }}
           >
             {region.name}
           </div>
@@ -157,70 +227,127 @@ export function RegionView({ regionId }: RegionViewProps) {
             {region.tagline}
           </div>
         </div>
-        <div className="np-mono text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] uppercase">
-          drag to pan · scroll to zoom
+        <div className="np-mono text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] uppercase pointer-events-auto flex items-center gap-3">
+          <button
+            onClick={() => {
+              sfx.click();
+              if (!containerRef.current || zones.length === 0) return;
+              const rect = containerRef.current.getBoundingClientRect();
+              let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+              for (const z of zones) {
+                minX = Math.min(minX, z.zone.cx ?? 0);
+                maxX = Math.max(maxX, z.zone.cx ?? 0);
+                minY = Math.min(minY, z.zone.cy ?? 0);
+                maxY = Math.max(maxY, z.zone.cy ?? 0);
+              }
+              const worldW = maxX - minX + 200;
+              const worldH = maxY - minY + 240;
+              const fitScale = Math.min(rect.width / worldW, rect.height / worldH, 1);
+              const worldCx = (minX + maxX) / 2;
+              const worldCy = (minY + maxY) / 2;
+              setView({
+                scale: fitScale,
+                x: rect.width / 2 - worldCx * fitScale,
+                y: rect.height / 2 - worldCy * fitScale,
+              });
+            }}
+            className="hover:text-[var(--color-fg-0)] transition"
+          >
+            fit view
+          </button>
+          <span className="opacity-50">drag to pan · scroll to zoom</span>
         </div>
       </div>
 
       {/* Map */}
       <div
         ref={containerRef}
-        className="flex-1 cursor-grab active:cursor-grabbing"
+        className={`flex-1 select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
         onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
         onWheel={onWheel}
       >
         <svg
           width="100%"
           height="100%"
           style={{ display: "block" }}
-          viewBox={`${-VIEWPORT_W / 2} ${-VIEWPORT_H / 2} ${VIEWPORT_W} ${VIEWPORT_H}`}
-          preserveAspectRatio="xMidYMid meet"
         >
           <defs>
             <radialGradient id="star-glow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor={region.color_accent} stopOpacity="0.5" />
-              <stop offset="60%" stopColor={region.color_accent} stopOpacity="0.05" />
-              <stop offset="100%" stopColor={region.color_accent} stopOpacity="0" />
+              <stop offset="0%" stopColor={accent} stopOpacity="0.55" />
+              <stop offset="60%" stopColor={accent} stopOpacity="0.05" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0" />
             </radialGradient>
             <radialGradient id="star-glow-complete" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="var(--color-lime)" stopOpacity="0.5" />
+              <stop offset="0%" stopColor="var(--color-lime)" stopOpacity="0.55" />
               <stop offset="60%" stopColor="var(--color-lime)" stopOpacity="0.05" />
               <stop offset="100%" stopColor="var(--color-lime)" stopOpacity="0" />
             </radialGradient>
+            {/* Animated gradient along the path for the "live" trail effect */}
+            <linearGradient id="path-flow" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={accent} stopOpacity="0.05" />
+              <stop offset="50%" stopColor={accent} stopOpacity="0.7" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0.05" />
+              <animate
+                attributeName="x1"
+                from="-1"
+                to="1"
+                dur="8s"
+                repeatCount="indefinite"
+              />
+              <animate
+                attributeName="x2"
+                from="0"
+                to="2"
+                dur="8s"
+                repeatCount="indefinite"
+              />
+            </linearGradient>
           </defs>
 
           <g
-            transform={`translate(${pan.x - (containerRef.current?.clientWidth ?? 0) / 2} ${pan.y - (containerRef.current?.clientHeight ?? 0) / 2}) scale(${zoom})`}
+            transform={`translate(${view.x} ${view.y}) scale(${view.scale})`}
+            style={{ transformOrigin: "0 0" }}
           >
-            {/* Edges */}
-            {edges.map((e, i) => {
-              const a = zoneById.get(e.from);
-              const b = zoneById.get(e.to);
-              if (!a || !b || a.zone.cx == null || b.zone.cx == null) return null;
-              return (
-                <line
-                  key={i}
-                  x1={a.zone.cx}
-                  y1={a.zone.cy ?? 0}
-                  x2={b.zone.cx}
-                  y2={b.zone.cy ?? 0}
-                  stroke="var(--color-border-subtle)"
-                  strokeWidth={1.5}
-                  strokeDasharray="3 6"
-                  opacity={0.6}
+            {/* The path — drawn behind the stars */}
+            {edgePath && (
+              <>
+                {/* Outer glow */}
+                <path
+                  d={edgePath}
+                  fill="none"
+                  stroke={accent}
+                  strokeOpacity={0.18}
+                  strokeWidth={14 / view.scale}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
-              );
-            })}
+                {/* Base path */}
+                <path
+                  d={edgePath}
+                  fill="none"
+                  stroke="var(--color-border-default)"
+                  strokeWidth={2.5 / view.scale}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                {/* Animated flow */}
+                <path
+                  d={edgePath}
+                  fill="none"
+                  stroke="url(#path-flow)"
+                  strokeWidth={3.5 / view.scale}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </>
+            )}
 
             {/* Zone stars */}
             {zones.map((z) => (
               <ZoneStar
                 key={z.zone.id}
                 zone={z}
-                accent={region.color_accent}
+                accent={accent}
                 hovered={hovered === z.zone.id}
                 onHover={(id) => {
                   setHovered(id);
@@ -239,8 +366,8 @@ export function RegionView({ regionId }: RegionViewProps) {
       {/* Hover tooltip */}
       {hovered && (
         <ZoneHoverPanel
-          zone={zoneById.get(hovered)!}
-          accent={region.color_accent}
+          zone={zones.find((z) => z.zone.id === hovered)!}
+          accent={accent}
         />
       )}
     </div>
@@ -248,7 +375,7 @@ export function RegionView({ regionId }: RegionViewProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Star + tooltip components
+// Star + tooltip
 // ---------------------------------------------------------------------------
 
 function ZoneStar({
@@ -276,7 +403,9 @@ function ZoneStar({
     ? "var(--color-lime)"
     : isActive
       ? accent
-      : "var(--color-fg-3)";
+      : "var(--color-fg-2)";
+
+  const circumference = 2 * Math.PI * STAR_RADIUS;
 
   return (
     <g
@@ -289,29 +418,59 @@ function ZoneStar({
     >
       {/* Glow halo */}
       <circle
-        r={STAR_RADIUS * 2.2}
+        r={STAR_RADIUS * (hovered ? 2.4 : 2.0)}
         fill={isComplete ? "url(#star-glow-complete)" : "url(#star-glow)"}
-        opacity={hovered ? 1 : 0.6}
+        opacity={hovered ? 1 : 0.7}
+        style={{ transition: "opacity 200ms, r 200ms" }}
       />
-      {/* Outer ring (progress) */}
+      {/* Outer ring (background) */}
       <circle
         r={STAR_RADIUS}
-        fill="none"
+        fill="var(--color-bg-1)"
         stroke="var(--color-border-default)"
         strokeWidth={2}
       />
+      {/* Progress arc */}
+      {pct > 0 && (
+        <circle
+          r={STAR_RADIUS}
+          fill="none"
+          stroke={fillColor}
+          strokeWidth={3}
+          strokeDasharray={`${pct * circumference} ${circumference}`}
+          transform="rotate(-90)"
+          strokeLinecap="round"
+        />
+      )}
+      {/* Inner pulse for in-progress */}
+      {isActive && !isComplete && (
+        <circle
+          r={STAR_RADIUS * 0.6}
+          fill="none"
+          stroke={accent}
+          strokeWidth={1}
+          opacity={0.5}
+        >
+          <animate
+            attributeName="r"
+            from={STAR_RADIUS * 0.55}
+            to={STAR_RADIUS * 0.75}
+            dur="2s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="opacity"
+            from="0.6"
+            to="0"
+            dur="2s"
+            repeatCount="indefinite"
+          />
+        </circle>
+      )}
+      {/* Inner dot */}
       <circle
-        r={STAR_RADIUS}
-        fill="none"
-        stroke={fillColor}
-        strokeWidth={2.5}
-        strokeDasharray={`${pct * (2 * Math.PI * STAR_RADIUS)} ${(1 - pct) * (2 * Math.PI * STAR_RADIUS)}`}
-        transform={`rotate(-90)`}
-      />
-      {/* Inner star */}
-      <circle
-        r={STAR_RADIUS * 0.55}
-        fill="var(--color-bg-1)"
+        r={STAR_RADIUS * 0.4}
+        fill="var(--color-bg-2)"
         stroke={fillColor}
         strokeWidth={1.5}
       />
@@ -329,11 +488,12 @@ function ZoneStar({
       {/* Zone name beneath */}
       <text
         textAnchor="middle"
-        y={STAR_RADIUS + 18}
+        y={STAR_RADIUS + 22}
         fontFamily="var(--font-sans)"
         fontSize={11}
         fontWeight={500}
-        fill="var(--color-fg-1)"
+        fill={hovered ? "var(--color-fg-0)" : "var(--color-fg-1)"}
+        style={{ transition: "fill 150ms" }}
       >
         {zone.zone.name}
       </text>
@@ -381,7 +541,7 @@ function ZoneHoverPanel({
           {completed} ({pct}%)
         </span>
       </div>
-      <div className={cn("mt-2 np-mono text-[10px] tracking-widest", "text-[var(--color-fg-3)]")}>
+      <div className="mt-2 np-mono text-[10px] tracking-widest text-[var(--color-fg-3)]">
         click to enter
       </div>
     </motion.div>
