@@ -1,60 +1,56 @@
 /**
- * BootView — fake terminal boot sequence.
+ * BootView — pixel terminal boot.
  *
- * Plays once on first launch (when app_state.onboarded_at is null) and then
- * sets the route to atlas. Subsequent launches skip straight to atlas.
+ * Plays full sequence on first launch (when app_state.onboarded_at is null)
+ * and a quick fade on subsequent launches.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useUi } from "../store";
 import { sfx, unlockAudio } from "../lib/sfx";
 import * as db from "../db";
 
 const LINES = [
-  { delay: 0, text: "// nullpath kernel v0.1.0 — initialising...", color: "fg-2" },
-  { delay: 200, text: "[ ok ] mounting atlas...", color: "fg-1" },
-  { delay: 360, text: "[ ok ] decoding constellation maps", color: "fg-1" },
-  { delay: 540, text: "[ ok ] indexing 23 zones, 713 nodes", color: "fg-1" },
-  { delay: 720, text: "[ ok ] loading skill graph (web region)", color: "fg-1" },
-  { delay: 880, text: "[ ok ] establishing local sqlite link", color: "fg-1" },
-  { delay: 1040, text: "[ ok ] linking idle telemetry hooks", color: "fg-1" },
-  { delay: 1200, text: "[ ok ] preparing operator profile", color: "fg-1" },
-  { delay: 1360, text: "$ welcome, operator.", color: "cyan" },
-  { delay: 1480, text: "$ proceed to atlas? [ y ]", color: "magenta" },
+  { delay: 0,    text: ">>> nullpath_kernel.boot()", color: "fg-2" },
+  { delay: 200,  text: "[ OK ] CRT warm-up.................. green", color: "fg-1" },
+  { delay: 360,  text: "[ OK ] mounting atlas............... green", color: "fg-1" },
+  { delay: 520,  text: "[ OK ] decoding constellation maps.. green", color: "fg-1" },
+  { delay: 680,  text: "[ OK ] indexing 23 zones / 820 nodes green", color: "fg-1" },
+  { delay: 840,  text: "[ OK ] loading skill graph (web).... green", color: "fg-1" },
+  { delay: 1000, text: "[ OK ] linking sqlite store......... green", color: "fg-1" },
+  { delay: 1160, text: "[ OK ] idle telemetry hooks armed... green", color: "fg-1" },
+  { delay: 1320, text: "[ OK ] operator profile ready....... green", color: "fg-1" },
+  { delay: 1500, text: "$ welcome, operator.", color: "cyan" },
+  { delay: 1640, text: "$ enter the atlas? [Y]_", color: "magenta" },
 ];
 
 export function BootView() {
   const go = useUi((s) => s.go);
   const [shown, setShown] = useState(0);
   const [skip, setSkip] = useState(false);
+  const titleRef = useRef<HTMLDivElement | null>(null);
 
-  // Fast-skip if already onboarded
   useEffect(() => {
     let cancelled = false;
     async function check() {
       try {
         const state = await db.getAppState();
         if (state.onboarded_at) {
-          // Fade-by quickly: still show 600ms of intro, then atlas
           window.setTimeout(() => {
             if (!cancelled) go({ name: "atlas" });
-          }, 600);
+          }, 700);
           if (!cancelled) setSkip(true);
         } else {
-          // First boot — full sequence
           unlockAudio();
           sfx.bootStart();
         }
       } catch {
-        // DB not ready: show full sequence anyway
         if (!cancelled) sfx.bootStart();
       }
     }
     check();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [go]);
 
   useEffect(() => {
@@ -69,7 +65,7 @@ export function BootView() {
       await db.updateAppState({ onboarded_at: new Date().toISOString() });
       sfx.success();
       go({ name: "atlas" });
-    }, 2300);
+    }, 2500);
     return () => {
       timers.forEach((t) => window.clearTimeout(t));
       window.clearTimeout(finish);
@@ -77,51 +73,81 @@ export function BootView() {
   }, [skip, go]);
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center">
-      <div className="w-[560px] max-w-full px-6">
+    <div className="h-screen w-screen flex items-center justify-center px-6">
+      <div className="w-[640px] max-w-full">
         {!skip ? (
-          <motion.div
-            className="np-mono text-[12px] leading-[1.8] tracking-wide"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
-          >
-            {LINES.slice(0, shown).map((line, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.2 }}
-                className={
-                  line.color === "cyan"
-                    ? "text-[var(--color-cyan)]"
-                    : line.color === "magenta"
-                      ? "text-[var(--color-magenta)]"
-                      : line.color === "fg-1"
-                        ? "text-[var(--color-fg-1)]"
-                        : "text-[var(--color-fg-2)]"
-                }
+          <>
+            {/* Big pixel logo */}
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: "linear" }}
+              className="text-center mb-8"
+            >
+              <div
+                ref={titleRef}
+                className="np-display text-4xl np-flicker"
+                data-text="NULLPATH"
+                style={{
+                  background:
+                    "linear-gradient(180deg, var(--color-cyan) 0%, var(--color-magenta) 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  textShadow: "0 0 20px var(--color-cyan-glow)",
+                }}
               >
-                {line.text}
-                {i === shown - 1 && (
-                  <span className="ml-1 inline-block w-2 h-[10px] align-middle bg-[var(--color-cyan)] np-pulse" />
-                )}
-              </motion.div>
-            ))}
-          </motion.div>
+                <span className="np-glitch-text" data-text="NULLPATH">
+                  NULLPATH
+                </span>
+              </div>
+              <div className="np-screen text-[9px] tracking-[0.4em] text-[var(--color-fg-3)] mt-3">
+                ◇ OFFENSIVE-SECURITY ATLAS ◇
+              </div>
+            </motion.div>
+
+            {/* Boot log */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="np-pixel-inset p-4 np-mono text-[14px] leading-[1.7]"
+            >
+              {LINES.slice(0, shown).map((line, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -4 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.08 }}
+                  className={
+                    line.color === "cyan"
+                      ? "text-[var(--color-cyan)]"
+                      : line.color === "magenta"
+                        ? "text-[var(--color-magenta)]"
+                        : line.color === "fg-1"
+                          ? "text-[var(--color-fg-1)]"
+                          : "text-[var(--color-fg-2)]"
+                  }
+                >
+                  {line.text.replace("green", "")}
+                  {line.text.includes("green") && (
+                    <span className="text-[var(--color-lime)]">[ ok ]</span>
+                  )}
+                  {i === shown - 1 && (
+                    <span className="ml-1 inline-block w-[8px] h-[14px] bg-[var(--color-cyan)] np-blink align-middle" />
+                  )}
+                </motion.div>
+              ))}
+            </motion.div>
+          </>
         ) : (
           <div className="flex flex-col items-center gap-4">
-            <div className="flex items-baseline gap-1">
-              <span className="text-5xl font-bold tracking-tight bg-gradient-to-br from-[var(--color-cyan)] via-[var(--color-fg-0)] to-[var(--color-magenta)] bg-clip-text text-transparent">
-                null
-              </span>
-              <span className="text-5xl font-bold tracking-tight text-[var(--color-fg-0)]">
-                path
-              </span>
-              <span className="np-mono text-xl text-[var(--color-cyan)] np-pulse">_</span>
+            <div className="np-display text-4xl np-flicker text-[var(--color-cyan)]">
+              <span className="np-glitch-text" data-text="NULLPATH">NULLPATH</span>
+              <span className="np-blink ml-2 text-[var(--color-magenta)]">_</span>
             </div>
-            <div className="np-mono text-[10px] text-[var(--color-fg-3)] tracking-[0.4em]">
-              loading atlas...
+            <div className="np-screen text-[9px] tracking-[0.4em] text-[var(--color-fg-3)] np-blink">
+              LOADING ATLAS...
             </div>
           </div>
         )}

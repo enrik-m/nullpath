@@ -178,7 +178,7 @@ function Section({
   return (
     <div
       className={cn(
-        "np-glass rounded-lg p-5",
+        "np-pixel rounded-lg p-5",
         tone === "danger" && "border-[var(--color-rose)]",
       )}
     >

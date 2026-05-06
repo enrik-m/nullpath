@@ -1,10 +1,8 @@
 /**
- * Sound effects layer.
+ * Sound effects layer — chunky chiptune.
  *
- * SFX are synthesized on-the-fly via the Web Audio API rather than
- * shipped as audio files — keeps bundle size small and lets us tune
- * cyberpunk timbres directly. Howler is left in dependencies for
- * future ambient tracks.
+ * Synth-only via Web Audio. Square waves dominate (NES-era feel) with
+ * triangle bass. Short attacks, short decays. No reverb — dry pixel sound.
  */
 
 import { useUi } from "../store";
@@ -13,7 +11,6 @@ let ctx: AudioContext | null = null;
 
 function audio(): AudioContext {
   if (!ctx) {
-    // Lazy because some browsers reject creation pre-user-gesture
     ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
   return ctx;
@@ -25,12 +22,12 @@ function enabled(): boolean {
 
 interface ToneOpts {
   freq: number;
-  duration: number;       // seconds
+  duration: number;
   type?: OscillatorType;
-  gain?: number;          // 0..1
-  attack?: number;        // seconds
-  release?: number;       // seconds
-  detune?: number;        // cents
+  gain?: number;
+  attack?: number;
+  release?: number;
+  detune?: number;
 }
 
 function tone(opts: ToneOpts) {
@@ -39,21 +36,31 @@ function tone(opts: ToneOpts) {
   const now = a.currentTime;
   const osc = a.createOscillator();
   const gainNode = a.createGain();
-  osc.type = opts.type ?? "sine";
+  osc.type = opts.type ?? "square";
   osc.frequency.value = opts.freq;
   if (opts.detune) osc.detune.value = opts.detune;
-  const peak = opts.gain ?? 0.18;
-  const attack = opts.attack ?? 0.01;
-  const release = opts.release ?? 0.08;
+  const peak = opts.gain ?? 0.12;
+  const attack = opts.attack ?? 0.005;
+  const release = opts.release ?? 0.04;
   gainNode.gain.setValueAtTime(0, now);
   gainNode.gain.linearRampToValueAtTime(peak, now + attack);
+  gainNode.gain.setValueAtTime(peak, now + opts.duration);
   gainNode.gain.exponentialRampToValueAtTime(0.0001, now + opts.duration + release);
   osc.connect(gainNode).connect(a.destination);
   osc.start(now);
   osc.stop(now + opts.duration + release + 0.05);
 }
 
-function noise(duration: number, gainPeak = 0.1, filterFreq = 1500) {
+function arpeggio(freqs: number[], stepMs: number, opts: Partial<ToneOpts> = {}) {
+  freqs.forEach((f, i) => {
+    setTimeout(
+      () => tone({ freq: f, duration: stepMs / 1000 - 0.005, type: "square", gain: 0.1, ...opts }),
+      i * stepMs,
+    );
+  });
+}
+
+function noise(duration: number, gainPeak = 0.08, filterFreq = 1500) {
   if (!enabled()) return;
   const a = audio();
   const now = a.currentTime;
@@ -75,68 +82,77 @@ function noise(duration: number, gainPeak = 0.1, filterFreq = 1500) {
 }
 
 // ---------------------------------------------------------------------------
-// Public API — semantic, not waveform.
+// Public API
 // ---------------------------------------------------------------------------
+
+const NOTE = {
+  C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+  C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, B5: 987.77,
+  C6: 1046.5, D6: 1174.7, E6: 1318.5, G6: 1568.0,
+};
 
 export const sfx = {
   hover() {
-    tone({ freq: 880, duration: 0.04, type: "sine", gain: 0.04, attack: 0.005, release: 0.03 });
+    tone({ freq: NOTE.E5, duration: 0.02, type: "square", gain: 0.04 });
   },
   click() {
-    tone({ freq: 540, duration: 0.05, type: "triangle", gain: 0.08, attack: 0.005 });
+    tone({ freq: NOTE.A5, duration: 0.04, type: "square", gain: 0.08 });
   },
   navigate() {
-    tone({ freq: 660, duration: 0.07, type: "sine", gain: 0.1 });
-    setTimeout(() => tone({ freq: 880, duration: 0.06, type: "sine", gain: 0.08 }), 40);
+    arpeggio([NOTE.C5, NOTE.E5, NOTE.G5], 30, { gain: 0.09 });
   },
   success() {
-    tone({ freq: 587.33, duration: 0.1, type: "triangle", gain: 0.12 });
-    setTimeout(() => tone({ freq: 783.99, duration: 0.12, type: "triangle", gain: 0.12 }), 60);
-    setTimeout(() => tone({ freq: 1046.5, duration: 0.18, type: "triangle", gain: 0.12 }), 130);
+    arpeggio([NOTE.C5, NOTE.E5, NOTE.G5, NOTE.C6], 60, { gain: 0.12 });
   },
   complete() {
-    // node completed
-    tone({ freq: 659.25, duration: 0.12, type: "sine", gain: 0.18 });
-    setTimeout(() => tone({ freq: 987.77, duration: 0.18, type: "sine", gain: 0.16 }), 80);
+    arpeggio([NOTE.E5, NOTE.G5, NOTE.B5, NOTE.E6], 50, { gain: 0.13 });
   },
   levelUp() {
-    tone({ freq: 523.25, duration: 0.15, type: "triangle", gain: 0.18 });
-    setTimeout(() => tone({ freq: 659.25, duration: 0.15, type: "triangle", gain: 0.18 }), 110);
-    setTimeout(() => tone({ freq: 783.99, duration: 0.15, type: "triangle", gain: 0.18 }), 220);
-    setTimeout(() => tone({ freq: 1046.5, duration: 0.3, type: "triangle", gain: 0.2 }), 330);
+    arpeggio([NOTE.C5, NOTE.D5, NOTE.E5, NOTE.G5, NOTE.C6, NOTE.E6, NOTE.G6], 80, { gain: 0.14 });
+    setTimeout(() => tone({ freq: NOTE.C6, duration: 0.5, type: "triangle", gain: 0.15 }), 600);
   },
   warn() {
-    tone({ freq: 220, duration: 0.18, type: "sawtooth", gain: 0.08 });
+    tone({ freq: NOTE.A4, duration: 0.06, type: "square", gain: 0.1 });
+    setTimeout(() => tone({ freq: NOTE.E4, duration: 0.1, type: "square", gain: 0.1 }), 80);
   },
   zoneUnlock() {
-    noise(0.2, 0.07, 600);
-    setTimeout(() => tone({ freq: 130, duration: 0.4, type: "sawtooth", gain: 0.14 }), 50);
-    setTimeout(() => tone({ freq: 195, duration: 0.4, type: "sawtooth", gain: 0.12 }), 120);
+    noise(0.08, 0.06, 800);
+    arpeggio([NOTE.G4, NOTE.B4, NOTE.D5, NOTE.G5], 50, { gain: 0.11 });
   },
   bootStart() {
-    tone({ freq: 110, duration: 0.4, type: "sawtooth", gain: 0.06 });
-    noise(0.2, 0.04, 300);
+    tone({ freq: 80, duration: 0.3, type: "triangle", gain: 0.08 });
+    noise(0.15, 0.04, 400);
   },
   bootChunk() {
-    tone({ freq: 800 + Math.random() * 200, duration: 0.02, type: "square", gain: 0.04 });
+    tone({
+      freq: 600 + Math.random() * 800,
+      duration: 0.015,
+      type: "square",
+      gain: 0.05,
+    });
   },
   glitch() {
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       setTimeout(
         () =>
           tone({
-            freq: 200 + Math.random() * 1500,
-            duration: 0.03,
+            freq: 100 + Math.random() * 1800,
+            duration: 0.025,
             type: "square",
-            gain: 0.06,
+            gain: 0.05,
           }),
-        i * 25,
+        i * 18,
       );
+    }
+  },
+  /** Soft typewriter for boot text */
+  type() {
+    if (Math.random() < 0.4) {
+      tone({ freq: 1200 + Math.random() * 600, duration: 0.008, type: "square", gain: 0.025 });
     }
   },
 };
 
-/** Re-init the audio context after a user gesture (some browsers require it). */
 export function unlockAudio() {
   const a = audio();
   if (a.state === "suspended") a.resume().catch(() => {});

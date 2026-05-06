@@ -109,19 +109,19 @@ function buildEdges(rows: NodeRow[]): Edge[] {
 }
 
 // ---------------------------------------------------------------------------
-// Custom node renderer
+// Custom node renderer — chunky pixel card
 // ---------------------------------------------------------------------------
 const DEPTH_RING: Record<NodeDepth, string> = {
-  intro: "#6b7088",
-  std: "#22d3ee",
-  adv: "#e879f9",
-  res: "#fb7185",
+  intro: "#7280b0",
+  std: "#5cf2ff",
+  adv: "#ff66e0",
+  res: "#ff5c7a",
 };
 
 const STATUS_FILL: Record<NodeStatus, string> = {
-  available: "#11131e",
-  in_progress: "#0a1f24",
-  complete: "#0e2a13",
+  available: "#161b3a",
+  in_progress: "#0d2840",
+  complete: "#0e2a14",
 };
 
 function SkillNode({ data, selected }: NodeProps) {
@@ -132,19 +132,26 @@ function SkillNode({ data, selected }: NodeProps) {
 
   const isComplete = row.status === "complete";
   const isInProgress = row.status === "in_progress";
+  const borderColor = isComplete ? "#a8ff5c" : isInProgress ? "#5cf2ff" : ring;
 
   return (
     <div
       className={cn(
-        "rounded-md transition-all relative",
-        isSub ? "min-w-[120px] max-w-[140px] px-2 py-1.5" : "min-w-[180px] max-w-[200px] px-3 py-2",
-        isComplete && "shadow-[0_0_18px_color-mix(in_oklab,var(--color-lime)_55%,transparent)]",
-        isInProgress && "shadow-[0_0_18px_color-mix(in_oklab,var(--color-cyan)_45%,transparent)]",
-        selected && "ring-2 ring-[var(--color-cyan)]",
+        "relative",
+        isSub ? "min-w-[120px] max-w-[150px] px-2 py-1.5" : "min-w-[190px] max-w-[210px] px-3 py-2",
       )}
       style={{
         background: fill,
-        border: `1.5px solid ${isComplete ? "#a3e635" : isInProgress ? "#22d3ee" : ring}`,
+        border: `2px solid ${borderColor}`,
+        boxShadow: `
+          inset 2px 2px 0 0 ${borderColor}66,
+          inset -2px -2px 0 0 #00000088,
+          0 3px 0 0 #0a0d1f
+          ${selected ? `, 0 0 0 2px var(--color-cyan), 0 0 12px var(--color-cyan-glow)` : ""}
+          ${isComplete ? `, 0 0 12px ${borderColor}55` : ""}
+          ${isInProgress ? `, 0 0 12px ${borderColor}55` : ""}
+        `,
+        imageRendering: "pixelated",
       }}
     >
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
@@ -152,23 +159,23 @@ function SkillNode({ data, selected }: NodeProps) {
 
       <div className="flex items-center gap-1.5">
         <span
-          className="np-mono text-[8px] tracking-[0.2em] uppercase"
-          style={{ color: ring }}
+          className="np-screen text-[8px] tracking-[0.15em]"
+          style={{ color: borderColor }}
         >
           {row.id}
         </span>
         {row.owasp_tag && (
-          <span className="np-mono text-[8px] text-[var(--color-fg-3)] uppercase tracking-wider">
+          <span className="np-screen text-[7px] text-[var(--color-fg-3)] tracking-wider">
             {row.owasp_tag}
           </span>
         )}
-        {isComplete && <span className="ml-auto text-[10px] text-[var(--color-lime)]">✓</span>}
-        {isInProgress && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--color-cyan)] np-pulse" />}
+        {isComplete && <span className="ml-auto np-display text-[9px] text-[var(--color-lime)]">✓</span>}
+        {isInProgress && <span className="ml-auto w-2 h-2 bg-[var(--color-cyan)] np-pulse" />}
       </div>
       <div
         className={cn(
-          "leading-tight font-medium mt-0.5",
-          isSub ? "text-[10.5px]" : "text-[12px]",
+          "leading-tight font-semibold mt-1",
+          isSub ? "text-[11px]" : "text-[12px]",
           isComplete ? "text-[var(--color-lime)]" : "text-[var(--color-fg-0)]",
         )}
       >
@@ -294,36 +301,32 @@ export function ZoneView({ zoneId }: ZoneViewProps) {
           proOptions={{ hideAttribution: true }}
           style={{ background: "transparent" }}
         >
-          <Background color="#2c3148" gap={28} size={1.2} />
-          <Controls
-            showInteractive={false}
-            style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-border-default)" }}
-          />
+          <Background color="#2a3358" gap={32} size={1} />
+          <Controls showInteractive={false} />
           <MiniMap
             pannable
             zoomable
             nodeColor={(n) => {
               const row = (n.data as any).row as NodeRow;
-              if (row.status === "complete") return "#a3e635";
-              if (row.status === "in_progress") return "#22d3ee";
-              return "#41465e";
+              if (row.status === "complete") return "#a8ff5c";
+              if (row.status === "in_progress") return "#5cf2ff";
+              return "#3a4480";
             }}
-            maskColor="color-mix(in oklab, #06070b 80%, transparent)"
-            style={{ background: "var(--color-bg-1)", border: "1px solid var(--color-border-default)" }}
+            maskColor="rgba(7, 9, 26, 0.85)"
           />
         </ReactFlow>
 
         {/* Floating header */}
         <div className="absolute top-4 left-4 right-4 flex items-start justify-between pointer-events-none">
-          <div className="pointer-events-auto">
-            <div className="np-mono text-[10px] tracking-[0.3em] text-[var(--color-fg-3)] uppercase">
-              // zone · {zone.id}
+          <div className="pointer-events-auto np-pixel px-4 py-2" style={{ borderColor: accent }}>
+            <div className="np-screen text-[9px] tracking-[0.3em] text-[var(--color-fg-3)]">
+              // ZONE · {zone.id}
             </div>
-            <div className="text-2xl font-bold tracking-tight" style={{ color: accent }}>
-              {zone.name}
+            <div className="np-display text-base mt-1" style={{ color: accent }}>
+              {zone.name.toUpperCase()}
             </div>
-            <div className="np-mono text-[11px] text-[var(--color-fg-2)] mt-1">
-              {rows.length} nodes · {rows.filter((r) => r.status === "complete").length} complete
+            <div className="np-mono text-[12px] text-[var(--color-fg-2)] mt-1">
+              {rows.length} NODES · {rows.filter((r) => r.status === "complete").length} DONE
             </div>
           </div>
           <div className="flex items-center gap-2 pointer-events-auto">
@@ -334,13 +337,13 @@ export function ZoneView({ zoneId }: ZoneViewProps) {
                 setTrailMode((v) => !v);
               }}
               className={cn(
-                "np-mono text-[10px] tracking-[0.2em] uppercase px-3 py-1.5 rounded border transition",
+                "np-screen text-[9px] tracking-[0.2em] uppercase px-3 py-2 border-2 transition",
                 trailMode
-                  ? "text-[var(--color-lime)] border-[var(--color-lime-dim)] bg-[color-mix(in_oklab,var(--color-lime)_10%,transparent)]"
-                  : "text-[var(--color-fg-2)] border-[var(--color-border-default)] hover:text-[var(--color-fg-0)]",
+                  ? "bg-[var(--color-lime)] text-[var(--color-bg-0)] border-[var(--color-lime)]"
+                  : "text-[var(--color-fg-2)] border-[var(--color-border-default)] bg-[var(--color-bg-2)] hover:text-[var(--color-lime)] hover:border-[var(--color-lime-dim)]",
               )}
             >
-              Trail
+              TRAIL
             </button>
           </div>
         </div>
@@ -373,8 +376,8 @@ function FilterButtons({
     { id: "complete", label: "Done" },
   ];
   return (
-    <div className="np-mono text-[10px] flex border border-[var(--color-border-default)] rounded overflow-hidden bg-[var(--color-bg-2)]">
-      {items.map((it) => (
+    <div className="np-screen text-[9px] flex border-2 border-[var(--color-border-default)] bg-[var(--color-bg-2)]">
+      {items.map((it, i) => (
         <button
           key={it.id}
           onClick={() => {
@@ -382,13 +385,14 @@ function FilterButtons({
             onChange(it.id);
           }}
           className={cn(
-            "px-2.5 py-1.5 tracking-[0.15em] uppercase transition",
+            "px-3 py-2 tracking-[0.2em] uppercase transition",
+            i > 0 && "border-l-2 border-[var(--color-border-default)]",
             value === it.id
-              ? "bg-[color-mix(in_oklab,var(--color-cyan)_15%,transparent)] text-[var(--color-cyan)]"
-              : "text-[var(--color-fg-2)] hover:text-[var(--color-fg-0)]",
+              ? "bg-[var(--color-cyan-deep)] text-[var(--color-cyan)]"
+              : "text-[var(--color-fg-2)] hover:text-[var(--color-fg-0)] hover:bg-[var(--color-bg-3)]",
           )}
         >
-          {it.label}
+          {it.label.toUpperCase()}
         </button>
       ))}
     </div>

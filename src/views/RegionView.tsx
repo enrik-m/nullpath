@@ -1,12 +1,12 @@
 /**
- * RegionView — top-down zone DAG.
+ * RegionView — pixel-art DAG map.
  *
- * Z01 Foundations is the root. Each child zone connects to one or more
- * parents that represent its prerequisites. Completing a parent lights up
- * its outgoing edges so what's "unlocked next" is always visually obvious.
+ * Zones render as pixel-art "monuments" connected by stepped orthogonal
+ * paths (no bezier — chunky and grid-aligned). Lit edges are bright lime;
+ * reachable edges are dim accent; locked edges are dotted gray.
  *
- * No hard locking — every zone stays clickable. The lit edges are an
- * advisory progression hint, not a gate.
+ * Pan/zoom: window-bound mouse listeners so drag survives leaving the SVG;
+ * wheel zoom anchors on the cursor.
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
@@ -16,38 +16,20 @@ import type { ZoneRow, ZoneStats, RegionRow } from "../db/types";
 import { useUi } from "../store";
 import { sfx } from "../lib/sfx";
 
-interface RegionViewProps {
-  regionId: string;
-}
+interface RegionViewProps { regionId: string; }
+interface ZoneNode { zone: ZoneRow; stats: ZoneStats | null; }
+interface View { x: number; y: number; scale: number; }
 
-interface ZoneNode {
-  zone: ZoneRow;
-  stats: ZoneStats | null;
-}
-
-const STAR_RADIUS = 38;
-const MIN_SCALE = 0.35;
-const MAX_SCALE = 2.5;
-
-interface View {
-  x: number;
-  y: number;
-  scale: number;
-}
+const MIN_SCALE = 0.3;
+const MAX_SCALE = 2.4;
 
 // ---------------------------------------------------------------------------
-// The DAG. Each entry: child → parents that must (in spirit) be done first.
-// These are advisory, not enforcing — every zone is always clickable.
+// DAG. Each entry: child → parents that must (in spirit) be done first.
 // ---------------------------------------------------------------------------
-type EdgeMap = Record<string, string[]>;
-
-const ZONE_PARENTS: EdgeMap = {
-  // Layer 1 — first branches off Foundations
-  Z22: ["Z01"], // Methodology
-  Z02: ["Z01"], // Tooling
-  Z03: ["Z01"], // Recon
-
-  // Layer 2 — vuln basics, mostly under Tooling, with Recon feeding Misconfig
+const ZONE_PARENTS: Record<string, string[]> = {
+  Z22: ["Z01"],
+  Z02: ["Z01"],
+  Z03: ["Z01"],
   Z04: ["Z02"],
   Z05: ["Z02"],
   Z06: ["Z02"],
@@ -56,32 +38,28 @@ const ZONE_PARENTS: EdgeMap = {
   Z09: ["Z02"],
   Z10: ["Z06"],
   Z12: ["Z03", "Z02"],
-
-  // Layer 3 — specializations grown out of vuln basics
-  Z14: ["Z08", "Z04"],            // Source review off Server-Side + Injection
-  Z18: ["Z05"],                    // Frontend frameworks off Client-Side
-  Z19: ["Z05"],                    // Modern browser off Client-Side
-  Z11: ["Z04", "Z06"],            // API Gateway off Injection + Auth
-  Z13: ["Z07", "Z06"],            // Business Logic off Access + Auth
-  Z20: ["Z04", "Z08"],            // AI/LLM off Injection + Server-Side
-  Z16: ["Z08"],                    // Cloud-Native off Server-Side
-
-  // Layer 4 — research-grade specialties
-  Z15: ["Z14"],                    // Supply Chain off Source review
-  Z17: ["Z04", "Z05", "Z09"],     // WAF/CDN bypass off Inj + Client + HTTP
-  Z21: ["Z11", "Z14", "Z17"],     // Defenses off API + Source + WAF
-
-  // Layer 5 — endgame
+  Z14: ["Z08", "Z04"],
+  Z18: ["Z05"],
+  Z19: ["Z05"],
+  Z11: ["Z04", "Z06"],
+  Z13: ["Z07", "Z06"],
+  Z20: ["Z04", "Z08"],
+  Z16: ["Z08"],
+  Z15: ["Z14"],
+  Z17: ["Z04", "Z05", "Z09"],
+  Z21: ["Z11", "Z14", "Z17"],
   Z23: ["Z21", "Z15", "Z16", "Z19", "Z20", "Z13", "Z18", "Z22"],
 };
 
 // ---------------------------------------------------------------------------
-// Edge geometry helpers
+// Stepped orthogonal edge path (chunky / grid-aligned).
+// Goes vertical-then-horizontal-then-vertical so it looks like an
+// old-school dungeon-map pipe.
 // ---------------------------------------------------------------------------
-function bezierEdgePath(sx: number, sy: number, tx: number, ty: number): string {
-  // Vertical drop: simple S-curve via y-midpoint control points.
-  const my = (sy + ty) / 2;
-  return `M ${sx} ${sy} C ${sx} ${my}, ${tx} ${my}, ${tx} ${ty}`;
+function steppedEdgePath(sx: number, sy: number, tx: number, ty: number): string {
+  if (Math.abs(sy - ty) < 1) return `M ${sx} ${sy} L ${tx} ${ty}`;
+  const my = sy + (ty - sy) / 2;
+  return `M ${sx} ${sy} L ${sx} ${my} L ${tx} ${my} L ${tx} ${ty}`;
 }
 
 export function RegionView({ regionId }: RegionViewProps) {
@@ -96,7 +74,6 @@ export function RegionView({ regionId }: RegionViewProps) {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Load
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -110,9 +87,7 @@ export function RegionView({ regionId }: RegionViewProps) {
       setLoading(false);
     }
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [regionId]);
 
   const fitView = useCallback(() => {
@@ -128,8 +103,8 @@ export function RegionView({ regionId }: RegionViewProps) {
       if (y < minY) minY = y;
       if (y > maxY) maxY = y;
     }
-    const worldW = maxX - minX + 240;
-    const worldH = maxY - minY + 280;
+    const worldW = maxX - minX + 280;
+    const worldH = maxY - minY + 320;
     const fitScale = Math.min(rect.width / worldW, rect.height / worldH, 1);
     const worldCx = (minX + maxX) / 2;
     const worldCy = (minY + maxY) / 2;
@@ -140,13 +115,8 @@ export function RegionView({ regionId }: RegionViewProps) {
     });
   }, [zones]);
 
-  useLayoutEffect(() => {
-    fitView();
-  }, [fitView]);
+  useLayoutEffect(() => { fitView(); }, [fitView]);
 
-  // ---------------------------------------------------------------------
-  // Resolve coords + per-zone completion + edge "lit" state
-  // ---------------------------------------------------------------------
   const zoneById = useMemo(() => {
     const m = new Map<string, ZoneNode>();
     for (const z of zones) m.set(z.zone.id, z);
@@ -171,7 +141,6 @@ export function RegionView({ regionId }: RegionViewProps) {
     [zoneById],
   );
 
-  /** All ancestor parents complete → zone is "unlocked." */
   const isZoneUnlocked = useCallback(
     (id: string): boolean => {
       const parents = ZONE_PARENTS[id];
@@ -193,9 +162,7 @@ export function RegionView({ regionId }: RegionViewProps) {
     return out;
   }, [isZoneComplete, isZoneStarted]);
 
-  // ---------------------------------------------------------------------
-  // Pan / zoom (window-level listeners so drag survives leaving the SVG)
-  // ---------------------------------------------------------------------
+  // Pan / zoom
   function onMouseDown(e: React.MouseEvent) {
     if ((e.target as HTMLElement).closest("[data-zone-star]")) return;
     if (e.button !== 0) return;
@@ -207,18 +174,11 @@ export function RegionView({ regionId }: RegionViewProps) {
   const onMouseMove = useCallback((e: MouseEvent) => {
     const d = dragRef.current;
     if (!d) return;
-    setView((v) => ({
-      ...v,
-      x: d.vx0 + (e.clientX - d.x0),
-      y: d.vy0 + (e.clientY - d.y0),
-    }));
+    setView((v) => ({ ...v, x: d.vx0 + (e.clientX - d.x0), y: d.vy0 + (e.clientY - d.y0) }));
   }, []);
 
   const onMouseUp = useCallback(() => {
-    if (dragRef.current) {
-      dragRef.current = null;
-      setIsDragging(false);
-    }
+    if (dragRef.current) { dragRef.current = null; setIsDragging(false); }
   }, []);
 
   useEffect(() => {
@@ -240,18 +200,14 @@ export function RegionView({ regionId }: RegionViewProps) {
     setView((v) => {
       const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, v.scale * factor));
       const f = newScale / v.scale;
-      return {
-        scale: newScale,
-        x: cx - (cx - v.x) * f,
-        y: cy - (cy - v.y) * f,
-      };
+      return { scale: newScale, x: cx - (cx - v.x) * f, y: cy - (cy - v.y) * f };
     });
   }
 
   if (loading || !region) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="np-mono text-[var(--color-fg-2)] text-xs tracking-[0.3em]">
+        <div className="np-mono text-[var(--color-fg-2)] text-base np-blink">
           loading constellation...
         </div>
       </div>
@@ -263,32 +219,28 @@ export function RegionView({ regionId }: RegionViewProps) {
   return (
     <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
       {/* Region overlay header */}
-      <div className="absolute top-0 left-0 right-0 z-10 px-8 py-4 pointer-events-none flex items-start justify-between">
-        <div>
-          <div className="np-mono text-[10px] tracking-[0.3em] text-[var(--color-fg-3)] uppercase">
-            // region · {region.id}
+      <div className="absolute top-0 left-0 right-0 z-10 px-6 py-4 pointer-events-none flex items-start justify-between">
+        <div className="np-pixel px-4 py-2 pointer-events-auto" style={{ borderColor: accent }}>
+          <div className="np-screen text-[9px] tracking-[0.3em] text-[var(--color-fg-3)]">
+            // REGION · {region.id}
           </div>
-          <div
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: accent }}
-          >
-            {region.name}
+          <div className="np-display text-base mt-1" style={{ color: accent }}>
+            {region.name.toUpperCase()}
           </div>
-          <div className="text-[var(--color-fg-2)] text-[12px] mt-1 max-w-md">
+          <div className="text-[var(--color-fg-2)] text-[11px] mt-1 max-w-md">
             {region.tagline}
           </div>
         </div>
-        <div className="np-mono text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] uppercase pointer-events-auto flex items-center gap-3">
+        <div className="flex items-center gap-2 pointer-events-auto">
           <button
-            onClick={() => {
-              sfx.click();
-              fitView();
-            }}
-            className="hover:text-[var(--color-fg-0)] transition"
+            onClick={() => { sfx.click(); fitView(); }}
+            className="np-btn np-btn-ghost np-btn-sm"
           >
-            fit view
+            FIT VIEW
           </button>
-          <span className="opacity-50">drag to pan · scroll to zoom</span>
+          <span className="np-screen text-[8px] tracking-[0.2em] text-[var(--color-fg-3)] hidden md:block">
+            DRAG · SCROLL
+          </span>
         </div>
       </div>
 
@@ -298,30 +250,32 @@ export function RegionView({ regionId }: RegionViewProps) {
         className={`flex-1 select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
         onMouseDown={onMouseDown}
         onWheel={onWheel}
+        style={{
+          background: `
+            radial-gradient(ellipse 50% 50% at 50% 50%, ${accent}11 0%, transparent 70%),
+            repeating-linear-gradient(
+              0deg,
+              var(--color-bg-1) 0,
+              var(--color-bg-1) 24px,
+              var(--color-bg-2) 24px,
+              var(--color-bg-2) 25px
+            ),
+            repeating-linear-gradient(
+              90deg,
+              transparent 0,
+              transparent 24px,
+              var(--color-bg-2) 24px,
+              var(--color-bg-2) 25px
+            )
+          `,
+        }}
       >
-        <svg width="100%" height="100%" style={{ display: "block" }}>
+        <svg width="100%" height="100%" style={{ display: "block" }} shapeRendering="crispEdges">
           <defs>
-            <radialGradient id="star-glow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor={accent} stopOpacity="0.55" />
-              <stop offset="60%" stopColor={accent} stopOpacity="0.05" />
-              <stop offset="100%" stopColor={accent} stopOpacity="0" />
-            </radialGradient>
-            <radialGradient id="star-glow-complete" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="var(--color-lime)" stopOpacity="0.6" />
-              <stop offset="60%" stopColor="var(--color-lime)" stopOpacity="0.05" />
-              <stop offset="100%" stopColor="var(--color-lime)" stopOpacity="0" />
-            </radialGradient>
-            <radialGradient id="star-glow-locked" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="var(--color-fg-3)" stopOpacity="0.18" />
-              <stop offset="80%" stopColor="var(--color-fg-3)" stopOpacity="0" />
-            </radialGradient>
-            {/* Lit (parent-complete) edge — a flowing gradient */}
-            <linearGradient id="edge-lit" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-lime)" stopOpacity="0.95" />
-              <stop offset="100%" stopColor={accent} stopOpacity="0.95" />
-            </linearGradient>
+            <pattern id="dot-pattern" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="2" height="2" fill="var(--color-fg-3)" />
+            </pattern>
           </defs>
-
           <g
             transform={`translate(${view.x} ${view.y}) scale(${view.scale})`}
             style={{ transformOrigin: "0 0" }}
@@ -335,43 +289,48 @@ export function RegionView({ regionId }: RegionViewProps) {
               const sy = a.zone.cy ?? 0;
               const tx = b.zone.cx ?? 0;
               const ty = b.zone.cy ?? 0;
-              const d = bezierEdgePath(sx, sy, tx, ty);
-              const stroke = e.lit
-                ? "url(#edge-lit)"
-                : e.reachable
-                  ? accent
-                  : "var(--color-border-default)";
-              const opacity = e.lit ? 1 : e.reachable ? 0.55 : 0.4;
-              const width = e.lit ? 2.8 : 1.5;
+              const d = steppedEdgePath(sx, sy, tx, ty);
+              const litColor = "var(--color-lime)";
+              const reachableColor = accent;
+              const lockedColor = "var(--color-border-default)";
+              const stroke = e.lit ? litColor : e.reachable ? reachableColor : lockedColor;
               return (
                 <g key={`${e.from}->${e.to}`}>
-                  {/* Soft halo behind lit edges */}
+                  {/* Lit halo */}
                   {e.lit && (
                     <path
                       d={d}
                       fill="none"
-                      stroke={accent}
-                      strokeOpacity={0.25}
-                      strokeWidth={10 / view.scale + 4}
-                      strokeLinecap="round"
+                      stroke={litColor}
+                      strokeOpacity={0.3}
+                      strokeWidth={14 / view.scale}
+                      strokeLinecap="butt"
+                      strokeLinejoin="miter"
                     />
                   )}
                   <path
                     d={d}
                     fill="none"
                     stroke={stroke}
-                    strokeOpacity={opacity}
-                    strokeWidth={width / view.scale + (e.lit ? 1 : 0)}
-                    strokeLinecap="round"
-                    strokeDasharray={e.lit ? undefined : `${4 / view.scale} ${4 / view.scale}`}
+                    strokeOpacity={e.lit ? 1 : e.reachable ? 0.85 : 0.5}
+                    strokeWidth={e.lit ? 4 / view.scale : 3 / view.scale}
+                    strokeLinecap="butt"
+                    strokeLinejoin="miter"
+                    strokeDasharray={
+                      e.lit
+                        ? undefined
+                        : e.reachable
+                          ? `${6 / view.scale} ${4 / view.scale}`
+                          : `${4 / view.scale} ${4 / view.scale}`
+                    }
                   />
                 </g>
               );
             })}
 
-            {/* Zone stars */}
+            {/* Zones */}
             {zones.map((z) => (
-              <ZoneStar
+              <PixelZoneNode
                 key={z.zone.id}
                 zone={z}
                 accent={accent}
@@ -391,7 +350,6 @@ export function RegionView({ regionId }: RegionViewProps) {
         </svg>
       </div>
 
-      {/* Hover tooltip */}
       {hovered && (
         <ZoneHoverPanel
           zone={zoneById.get(hovered)!}
@@ -407,10 +365,10 @@ export function RegionView({ regionId }: RegionViewProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Star + tooltip
+// PixelZoneNode — pixel-art monument with chunky bordered tile + progress
+// segments around the perimeter.
 // ---------------------------------------------------------------------------
-
-function ZoneStar({
+function PixelZoneNode({
   zone,
   accent,
   hovered,
@@ -433,110 +391,125 @@ function ZoneStar({
   const pct = total > 0 ? completed / total : 0;
   const isComplete = total > 0 && completed === total;
   const isActive = inProgress > 0;
-  const fillColor = isComplete
-    ? "var(--color-lime)"
+
+  const accentColor = isComplete
+    ? "#a8ff5c"
     : isActive
       ? accent
       : unlocked
-        ? "var(--color-fg-1)"
-        : "var(--color-fg-3)";
+        ? "#b0b8e0"
+        : "#4a5485";
 
-  const circumference = 2 * Math.PI * STAR_RADIUS;
-  const haloId = isComplete
-    ? "star-glow-complete"
-    : unlocked
-      ? "star-glow"
-      : "star-glow-locked";
+  // Tile size — 56x56 unit pixel-art monument
+  const W = 56;
+  const PAD = 4;
+
+  // Progress bar segments around the bottom (12 cells)
+  const SEGMENTS = 12;
+  const filled = Math.round(pct * SEGMENTS);
 
   return (
     <g
       data-zone-star
-      transform={`translate(${cx} ${cy})`}
-      style={{ cursor: "pointer", opacity: unlocked ? 1 : 0.65 }}
+      transform={`translate(${cx - W / 2} ${cy - W / 2})`}
+      style={{ cursor: "pointer", opacity: unlocked ? 1 : 0.55 }}
       onMouseEnter={() => onHover(zone.zone.id)}
       onMouseLeave={() => onHover(null)}
       onClick={onSelect}
     >
-      {/* Glow halo */}
-      <circle
-        r={STAR_RADIUS * (hovered ? 2.4 : 2.0)}
-        fill={`url(#${haloId})`}
-        opacity={hovered ? 1 : 0.7}
-        style={{ transition: "opacity 200ms, r 200ms" }}
-      />
-      {/* Outer ring (background) */}
-      <circle
-        r={STAR_RADIUS}
-        fill="var(--color-bg-1)"
-        stroke={unlocked ? "var(--color-border-default)" : "var(--color-border-subtle)"}
-        strokeWidth={2}
-      />
-      {/* Progress arc */}
-      {pct > 0 && (
-        <circle
-          r={STAR_RADIUS}
+      {/* Outer halo glow when hovered or active */}
+      {(hovered || isActive || isComplete) && (
+        <rect
+          x={-12}
+          y={-12}
+          width={W + 24}
+          height={W + 24}
           fill="none"
-          stroke={fillColor}
-          strokeWidth={3}
-          strokeDasharray={`${pct * circumference} ${circumference}`}
-          transform="rotate(-90)"
-          strokeLinecap="round"
+          stroke={accentColor}
+          strokeWidth={2}
+          opacity={hovered ? 0.7 : 0.35}
+          strokeDasharray="2 4"
         />
       )}
-      {/* Inner pulse for in-progress */}
-      {isActive && !isComplete && (
-        <circle
-          r={STAR_RADIUS * 0.6}
-          fill="none"
-          stroke={accent}
-          strokeWidth={1}
-          opacity={0.5}
+
+      {/* Outer pixel border (3 layers for chunky bevel) */}
+      <rect x={0} y={0} width={W} height={W} fill="#0a0d1f" />
+      <rect x={2} y={2} width={W - 4} height={W - 4} fill={accentColor} />
+      <rect x={4} y={4} width={W - 8} height={W - 8} fill="#161b3a" />
+      {/* Highlight (top-left) and shadow (bot-right) bevel pixels */}
+      <rect x={4} y={4} width={W - 8} height={2} fill={accentColor} opacity={0.6} />
+      <rect x={4} y={4} width={2} height={W - 8} fill={accentColor} opacity={0.6} />
+
+      {/* Inner emblem area */}
+      <g transform={`translate(${PAD + 8} ${PAD + 6})`}>
+        {/* Big zone ID */}
+        <text
+          x={(W - 24) / 2}
+          y={14}
+          textAnchor="middle"
+          fontFamily="'Press Start 2P', monospace"
+          fontSize={10}
+          fill={accentColor}
+          shapeRendering="crispEdges"
         >
-          <animate
-            attributeName="r"
-            from={STAR_RADIUS * 0.55}
-            to={STAR_RADIUS * 0.75}
-            dur="2s"
-            repeatCount="indefinite"
-          />
-          <animate
-            attributeName="opacity"
-            from="0.6"
-            to="0"
-            dur="2s"
-            repeatCount="indefinite"
-          />
-        </circle>
-      )}
-      {/* Inner dot */}
-      <circle
-        r={STAR_RADIUS * 0.4}
-        fill="var(--color-bg-2)"
-        stroke={fillColor}
-        strokeWidth={1.5}
-      />
-      {/* Zone id */}
+          {zone.zone.id}
+        </text>
+
+        {/* Diamond accent */}
+        <g transform={`translate(${(W - 24) / 2 - 2} ${22})`}>
+          <rect x={2} y={0} width={2} height={2} fill={accentColor} />
+          <rect x={0} y={2} width={6} height={2} fill={accentColor} />
+          <rect x={2} y={4} width={2} height={2} fill={accentColor} />
+        </g>
+
+        {/* In-progress pulse dot */}
+        {isActive && !isComplete && (
+          <rect x={W - 24 - 4} y={0} width={3} height={3} fill={accentColor}>
+            <animate attributeName="opacity" values="1;0.2;1" dur="1s" repeatCount="indefinite" />
+          </rect>
+        )}
+        {/* Complete checkmark */}
+        {isComplete && (
+          <g transform={`translate(${W - 24 - 6} 0)`} fill="#a8ff5c">
+            <rect x={0} y={2} width={1} height={1} />
+            <rect x={1} y={3} width={1} height={1} />
+            <rect x={2} y={4} width={1} height={1} />
+            <rect x={3} y={3} width={1} height={1} />
+            <rect x={4} y={2} width={1} height={1} />
+            <rect x={5} y={1} width={1} height={1} />
+          </g>
+        )}
+      </g>
+
+      {/* Progress segments along the bottom inset */}
+      <g transform={`translate(${PAD + 4} ${W - PAD - 6})`}>
+        {Array.from({ length: SEGMENTS }).map((_, i) => {
+          const segW = (W - 2 * (PAD + 4)) / SEGMENTS;
+          return (
+            <rect
+              key={i}
+              x={i * segW + 0.5}
+              y={0}
+              width={segW - 1}
+              height={2}
+              fill={i < filled ? accentColor : "#1f2750"}
+            />
+          );
+        })}
+      </g>
+
+      {/* Zone name label below the tile */}
       <text
+        x={W / 2}
+        y={W + 14}
         textAnchor="middle"
-        dominantBaseline="central"
-        fontFamily="var(--font-mono)"
+        fontFamily="'Pixelify Sans', monospace"
         fontSize={11}
-        fontWeight={700}
-        fill={fillColor}
+        fontWeight={600}
+        fill={hovered ? "#e8ecff" : unlocked ? "#b0b8e0" : "#7280b0"}
+        shapeRendering="crispEdges"
       >
-        {zone.zone.id}
-      </text>
-      {/* Zone name beneath */}
-      <text
-        textAnchor="middle"
-        y={STAR_RADIUS + 22}
-        fontFamily="var(--font-sans)"
-        fontSize={11}
-        fontWeight={500}
-        fill={hovered ? "var(--color-fg-0)" : unlocked ? "var(--color-fg-1)" : "var(--color-fg-3)"}
-        style={{ transition: "fill 150ms" }}
-      >
-        {zone.zone.name}
+        {zone.zone.name.length > 22 ? zone.zone.name.slice(0, 20) + "…" : zone.zone.name}
       </text>
     </g>
   );
@@ -559,54 +532,61 @@ function ZoneHoverPanel({
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15 }}
-      className="absolute right-6 bottom-6 np-glass rounded-md p-4 max-w-[320px] pointer-events-none"
-      style={{ borderColor: accent + "55" }}
+      transition={{ duration: 0.1, ease: "linear" }}
+      className="absolute right-6 bottom-6 np-pixel max-w-[320px] pointer-events-none"
+      style={{ borderColor: accent }}
     >
-      <div className="flex items-baseline justify-between">
-        <div className="np-mono text-[10px] tracking-[0.2em] uppercase" style={{ color: accent }}>
-          {zone.zone.id}
-        </div>
-        <div
-          className="np-mono text-[9px] tracking-[0.2em] uppercase"
-          style={{ color: unlocked ? "var(--color-lime)" : "var(--color-fg-3)" }}
+      <div
+        className="np-screen text-[9px] tracking-[0.2em] px-3 py-1.5 border-b-2 flex items-center gap-2"
+        style={{
+          background: `${accent}22`,
+          borderColor: "var(--color-border-default)",
+          color: accent,
+        }}
+      >
+        <span className="inline-block w-2 h-2" style={{ background: accent }} />
+        ZONE · {zone.zone.id}
+        <span
+          className="ml-auto px-1.5 py-0.5 text-[8px]"
+          style={{
+            background: unlocked ? "var(--color-lime)" : "var(--color-bg-3)",
+            color: unlocked ? "var(--color-bg-0)" : "var(--color-fg-3)",
+          }}
         >
           {unlocked ? "AVAILABLE" : "GATED"}
-        </div>
-      </div>
-      <div className="text-base font-bold text-[var(--color-fg-0)] mt-0.5 mb-2">
-        {zone.zone.name}
-      </div>
-      <div className="np-divider mb-2" />
-      <div className="np-mono text-[11px] text-[var(--color-fg-1)] flex items-center justify-between">
-        <span>nodes</span>
-        <span>{total}</span>
-      </div>
-      <div className="np-mono text-[11px] text-[var(--color-cyan)] flex items-center justify-between">
-        <span>in progress</span>
-        <span>{inProgress}</span>
-      </div>
-      <div className="np-mono text-[11px] text-[var(--color-lime)] flex items-center justify-between">
-        <span>complete</span>
-        <span>
-          {completed} ({pct}%)
         </span>
       </div>
-      {parentNames.length > 0 && (
-        <>
-          <div className="np-divider my-2" />
-          <div className="np-mono text-[9px] tracking-[0.2em] uppercase text-[var(--color-fg-3)] mb-1">
-            unlocked by
+      <div className="p-4">
+        <div className="np-display text-sm text-[var(--color-fg-0)] mb-3">
+          {zone.zone.name.toUpperCase()}
+        </div>
+        <div className="space-y-1.5 np-mono text-[12px]">
+          <div className="flex justify-between text-[var(--color-fg-1)]">
+            <span>NODES</span><span>{total}</span>
           </div>
-          <div className="np-mono text-[10.5px] text-[var(--color-fg-2)] leading-tight">
-            {parentNames.join("  ·  ")}
+          <div className="flex justify-between text-[var(--color-cyan)]">
+            <span>IN PROGRESS</span><span>{inProgress}</span>
           </div>
-        </>
-      )}
-      <div className="mt-2 np-mono text-[10px] tracking-widest text-[var(--color-fg-3)]">
-        click to enter
+          <div className="flex justify-between text-[var(--color-lime)]">
+            <span>COMPLETE</span><span>{completed} ({pct}%)</span>
+          </div>
+        </div>
+        {parentNames.length > 0 && (
+          <>
+            <div className="np-divider my-3" />
+            <div className="np-screen text-[8px] tracking-[0.2em] text-[var(--color-fg-3)] mb-1">
+              UNLOCKED BY
+            </div>
+            <div className="text-[10px] text-[var(--color-fg-2)]">
+              {parentNames.join(" · ")}
+            </div>
+          </>
+        )}
+        <div className="mt-3 np-screen text-[8px] tracking-[0.2em] text-[var(--color-fg-3)] np-blink">
+          ▶ CLICK TO ENTER
+        </div>
       </div>
     </motion.div>
   );

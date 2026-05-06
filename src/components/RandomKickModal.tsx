@@ -111,7 +111,7 @@ export function RandomKickModal({ open, onClose }: KickProps) {
       <motion.div
         initial={{ scale: 0.97 }}
         animate={{ scale: 1 }}
-        className="np-glass rounded-lg w-[560px] max-w-full p-6 border-[var(--color-magenta-dim)]"
+        className="np-pixel rounded-lg w-[560px] max-w-full p-6 border-[var(--color-magenta-dim)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -141,7 +141,7 @@ export function RandomKickModal({ open, onClose }: KickProps) {
               <button
                 key={w.label}
                 onClick={() => chooseWindow(w)}
-                className="np-glass rounded p-4 text-left hover:border-[var(--color-magenta-dim)] transition group"
+                className="np-pixel rounded p-4 text-left hover:border-[var(--color-magenta-dim)] transition group"
               >
                 <div className="flex items-baseline justify-between">
                   <div className="text-base font-bold text-[var(--color-fg-0)]">{w.label}</div>
@@ -165,7 +165,7 @@ export function RandomKickModal({ open, onClose }: KickProps) {
                 rolling the dice...
               </div>
             ) : target ? (
-              <div className="mt-3 np-glass rounded p-4 border-[var(--color-magenta-dim)]">
+              <div className="mt-3 np-pixel rounded p-4 border-[var(--color-magenta-dim)]">
                 <div className="flex items-center gap-2">
                   <span className="np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-magenta)]">
                     {target.id}

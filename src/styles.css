@@ -1,74 +1,90 @@
 @import "tailwindcss";
 
-@import "@fontsource/jetbrains-mono/400.css";
-@import "@fontsource/jetbrains-mono/500.css";
-@import "@fontsource/jetbrains-mono/700.css";
-@import "@fontsource/inter/400.css";
-@import "@fontsource/inter/500.css";
-@import "@fontsource/inter/600.css";
-@import "@fontsource/inter/700.css";
+/* Pixel-art font stack ----------------------------------------------------- */
+@import "@fontsource/pixelify-sans/400.css";
+@import "@fontsource/pixelify-sans/500.css";
+@import "@fontsource/pixelify-sans/600.css";
+@import "@fontsource/pixelify-sans/700.css";
+@import "@fontsource/vt323/400.css";
+@import "@fontsource/press-start-2p/400.css";
+@import "@fontsource/silkscreen/400.css";
+@import "@fontsource/silkscreen/700.css";
 
 /* ============================================================
-   Nullpath — dark cyberpunk-terminal theme
-   ------------------------------------------------------------
-   Base near-black with deep gradient panels.
-   Cyan primary, magenta secondary, lime for completion states.
+   Nullpath OS — pixel-art retro hacker theme
+   ============================================================
+   Aesthetic: late-night CRT terminal × NES dialog box ×
+   cyberpunk OS. Chunky borders, sharp corners, beveled
+   surfaces, bitmap fonts, scanlines.
    ============================================================ */
 
 @theme {
-  /* Base */
-  --color-bg-0: #06070b;          /* deepest */
-  --color-bg-1: #0a0b13;          /* base */
-  --color-bg-2: #11131e;          /* panel */
-  --color-bg-3: #181b2a;          /* elevated */
-  --color-bg-4: #232739;          /* hover */
+  /* Base — deep void → panel → elevated → hover */
+  --color-bg-0: #07091a;
+  --color-bg-1: #0d1126;
+  --color-bg-2: #161b3a;
+  --color-bg-3: #1f2750;
+  --color-bg-4: #2c3668;
 
-  /* Borders */
-  --color-border-subtle: #1f2335;
-  --color-border-default: #2c3148;
-  --color-border-strong: #3d435e;
+  /* Borders — dim → default → highlight (for raised pixel bevels) */
+  --color-border-dim:    #1f2750;
+  --color-border-default:#3a4480;
+  --color-border-bright: #5a6cb8;
+  --color-border-hi:     #7d92e0;
+  --color-border-shadow: #0a0d1f;
 
-  /* Text */
-  --color-fg-0: #f4f5fb;          /* primary */
-  --color-fg-1: #b8bccd;          /* secondary */
-  --color-fg-2: #6b7088;          /* muted */
-  --color-fg-3: #41465e;          /* faint */
+  /* Text — primary → secondary → muted → faint */
+  --color-fg-0: #e8ecff;
+  --color-fg-1: #b0b8e0;
+  --color-fg-2: #7280b0;
+  --color-fg-3: #4a5485;
 
-  /* Accents */
-  --color-cyan: #22d3ee;
-  --color-cyan-dim: #0e7490;
-  --color-cyan-glow: #22d3ee44;
+  /* Saturated retro accents (CRT-bright) */
+  --color-cyan: #5cf2ff;
+  --color-cyan-dim: #2c8fa8;
+  --color-cyan-deep: #16566a;
+  --color-cyan-glow: #5cf2ff44;
 
-  --color-magenta: #e879f9;
-  --color-magenta-dim: #a21caf;
-  --color-magenta-glow: #e879f944;
+  --color-magenta: #ff66e0;
+  --color-magenta-dim: #a83cb0;
+  --color-magenta-deep: #5a1f60;
+  --color-magenta-glow: #ff66e044;
 
-  --color-lime: #a3e635;
-  --color-lime-dim: #4d7c0f;
-  --color-lime-glow: #a3e63544;
+  --color-lime: #a8ff5c;
+  --color-lime-dim: #5e9e2c;
+  --color-lime-deep: #2f5414;
+  --color-lime-glow: #a8ff5c44;
 
-  --color-amber: #fbbf24;
-  --color-rose: #fb7185;
+  --color-amber: #ffb84a;
+  --color-amber-dim: #b07820;
+  --color-rose: #ff5c7a;
+  --color-rose-dim: #a82c44;
+  --color-purple: #a47cff;
 
-  /* Depth tag colors */
-  --color-depth-intro: #6b7088;
-  --color-depth-std: #22d3ee;
-  --color-depth-adv: #e879f9;
-  --color-depth-res: #fb7185;
+  /* Depth tag colors (mapped to retro accents) */
+  --color-depth-intro: #7280b0;
+  --color-depth-std: #5cf2ff;
+  --color-depth-adv: #ff66e0;
+  --color-depth-res: #ff5c7a;
 
   /* Status colors */
-  --color-status-locked: #41465e;
-  --color-status-available: #6b7088;
-  --color-status-in-progress: #22d3ee;
-  --color-status-complete: #a3e635;
+  --color-status-locked:     #4a5485;
+  --color-status-available:  #b0b8e0;
+  --color-status-in-progress:#5cf2ff;
+  --color-status-complete:   #a8ff5c;
 
   /* Fonts */
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-pixel: "Pixelify Sans", "VT323", ui-monospace, monospace;
+  --font-mono: "VT323", "Pixelify Sans", ui-monospace, monospace;
+  --font-display: "Press Start 2P", "Silkscreen", "Pixelify Sans", monospace;
+  --font-screen: "Silkscreen", "Pixelify Sans", monospace;
 }
 
 * {
   box-sizing: border-box;
+  /* Force pixel-art rendering on raster bits */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 html, body, #root {
@@ -77,11 +93,17 @@ html, body, #root {
   padding: 0;
   background: var(--color-bg-0);
   color: var(--color-fg-0);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  /* Bitmap fonts read sharper with NO antialiasing */
+  -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  overflow: hidden; /* the app manages its own scroll regions */
+  font-smooth: never;
+  text-rendering: geometricPrecision;
+  overflow: hidden;
+  letter-spacing: 0.01em;
 }
 
 #root {
@@ -89,142 +111,428 @@ html, body, #root {
   position: relative;
 }
 
-/* Body backdrop — deep gradient + soft chromatic glow */
+/* Body backdrop — deep void with soft chromatic glow.
+   Uses a tiled noise pattern for retro CRT grain. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(ellipse 60% 50% at 80% 0%, var(--color-cyan-glow), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 20% 100%, var(--color-magenta-glow), transparent 60%),
-    linear-gradient(180deg, var(--color-bg-0) 0%, var(--color-bg-1) 100%);
+    radial-gradient(ellipse 60% 40% at 80% 0%, var(--color-cyan-glow), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 20% 100%, var(--color-magenta-glow), transparent 60%),
+    linear-gradient(180deg, var(--color-bg-0) 0%, #050714 100%);
   pointer-events: none;
 }
 
-/* Optional CRT scanline overlay */
+/* CRT scanline overlay — bigger, chunkier than before */
 body[data-scanlines="on"]::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  background-image: repeating-linear-gradient(
-    0deg,
-    rgba(255, 255, 255, 0.018) 0px,
-    rgba(255, 255, 255, 0.018) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  mix-blend-mode: overlay;
-  opacity: 0.6;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.16) 0px,
+      rgba(0, 0, 0, 0.16) 2px,
+      transparent 2px,
+      transparent 4px
+    );
+  mix-blend-mode: multiply;
+  opacity: 0.5;
 }
 
-/* Selection */
+/* Selection — chunky pixel highlight */
 ::selection {
   background: var(--color-cyan);
   color: var(--color-bg-0);
+  text-shadow: none;
 }
 
-/* Scrollbars */
+/* Pixel scrollbars */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-bg-1);
+  border-left: 2px solid var(--color-border-shadow);
 }
 ::-webkit-scrollbar-thumb {
   background: var(--color-border-default);
-  border-radius: 5px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  border: 2px solid var(--color-bg-1);
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-border-bright),
+    inset -2px -2px 0 0 var(--color-border-shadow);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-strong);
-  background-clip: padding-box;
+  background: var(--color-border-bright);
 }
 
-/* Focus rings */
+/* Focus ring — chunky pixel */
 :focus-visible {
   outline: 2px solid var(--color-cyan);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 button {
   font-family: inherit;
   cursor: pointer;
+  -webkit-font-smoothing: none;
+}
+button:disabled { cursor: not-allowed; }
+
+input, textarea, select {
+  font-family: var(--font-pixel);
+  -webkit-font-smoothing: none;
 }
 
-button:disabled {
-  cursor: not-allowed;
+/* Pixel-styled form inputs (apply globally) */
+input[type="text"], input[type="number"], input[type="date"],
+input[type="email"], input[type="url"], input[type="password"],
+textarea, select {
+  background: var(--color-bg-1);
+  color: var(--color-fg-0);
+  border: 2px solid var(--color-border-default);
+  border-radius: 0;
+  padding: 6px 10px;
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-border-shadow),
+    inset -2px -2px 0 0 var(--color-border-bright);
+  outline: none;
+  font-size: 13px;
+}
+input[type="range"] {
+  accent-color: var(--color-cyan);
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--color-cyan-dim);
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-border-shadow),
+    inset -2px -2px 0 0 var(--color-cyan-dim),
+    0 0 0 2px var(--color-cyan-glow);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--color-fg-3);
 }
 
 /* ============================================================
-   Utility classes — small set, used across components.
-   Tailwind handles most styling; these are escape hatches.
+   PIXEL UI PRIMITIVES (CSS classes used by components)
    ============================================================ */
 
-.np-glass {
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklab, var(--color-bg-2), transparent 10%) 0%,
-    color-mix(in oklab, var(--color-bg-1), transparent 5%) 100%
-  );
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border-subtle);
+/* PixelFrame — beveled raised panel like an NES dialog box.
+   Two layers of inset shadow give the chunky 2-tone bevel. */
+.np-pixel {
+  background: var(--color-bg-2);
+  border: 2px solid var(--color-border-default);
+  border-radius: 0;
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-border-bright),
+    inset -2px -2px 0 0 var(--color-border-shadow),
+    0 4px 0 0 var(--color-border-shadow);
 }
 
+/* Inset / sunken panel (the inverse — looks recessed) */
+.np-pixel-inset {
+  background: var(--color-bg-1);
+  border: 2px solid var(--color-border-default);
+  border-radius: 0;
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-border-shadow),
+    inset -2px -2px 0 0 var(--color-border-bright);
+}
+
+/* Flat pixel frame — no bevel, just a sharp border */
+.np-pixel-flat {
+  background: var(--color-bg-2);
+  border: 2px solid var(--color-border-default);
+  border-radius: 0;
+}
+
+/* Pixel button — raised that depresses on :active */
+.np-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-pixel);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 14px 8px;
+  background: var(--color-bg-3);
+  color: var(--color-fg-0);
+  border: 2px solid var(--color-border-default);
+  border-radius: 0;
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-border-bright),
+    inset -2px -2px 0 0 var(--color-border-shadow),
+    0 3px 0 0 var(--color-border-shadow);
+  cursor: pointer;
+  transition: transform 60ms steps(2), box-shadow 60ms steps(2);
+  user-select: none;
+}
+.np-btn:hover:not(:disabled) {
+  background: var(--color-bg-4);
+}
+.np-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-border-shadow),
+    inset -2px -2px 0 0 var(--color-border-bright),
+    0 0 0 0 var(--color-border-shadow);
+}
+.np-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Variants */
+.np-btn-primary {
+  background: var(--color-cyan-deep);
+  color: var(--color-cyan);
+  border-color: var(--color-cyan-dim);
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-cyan),
+    inset -2px -2px 0 0 var(--color-cyan-deep),
+    0 3px 0 0 var(--color-cyan-deep);
+}
+.np-btn-primary:hover:not(:disabled) {
+  background: var(--color-cyan-dim);
+  color: var(--color-bg-0);
+}
+
+.np-btn-success {
+  background: var(--color-lime-deep);
+  color: var(--color-lime);
+  border-color: var(--color-lime-dim);
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-lime),
+    inset -2px -2px 0 0 var(--color-lime-deep),
+    0 3px 0 0 var(--color-lime-deep);
+}
+.np-btn-success:hover:not(:disabled) {
+  background: var(--color-lime-dim);
+  color: var(--color-bg-0);
+}
+
+.np-btn-danger {
+  background: #3a1530;
+  color: var(--color-rose);
+  border-color: var(--color-rose-dim);
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-rose),
+    inset -2px -2px 0 0 #3a1530,
+    0 3px 0 0 #3a1530;
+}
+.np-btn-danger:hover:not(:disabled) {
+  background: var(--color-rose-dim);
+  color: var(--color-fg-0);
+}
+
+.np-btn-ghost {
+  background: transparent;
+  color: var(--color-fg-1);
+  border-color: var(--color-border-dim);
+  box-shadow: none;
+}
+.np-btn-ghost:hover:not(:disabled) {
+  background: var(--color-bg-3);
+  color: var(--color-fg-0);
+  border-color: var(--color-border-default);
+}
+.np-btn-ghost:active:not(:disabled) {
+  transform: none;
+}
+
+.np-btn-sm  { padding: 4px 10px 6px; font-size: 11px; }
+.np-btn-md  { padding: 6px 14px 8px; font-size: 12px; }
+.np-btn-lg  { padding: 8px 18px 10px; font-size: 13px; }
+
+/* Pixel tag — chunky inline badge */
+.np-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-screen);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 6px 3px;
+  border: 2px solid currentColor;
+  background: var(--color-bg-1);
+  border-radius: 0;
+  line-height: 1;
+}
+
+/* Pixel divider — dotted */
+.np-divider {
+  height: 2px;
+  background-image: linear-gradient(
+    to right,
+    var(--color-border-default) 0,
+    var(--color-border-default) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  background-size: 8px 2px;
+  background-repeat: repeat-x;
+}
+
+/* Pixel HR — heavier */
+.np-hr {
+  height: 4px;
+  background:
+    linear-gradient(to bottom,
+      var(--color-border-default) 0,
+      var(--color-border-default) 2px,
+      var(--color-border-shadow) 2px,
+      var(--color-border-shadow) 4px
+    );
+}
+
+/* Glows — chunkier than before */
 .np-glow-cyan {
   box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--color-cyan) 60%, transparent),
-    0 0 20px var(--color-cyan-glow);
+    0 0 0 2px var(--color-cyan-dim),
+    0 0 16px 2px var(--color-cyan-glow);
 }
-
 .np-glow-magenta {
   box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--color-magenta) 60%, transparent),
-    0 0 20px var(--color-magenta-glow);
+    0 0 0 2px var(--color-magenta-dim),
+    0 0 16px 2px var(--color-magenta-glow);
 }
-
 .np-glow-lime {
   box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--color-lime) 60%, transparent),
-    0 0 20px var(--color-lime-glow);
+    0 0 0 2px var(--color-lime-dim),
+    0 0 16px 2px var(--color-lime-glow);
 }
 
-.np-mono {
-  font-family: var(--font-mono);
-  letter-spacing: 0.01em;
-}
+/* Mono / display fonts as utility classes */
+.np-mono { font-family: var(--font-mono); letter-spacing: 0.04em; }
+.np-screen { font-family: var(--font-screen); letter-spacing: 0.08em; }
+.np-display { font-family: var(--font-display); letter-spacing: 0.04em; }
 
-.np-divider {
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--color-border-default) 50%,
-    transparent 100%
-  );
-}
+/* ============================================================
+   ANIMATIONS — all pixel-stepped, no smooth interpolation
+   ============================================================ */
 
 @keyframes np-pulse-glow {
-  0%, 100% { opacity: 1; filter: drop-shadow(0 0 6px var(--color-cyan-glow)); }
-  50% { opacity: 0.7; filter: drop-shadow(0 0 12px var(--color-cyan-glow)); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
-
 .np-pulse {
-  animation: np-pulse-glow 2.4s ease-in-out infinite;
+  animation: np-pulse-glow 1.6s steps(8) infinite;
 }
 
-@keyframes np-ticker {
+@keyframes np-blink {
+  0%, 60% { opacity: 1; }
+  60.01%, 100% { opacity: 0; }
+}
+.np-blink {
+  animation: np-blink 0.9s steps(1) infinite;
+}
+
+@keyframes np-flicker {
+  0%, 70% { opacity: 1; }
+  72% { opacity: 0.7; }
+  74% { opacity: 1; }
+  88% { opacity: 1; }
+  90% { opacity: 0.4; }
+  92% { opacity: 1; }
+  100% { opacity: 1; }
+}
+.np-flicker {
+  animation: np-flicker 4s steps(1) infinite;
+}
+
+@keyframes np-glitch-shift {
+  0%, 90%, 100% { transform: translate(0, 0); filter: none; }
+  91% { transform: translate(-2px, 1px); filter: hue-rotate(60deg); }
+  92% { transform: translate(2px, -1px); filter: hue-rotate(-60deg); }
+  93% { transform: translate(0, 2px); filter: hue-rotate(0deg); }
+  94% { transform: translate(0, 0); }
+}
+.np-glitch {
+  animation: np-glitch-shift 5s steps(1) infinite;
+}
+
+/* Glitch text duplicate-layer effect */
+.np-glitch-text {
+  position: relative;
+  display: inline-block;
+}
+.np-glitch-text::before,
+.np-glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+}
+.np-glitch-text::before {
+  color: var(--color-cyan);
+  animation: np-glitch-before 3s steps(1) infinite;
+  z-index: -1;
+}
+.np-glitch-text::after {
+  color: var(--color-magenta);
+  animation: np-glitch-after 3s steps(1) infinite;
+  z-index: -1;
+}
+@keyframes np-glitch-before {
+  0%, 95%, 100% { transform: translate(0, 0); opacity: 0; }
+  96% { transform: translate(-2px, 0); opacity: 0.85; }
+  97% { transform: translate(0, 0); opacity: 0; }
+}
+@keyframes np-glitch-after {
+  0%, 95%, 100% { transform: translate(0, 0); opacity: 0; }
+  96% { transform: translate(2px, 0); opacity: 0.85; }
+  97% { transform: translate(0, 0); opacity: 0; }
+}
+
+@keyframes np-marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
-
-.np-ticker > * {
-  animation: np-ticker 40s linear infinite;
+.np-marquee {
+  animation: np-marquee 50s linear infinite;
 }
 
-/* react-flow theme overrides come in a separate file loaded lazily */
+/* react-flow theme overrides for the pixel look */
+.react-flow__node {
+  border-radius: 0 !important;
+  font-family: var(--font-pixel) !important;
+}
+.react-flow__attribution { display: none !important; }
+.react-flow__controls {
+  border-radius: 0 !important;
+  background: var(--color-bg-2) !important;
+  border: 2px solid var(--color-border-default) !important;
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-border-bright),
+    inset -2px -2px 0 0 var(--color-border-shadow) !important;
+}
+.react-flow__controls-button {
+  background: var(--color-bg-3) !important;
+  border: none !important;
+  border-bottom: 2px solid var(--color-border-shadow) !important;
+  color: var(--color-fg-1) !important;
+  border-radius: 0 !important;
+}
+.react-flow__controls-button:hover {
+  background: var(--color-bg-4) !important;
+  color: var(--color-cyan) !important;
+}
+.react-flow__minimap {
+  border-radius: 0 !important;
+  border: 2px solid var(--color-border-default) !important;
+  box-shadow:
+    inset 2px 2px 0 0 var(--color-border-bright),
+    inset -2px -2px 0 0 var(--color-border-shadow) !important;
+}

@@ -3,15 +3,16 @@ import { Play, Square, Pause, Zap, ChevronRight, Target } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUi, formatHms } from "../store";
 import { sfx } from "../lib/sfx";
-import { evaluateAchievements } from "../lib/achievements";
 import { cn } from "../lib/cn";
 import * as db from "../db";
 import type { NodeRow } from "../db/types";
-import { Button } from "./ui/Button";
+import { PixelButton } from "./pixel/PixelButton";
+import { evaluateAchievements } from "../lib/achievements";
 
 /**
- * Top action bar — shows breadcrumbs, the live session timer, and the
- * Random Kick button.
+ * TopBar — RPG-HUD-flavored. Breadcrumbs read like a navigation trail,
+ * Random Kick is the "encounter" button, the timer panel looks like an
+ * NES status display.
  */
 export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
   const route = useUi((s) => s.route);
@@ -24,7 +25,6 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
   const [crumbs, setCrumbs] = useState<{ label: string; route: any | null }[]>([]);
   const [focusNode, setFocusNode] = useState<NodeRow | null>(null);
 
-  // Build breadcrumbs from current route
   useEffect(() => {
     let cancelled = false;
     async function build() {
@@ -52,7 +52,7 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
         trail.push({ label: "STATS", route: null });
       } else if (route.name === "bounties") {
         trail.length = 0;
-        trail.push({ label: "BOUNTIES", route: null });
+        trail.push({ label: "QUEST LOG", route: null });
       } else if (route.name === "settings") {
         trail.length = 0;
         trail.push({ label: "SETTINGS", route: null });
@@ -65,7 +65,6 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
     };
   }, [route]);
 
-  // Resolve focus node display
   useEffect(() => {
     let cancelled = false;
     if (!session?.focusNodeId) {
@@ -98,12 +97,7 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
   async function endSession() {
     if (!session) return;
     sfx.complete();
-    await db.endSession(
-      session.id,
-      session.durationSeconds,
-      session.idleSeconds,
-      false,
-    );
+    await db.endSession(session.id, session.durationSeconds, session.idleSeconds, false);
     await db.recordStudyDay(session.durationSeconds);
     showModal({
       kind: "session-end",
@@ -112,18 +106,24 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
       nodeId: session.focusNodeId,
     });
     setSession(null);
-    // Evaluate achievements after session-end modal
     window.setTimeout(() => evaluateAchievements(), 3500);
   }
 
-  async function toggleHunt() {
+  function toggleHunt() {
     if (!session) return;
     patchSession({ huntMode: !session.huntMode });
     sfx.click();
   }
 
   return (
-    <header className="h-14 shrink-0 border-b border-[var(--color-border-subtle)] flex items-center px-5 gap-3 bg-[color-mix(in_oklab,var(--color-bg-1)_85%,transparent)] backdrop-blur">
+    <header
+      className="h-14 shrink-0 flex items-center px-4 gap-3"
+      style={{
+        background: "var(--color-bg-1)",
+        borderBottom: "2px solid var(--color-border-default)",
+        boxShadow: "inset 0 -2px 0 0 var(--color-border-shadow)",
+      }}
+    >
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {crumbs.map((c, i) => (
@@ -134,43 +134,45 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
                   sfx.click();
                   go(c.route);
                 }}
-                className="np-mono text-[11px] tracking-[0.2em] text-[var(--color-fg-2)] hover:text-[var(--color-cyan)] transition truncate"
+                className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-2)] hover:text-[var(--color-cyan)] transition truncate"
               >
                 {c.label}
               </button>
             ) : (
-              <span className="np-mono text-[11px] tracking-[0.2em] text-[var(--color-fg-0)] truncate">
-                {c.label}
+              <span className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-cyan)] truncate">
+                ▸ {c.label}
               </span>
             )}
             {i < crumbs.length - 1 && (
-              <ChevronRight size={12} className="text-[var(--color-fg-3)] shrink-0" />
+              <ChevronRight size={11} className="text-[var(--color-fg-3)] shrink-0" />
             )}
           </div>
         ))}
       </div>
 
       {/* Random Kick */}
-      <Button variant="ghost" size="sm" onClick={onRandomKick}>
-        <Zap size={13} />
-        Random Kick
-      </Button>
+      <PixelButton variant="ghost" size="sm" onClick={onRandomKick}>
+        <Zap size={11} />
+        ENCOUNTER
+      </PixelButton>
 
       {/* Session controls */}
       <AnimatePresence mode="wait">
         {session ? (
           <motion.div
             key="session-active"
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="flex items-center gap-2"
           >
             {focusNode && (
-              <div className="np-mono text-[10px] uppercase text-[var(--color-fg-2)] tracking-[0.15em] hidden md:flex items-center gap-1.5">
-                <Target size={11} />
-                <span className="text-[var(--color-fg-1)]">{focusNode.id}</span>
-                <span className="text-[var(--color-fg-2)] truncate max-w-[160px]">
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 np-pixel-flat">
+                <Target size={10} className="text-[var(--color-magenta)]" />
+                <span className="np-screen text-[9px] tracking-[0.15em] text-[var(--color-magenta)]">
+                  {focusNode.id}
+                </span>
+                <span className="text-[10px] text-[var(--color-fg-2)] truncate max-w-[140px]">
                   {focusNode.name}
                 </span>
               </div>
@@ -178,10 +180,10 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
             <button
               onClick={toggleHunt}
               className={cn(
-                "np-mono text-[10px] uppercase px-2 py-1 rounded border transition",
+                "np-screen text-[9px] tracking-[0.15em] uppercase px-2 py-1.5 border-2 transition",
                 session.huntMode
-                  ? "text-[var(--color-magenta)] border-[var(--color-magenta-dim)] bg-[color-mix(in_oklab,var(--color-magenta)_10%,transparent)]"
-                  : "text-[var(--color-fg-3)] border-[var(--color-border-default)] hover:text-[var(--color-fg-1)]",
+                  ? "text-[var(--color-bg-0)] bg-[var(--color-magenta)] border-[var(--color-magenta)]"
+                  : "text-[var(--color-fg-3)] border-[var(--color-border-default)] hover:text-[var(--color-magenta)] hover:border-[var(--color-magenta-dim)]",
               )}
               title="Tag this session as live bug-bounty work"
             >
@@ -189,25 +191,28 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
             </button>
             <div
               className={cn(
-                "np-mono px-3 py-1.5 rounded-md border flex items-center gap-2",
+                "px-3 py-1 flex items-center gap-2 np-pixel-flat",
                 session.paused
-                  ? "border-[var(--color-amber)] text-[var(--color-amber)]"
-                  : "border-[var(--color-cyan-dim)] text-[var(--color-cyan)] np-glow-cyan",
+                  ? "border-[var(--color-amber)]"
+                  : "border-[var(--color-cyan)]",
               )}
             >
               {session.paused ? (
-                <Pause size={12} />
+                <Pause size={10} className="text-[var(--color-amber)]" />
               ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-cyan)] np-pulse" />
+                <span className="w-2 h-2 bg-[var(--color-cyan)] np-pulse" />
               )}
-              <span className="text-sm tabular-nums">
+              <span
+                className="np-mono text-[14px] tabular-nums"
+                style={{ color: session.paused ? "var(--color-amber)" : "var(--color-cyan)" }}
+              >
                 {formatHms(session.durationSeconds)}
               </span>
             </div>
-            <Button variant="danger" size="sm" onClick={endSession}>
-              <Square size={11} fill="currentColor" />
-              End
-            </Button>
+            <PixelButton variant="danger" size="sm" onClick={endSession}>
+              <Square size={9} fill="currentColor" />
+              END
+            </PixelButton>
           </motion.div>
         ) : (
           <motion.div
@@ -216,10 +221,10 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <Button variant="primary" size="sm" onClick={() => startSession(null)}>
-              <Play size={11} fill="currentColor" />
-              Start Session
-            </Button>
+            <PixelButton variant="primary" size="sm" onClick={() => startSession(null)}>
+              <Play size={9} fill="currentColor" />
+              START SESSION
+            </PixelButton>
           </motion.div>
         )}
       </AnimatePresence>

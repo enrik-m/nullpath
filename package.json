@@ -12,8 +12,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@fontsource/inter": "^5.2.8",
-    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/pixelify-sans": "^5.2.7",
+    "@fontsource/press-start-2p": "^5.2.7",
+    "@fontsource/silkscreen": "^5.2.8",
+    "@fontsource/vt323": "^5.2.7",
     "@tailwindcss/vite": "^4.2.4",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",

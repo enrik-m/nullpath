@@ -223,29 +223,40 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
         initial={{ x: 460 }}
         animate={{ x: 0 }}
         exit={{ x: 460 }}
-        transition={{ type: "spring", stiffness: 260, damping: 30 }}
-        className="w-[460px] shrink-0 h-full bg-[color-mix(in_oklab,var(--color-bg-1)_98%,transparent)] border-l border-[var(--color-border-subtle)] flex flex-col overflow-hidden"
+        transition={{ type: "tween", duration: 0.2, ease: "linear" }}
+        className="w-[460px] shrink-0 h-full flex flex-col overflow-hidden"
+        style={{
+          background: "var(--color-bg-1)",
+          borderLeft: "2px solid var(--color-border-default)",
+          boxShadow: "inset 2px 0 0 0 var(--color-border-bright)",
+        }}
       >
-        {/* Header */}
-        <div className="px-5 pt-5 pb-3 border-b border-[var(--color-border-subtle)]">
-          <div className="flex items-start gap-2">
-            <div
-              className="np-mono text-[10px] tracking-[0.2em] uppercase"
-              style={{ color: accent }}
-            >
-              {node.id}
-            </div>
+        {/* OS-window title bar */}
+        <div
+          className="np-screen text-[9px] tracking-[0.2em] px-4 py-2 flex items-center gap-2 border-b-2"
+          style={{
+            background: `${accent}22`,
+            borderColor: "var(--color-border-default)",
+            color: accent,
+          }}
+        >
+          <span className="inline-block w-2 h-2" style={{ background: accent }} />
+          NODE · {node.id}
+          <span className="ml-auto flex items-center gap-2">
+            <span className="text-[var(--color-fg-3)]">▢ ▢</span>
             <button
-              onClick={() => {
-                sfx.click();
-                onClose();
-              }}
-              className="ml-auto text-[var(--color-fg-2)] hover:text-[var(--color-fg-0)]"
+              onClick={() => { sfx.click(); onClose(); }}
+              className="hover:text-[var(--color-rose)] transition px-1"
+              aria-label="Close"
             >
-              <X size={16} />
+              ✕
             </button>
-          </div>
-          <div className="text-xl font-bold tracking-tight text-[var(--color-fg-0)] mt-1">
+          </span>
+        </div>
+
+        {/* Header */}
+        <div className="px-4 pt-4 pb-3 border-b-2 border-[var(--color-border-default)]">
+          <div className="np-display text-base text-[var(--color-fg-0)] leading-tight">
             {node.name}
           </div>
           {node.gloss && (
@@ -258,12 +269,12 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
             <StatusTag status={node.status} />
             <KindTag kind={node.kind} />
             {node.owasp_tag && (
-              <span className="np-mono text-[9px] tracking-[0.2em] border px-1.5 py-0.5 rounded-sm border-[var(--color-amber)] text-[var(--color-amber)]">
-                OWASP {node.owasp_tag}
+              <span className="np-tag" style={{ color: "var(--color-amber)" }}>
+                {node.owasp_tag}
               </span>
             )}
             {node.cwe_id && (
-              <span className="np-mono text-[9px] tracking-[0.2em] border px-1.5 py-0.5 rounded-sm border-[var(--color-fg-3)] text-[var(--color-fg-2)]">
+              <span className="np-tag" style={{ color: "var(--color-fg-2)" }}>
                 {node.cwe_id}
               </span>
             )}
@@ -271,33 +282,33 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
         </div>
 
         {/* Action bar */}
-        <div className="px-5 py-3 border-b border-[var(--color-border-subtle)] flex items-center gap-2 flex-wrap">
+        <div className="px-4 py-3 border-b-2 border-[var(--color-border-default)] flex items-center gap-2 flex-wrap" style={{ background: "var(--color-bg-2)" }}>
           {node.status === "available" && (
-            <Button variant="outline" size="sm" onClick={markInProgress}>
-              <PlayCircle size={12} />
-              Start
+            <Button variant="primary" size="sm" onClick={markInProgress}>
+              <PlayCircle size={11} />
+              START
             </Button>
           )}
           {node.status === "in_progress" && (
             <Button variant="ghost" size="sm" onClick={markAvailable}>
-              <X size={12} />
-              Pause
+              <X size={11} />
+              PAUSE
             </Button>
           )}
           {node.status !== "complete" ? (
             <Button variant="lime" size="sm" onClick={markComplete}>
-              <CheckCircle2 size={12} />
-              Complete
+              <CheckCircle2 size={11} />
+              COMPLETE
             </Button>
           ) : (
             <Button variant="ghost" size="sm" onClick={markAvailable}>
-              <X size={12} />
-              Re-open
+              <X size={11} />
+              RE-OPEN
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={setAsFocus}>
-            <Target size={12} />
-            Set as focus
+            <Target size={11} />
+            FOCUS
           </Button>
         </div>
 
@@ -315,7 +326,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                       sfx.click();
                       selectNode(c.id);
                     }}
-                    className="w-full text-left np-glass rounded px-3 py-2 hover:border-[var(--color-cyan-dim)] transition flex items-center gap-2"
+                    className="w-full text-left np-pixel-flat px-3 py-2 hover:border-[var(--color-cyan-dim)] transition flex items-center gap-2"
                   >
                     <span className="np-mono text-[9px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
                       {c.id}
@@ -361,7 +372,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="np-glass rounded p-3 mb-3 space-y-2"
+                className="np-pixel-flat p-3 mb-3 space-y-2"
               >
                 <div className="flex gap-1.5 flex-wrap">
                   {(["video", "blog", "writeup", "lab", "tool", "misc"] as ResourceKind[]).map(
@@ -427,7 +438,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
               {resources.map((r) => (
                 <div
                   key={r.id}
-                  className="np-glass rounded px-3 py-2 flex items-start gap-2"
+                  className="np-pixel-flat px-3 py-2 flex items-start gap-2"
                   style={{ borderLeftWidth: 3, borderLeftColor: RESOURCE_KIND_COLOR[r.kind] }}
                 >
                   <div className="flex-1 min-w-0">
@@ -498,28 +509,31 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
               onChange={(e) => onNoteChange(e.target.value)}
               onBlur={flushNote}
               placeholder="freeform markdown notes — concepts, payloads, links, anything"
-              className="w-full bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-2 text-[12.5px] text-[var(--color-fg-0)] np-mono leading-[1.6] focus:border-[var(--color-cyan-dim)] focus:outline-none min-h-[140px] resize-y"
+              className="np-pixel-inset w-full px-3 py-2 text-[13px] text-[var(--color-fg-0)] np-mono leading-[1.55] focus:outline-none min-h-[140px] resize-y"
             />
           </section>
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[var(--color-border-subtle)] np-mono text-[10px] tracking-[0.15em] text-[var(--color-fg-3)] uppercase flex items-center justify-between">
+        <div
+          className="px-4 py-2 border-t-2 border-[var(--color-border-default)] np-screen text-[9px] tracking-[0.2em] text-[var(--color-fg-3)] uppercase flex items-center justify-between"
+          style={{ background: "var(--color-bg-2)" }}
+        >
           <span>
-            xp {node.user_xp ?? 0}
+            XP {node.user_xp ?? 0}
             {node.completed_at && (
               <>
                 {" · "}
-                completed {new Date(node.completed_at).toLocaleDateString()}
+                DONE {new Date(node.completed_at).toLocaleDateString()}
               </>
             )}
           </span>
           <button
             onClick={flushNote}
-            className="hover:text-[var(--color-fg-0)] flex items-center gap-1"
+            className="hover:text-[var(--color-cyan)] flex items-center gap-1"
             title="Force-save notes"
           >
-            <Save size={10} /> save
+            <Save size={9} /> SAVE
           </button>
         </div>
       </motion.aside>
@@ -539,13 +553,14 @@ function SectionHeader({
   return (
     <div
       className={cn(
-        "np-mono text-[10px] tracking-[0.25em] uppercase text-[var(--color-fg-2)] flex items-center gap-2",
+        "np-screen text-[10px] tracking-[0.25em] uppercase text-[var(--color-fg-2)] flex items-center gap-2",
         !noMargin && "mb-2",
       )}
     >
-      <span>// {title}</span>
+      <span className="text-[var(--color-cyan)]">▸</span>
+      <span>{title}</span>
       {typeof count === "number" && (
-        <span className="text-[var(--color-fg-3)]">({count})</span>
+        <span className="text-[var(--color-fg-3)]">[{count}]</span>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 /**
- * AtlasView — the world map. Three regions side by side; only the active one
- * is clickable. Locked regions render foggy with a "unlocks after..." note.
+ * AtlasView — three regions as pixel-art tiles. Locked tiles render with
+ * a chunky "LOCKED" overlay; the active region pulses an inviting glow.
  */
 
 import { useEffect, useState } from "react";
@@ -11,6 +11,8 @@ import type { RegionRow } from "../db/types";
 import { useUi } from "../store";
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
+import { PixelBar } from "../components/pixel/PixelBar";
+import { PixelSprite, type SpriteName } from "../components/pixel/PixelSprite";
 
 interface RegionCard {
   region: RegionRow;
@@ -19,10 +21,10 @@ interface RegionCard {
   completedNodes: number;
 }
 
-const REGION_DESCRIPTORS: Record<string, { glyph: string; surfaceWord: string }> = {
-  web: { glyph: "://", surfaceWord: "Surface" },
-  "red-team": { glyph: "$_", surfaceWord: "Citadel" },
-  "vuln-research": { glyph: "0x", surfaceWord: "Core" },
+const REGION_DESCRIPTORS: Record<string, { glyph: string; sigil: string; sprite: SpriteName }> = {
+  web: { glyph: "[ ://web ]", sigil: "Z01-Z23", sprite: "shield" },
+  "red-team": { glyph: "[ #!/ad ]", sigil: "LOCKED", sprite: "skull" },
+  "vuln-research": { glyph: "[ 0xfff ]", sigil: "LOCKED", sprite: "bug" },
 };
 
 export function AtlasView() {
@@ -60,7 +62,7 @@ export function AtlasView() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="np-mono text-[var(--color-fg-2)] text-xs tracking-[0.3em]">
+        <div className="np-mono text-[var(--color-fg-2)] text-base np-blink">
           loading atlas...
         </div>
       </div>
@@ -74,23 +76,27 @@ export function AtlasView() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="mb-12"
+          transition={{ duration: 0.2, ease: "linear" }}
+          className="mb-10"
         >
-          <div className="np-mono text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] uppercase mb-2">
-            // ATLAS / OFFENSIVE-SECURITY CAREER MAP
+          <div className="np-screen text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] mb-3">
+            // ATLAS · OFFENSIVE-SECURITY MAP
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-[var(--color-fg-0)]">
-            Three regions. One operator.
+          <h1 className="np-display text-3xl text-[var(--color-fg-0)]">
+            <span className="np-glitch-text" data-text="THREE REGIONS.">
+              THREE REGIONS.
+            </span>
+            <br />
+            <span className="text-[var(--color-cyan)] mt-2 inline-block">ONE OPERATOR.</span>
           </h1>
-          <p className="text-[var(--color-fg-2)] mt-3 text-sm max-w-xl">
-            Each region is a constellation of skills. Click the active region to
-            explore its zones. Locked regions reveal as you complete prior ones.
+          <p className="text-[var(--color-fg-2)] mt-4 text-sm max-w-xl">
+            Each region is a constellation of skills. Pick one to enter. Locked regions reveal
+            as you complete the prior ones.
           </p>
         </motion.div>
 
-        {/* Region cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Region tiles */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {cards.map((card, i) => {
             const locked = card.region.is_locked === 1;
             const desc = REGION_DESCRIPTORS[card.region.id];
@@ -103,8 +109,7 @@ export function AtlasView() {
                 key={card.region.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: i * 0.08 }}
-                whileHover={!locked ? { y: -4 } : {}}
+                transition={{ duration: 0.25, delay: i * 0.06, ease: "linear" }}
                 onMouseEnter={() => !locked && sfx.hover()}
                 onClick={() => {
                   if (locked) {
@@ -116,88 +121,88 @@ export function AtlasView() {
                 }}
                 disabled={locked}
                 className={cn(
-                  "np-glass rounded-lg p-6 text-left transition-all relative overflow-hidden group",
-                  locked
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:border-[var(--color-cyan-dim)] cursor-pointer",
+                  "np-pixel text-left p-0 relative overflow-hidden group",
+                  !locked && "hover:bg-[var(--color-bg-3)] cursor-pointer transition-colors",
+                  locked && "cursor-not-allowed",
                 )}
                 style={{
-                  borderColor: !locked ? card.region.color_accent + "44" : undefined,
+                  borderColor: !locked ? card.region.color_accent : undefined,
                 }}
               >
-                {/* Background flourish */}
+                {/* Title bar — like an OS window */}
                 <div
-                  className="absolute -right-12 -top-12 w-48 h-48 rounded-full blur-3xl opacity-30 transition-opacity group-hover:opacity-50"
-                  style={{ background: card.region.color_accent }}
-                />
+                  className="np-screen text-[9px] tracking-[0.2em] px-3 py-2 flex items-center gap-2 border-b-2"
+                  style={{
+                    background: locked ? "var(--color-bg-3)" : `${card.region.color_accent}22`,
+                    borderColor: "var(--color-border-default)",
+                    color: locked ? "var(--color-fg-3)" : card.region.color_accent,
+                  }}
+                >
+                  <span className="inline-block w-2 h-2" style={{ background: locked ? "var(--color-fg-3)" : card.region.color_accent }} />
+                  {desc?.glyph ?? "[ region ]"}
+                  <span className="ml-auto text-[var(--color-fg-3)]">
+                    {locked ? "■" : "▣"}
+                  </span>
+                </div>
 
-                {/* Lock veil */}
-                {locked && (
-                  <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[1px] z-10">
-                    <div className="flex flex-col items-center gap-2">
-                      <Lock size={24} className="text-[var(--color-fg-3)]" />
-                      <div className="np-mono text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] uppercase">
-                        LOCKED
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="relative">
+                {/* Body */}
+                <div className="p-5 relative">
+                  {/* Background sprite glow */}
                   <div
-                    className="np-mono text-3xl mb-1"
-                    style={{ color: card.region.color_accent }}
+                    className="absolute -right-4 -top-2 opacity-25"
+                    style={{ filter: "blur(0.5px)" }}
                   >
-                    {desc?.glyph ?? "::"}
-                  </div>
-                  <div className="np-mono text-[10px] tracking-[0.3em] text-[var(--color-fg-3)] uppercase mb-3">
-                    Region · {desc?.surfaceWord ?? "Region"}
-                  </div>
-                  <div className="text-2xl font-bold tracking-tight text-[var(--color-fg-0)]">
-                    {card.region.name}
-                  </div>
-                  <p className="text-[var(--color-fg-2)] text-[13px] mt-3 min-h-[3em]">
-                    {card.region.tagline}
-                  </p>
-
-                  <div className="np-divider my-5" />
-
-                  <div className="grid grid-cols-3 gap-2 np-mono">
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-fg-3)]">
-                        zones
-                      </div>
-                      <div className="text-lg text-[var(--color-fg-0)]">{card.zoneCount}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-fg-3)]">
-                        nodes
-                      </div>
-                      <div className="text-lg text-[var(--color-fg-0)]">{card.totalNodes}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-fg-3)]">
-                        progress
-                      </div>
-                      <div
-                        className="text-lg"
-                        style={{
-                          color: pct === 100 ? "var(--color-lime)" : card.region.color_accent,
-                        }}
-                      >
-                        {pct}%
-                      </div>
-                    </div>
+                    <PixelSprite
+                      name={desc?.sprite ?? "diamond"}
+                      size={92}
+                      color={locked ? "var(--color-fg-3)" : card.region.color_accent}
+                      secondary={locked ? "var(--color-fg-3)" : `${card.region.color_accent}aa`}
+                    />
                   </div>
 
-                  {/* Progress bar */}
-                  <div className="mt-3 h-1 rounded-full bg-[var(--color-bg-3)] overflow-hidden">
-                    <div
-                      className="h-full transition-all"
-                      style={{
-                        width: `${pct}%`,
-                        background: `linear-gradient(90deg, ${card.region.color_accent}, ${card.region.color_accent}aa)`,
-                      }}
+                  {/* Lock veil */}
+                  {locked && (
+                    <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[1px] z-10 bg-[#0a0e1a99]">
+                      <div className="flex flex-col items-center gap-2">
+                        <Lock size={26} className="text-[var(--color-fg-3)]" />
+                        <div className="np-display text-[10px] tracking-[0.2em] text-[var(--color-fg-2)]">
+                          LOCKED
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="relative">
+                    <div className="np-display text-xl text-[var(--color-fg-0)] mb-2 leading-tight">
+                      {card.region.name.toUpperCase()}
+                    </div>
+                    <p className="text-[var(--color-fg-2)] text-[12px] mb-5 min-h-[3em] leading-relaxed">
+                      {card.region.tagline}
+                    </p>
+
+                    <div className="np-divider mb-3" />
+
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <Stat label="ZONES" value={`${card.zoneCount}`} />
+                      <Stat label="NODES" value={`${card.totalNodes}`} />
+                      <Stat
+                        label="DONE"
+                        value={`${pct}%`}
+                        color={
+                          pct === 100
+                            ? "var(--color-lime)"
+                            : pct > 0
+                              ? card.region.color_accent
+                              : "var(--color-fg-2)"
+                        }
+                      />
+                    </div>
+
+                    <PixelBar
+                      value={pct / 100}
+                      color={card.region.color_accent}
+                      segments={24}
+                      height={6}
                     />
                   </div>
                 </div>
@@ -206,10 +211,26 @@ export function AtlasView() {
           })}
         </div>
 
-        {/* Footer note */}
-        <div className="mt-12 np-mono text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] uppercase">
-          tip: ⌘K to search · 1-4 to jump views · hover regions to preview
+        {/* Footer hint */}
+        <div className="mt-12 np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] flex flex-wrap gap-x-6 gap-y-2">
+          <span>⌘K · SEARCH</span>
+          <span>1-4 · JUMP VIEWS</span>
+          <span>? · SHORTCUTS</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div>
+      <div className="np-screen text-[8px] tracking-[0.2em] text-[var(--color-fg-3)]">{label}</div>
+      <div
+        className="np-display text-base mt-0.5"
+        style={{ color: color ?? "var(--color-fg-0)" }}
+      >
+        {value}
       </div>
     </div>
   );

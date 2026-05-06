@@ -188,7 +188,7 @@ export function StatsView() {
 
         {/* Refreshers due */}
         {refreshers.length > 0 && (
-          <div className="np-glass rounded-lg p-5 mt-6 border-[var(--color-magenta-dim)]">
+          <div className="np-pixel rounded-lg p-5 mt-6 border-[var(--color-magenta-dim)]">
             <div className="flex items-center gap-2 mb-3">
               <Brain size={14} className="text-[var(--color-magenta)]" />
               <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-magenta)]">
@@ -203,7 +203,7 @@ export function StatsView() {
               {refreshers.slice(0, 6).map((r) => (
                 <div
                   key={r.id}
-                  className="np-glass rounded px-3 py-2 flex items-center gap-3"
+                  className="np-pixel rounded px-3 py-2 flex items-center gap-3"
                 >
                   <button
                     onClick={() => {
@@ -259,7 +259,7 @@ export function StatsView() {
         )}
 
         {/* Streak heatmap */}
-        <div className="np-glass rounded-lg p-5 mt-6">
+        <div className="np-pixel rounded-lg p-5 mt-6">
           <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-2)] mb-3">
             // streak · last 8 weeks
           </div>
@@ -287,7 +287,7 @@ export function StatsView() {
         </div>
 
         {/* Time Ledger */}
-        <div className="np-glass rounded-lg p-5 mt-6">
+        <div className="np-pixel rounded-lg p-5 mt-6">
           <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-2)] mb-4">
             // time ledger · per zone
           </div>
@@ -345,7 +345,7 @@ function Stat({
   sub?: string;
 }) {
   return (
-    <div className="np-glass rounded p-4">
+    <div className="np-pixel rounded p-4">
       <div className="np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
         {label}
       </div>
@@ -385,7 +385,7 @@ function OperatorCard({
         background:
           "linear-gradient(135deg, var(--color-bg-2) 0%, var(--color-bg-1) 100%)",
         border: `1px solid ${accent}55`,
-        boxShadow: `0 0 32px ${accent}22, inset 0 0 0 1px var(--color-border-subtle)`,
+        boxShadow: `0 0 32px ${accent}22, inset 0 0 0 1px var(--color-border-default)`,
       }}
     >
       <div

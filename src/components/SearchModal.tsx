@@ -108,11 +108,11 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
       <motion.div
         initial={{ scale: 0.97, y: -8 }}
         animate={{ scale: 1, y: 0 }}
-        className="w-[640px] max-w-full np-glass rounded-lg overflow-hidden border-[var(--color-cyan-dim)] np-glow-cyan"
+        className="w-[640px] max-w-full np-pixel rounded-lg overflow-hidden border-[var(--color-cyan-dim)] np-glow-cyan"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border-subtle)]">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border-default)]">
           <Search size={16} className="text-[var(--color-fg-2)]" />
           <input
             ref={inputRef}
@@ -172,7 +172,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
           ))}
         </div>
 
-        <div className="px-4 py-2 border-t border-[var(--color-border-subtle)] flex items-center gap-3 np-mono text-[9px] tracking-[0.15em] uppercase text-[var(--color-fg-3)]">
+        <div className="px-4 py-2 border-t border-[var(--color-border-default)] flex items-center gap-3 np-mono text-[9px] tracking-[0.15em] uppercase text-[var(--color-fg-3)]">
           <span>↑↓ navigate</span>
           <span>↵ open</span>
           <span>esc close</span>

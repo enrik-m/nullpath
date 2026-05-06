@@ -102,16 +102,16 @@ export function BountiesView() {
 
         {/* List */}
         {items.length === 0 ? (
-          <div className="np-glass rounded-lg p-12 text-center">
+          <div className="np-pixel rounded-lg p-12 text-center">
             <div className="np-mono text-[12px] text-[var(--color-fg-3)] tracking-widest">
               no submissions yet — log one when you ship a real finding
             </div>
           </div>
         ) : (
-          <div className="np-glass rounded-lg overflow-hidden">
+          <div className="np-pixel rounded-lg overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[var(--color-border-subtle)] np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
+                <tr className="border-b border-[var(--color-border-default)] np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
                   <th className="px-4 py-3 text-left">Date</th>
                   <th className="px-4 py-3 text-left">Program</th>
                   <th className="px-4 py-3 text-left">Title</th>
@@ -126,7 +126,7 @@ export function BountiesView() {
                 {items.map((b) => (
                   <tr
                     key={b.id}
-                    className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-3)] transition-colors"
+                    className="border-b border-[var(--color-border-default)] hover:bg-[var(--color-bg-3)] transition-colors"
                   >
                     <td className="px-4 py-3 np-mono text-[11px] text-[var(--color-fg-2)]">
                       {new Date(b.submitted_at).toLocaleDateString()}
@@ -212,7 +212,7 @@ function Stat({
   accent: string;
 }) {
   return (
-    <div className="np-glass rounded p-4">
+    <div className="np-pixel rounded p-4">
       <div className="np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
         {label}
       </div>
@@ -282,7 +282,7 @@ function BountyForm({
       <motion.div
         initial={{ scale: 0.97 }}
         animate={{ scale: 1 }}
-        className="np-glass rounded-lg w-[560px] max-w-full p-6 border-[var(--color-cyan-dim)] max-h-[90vh] overflow-y-auto"
+        className="np-pixel rounded-lg w-[560px] max-w-full p-6 border-[var(--color-cyan-dim)] max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

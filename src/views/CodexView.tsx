@@ -177,7 +177,7 @@ export function CodexView() {
         {/* List */}
         <div className="space-y-1.5">
           {filtered.length === 0 && (
-            <div className="np-glass rounded-lg p-12 text-center">
+            <div className="np-pixel rounded-lg p-12 text-center">
               <div className="np-mono text-[12px] text-[var(--color-fg-3)] tracking-widest">
                 {items.length === 0
                   ? "no resources yet — open a node and start attaching videos / blogs / writeups"
@@ -188,7 +188,7 @@ export function CodexView() {
           {filtered.map((r) => (
             <div
               key={r.id}
-              className="np-glass rounded p-3 flex items-start gap-3 hover:border-[var(--color-cyan-dim)] transition"
+              className="np-pixel rounded p-3 flex items-start gap-3 hover:border-[var(--color-cyan-dim)] transition"
               style={{ borderLeftWidth: 3, borderLeftColor: KIND_COLOR[r.kind] }}
             >
               <span
