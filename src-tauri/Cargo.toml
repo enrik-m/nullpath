@@ -21,16 +21,3 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-chrono = { version = "0.4", features = ["serde"] }
-
-# OS idle detection — used by the session tracker
-[target.'cfg(target_os = "windows")'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_System_SystemInformation", "Win32_UI_Input_KeyboardAndMouse"] }
-
-[target.'cfg(target_os = "macos")'.dependencies]
-core-graphics = "0.24"
-
-[target.'cfg(target_os = "linux")'.dependencies]
-# X11 idle detection. Wayland users will see the threshold not auto-fire;
-# we fall back to in-window detection (mouse/key events on the app window).
-x11 = { version = "2.21", features = ["xss"] }

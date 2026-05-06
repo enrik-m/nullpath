@@ -8,7 +8,7 @@
  * and `<OperatorCardOffscreen>` for the export-target instance.
  */
 
-import { formatHmShort } from "../store";
+import { memo } from "react";
 import { APP_VERSION } from "../lib/version";
 import { PixelSprite, type SpriteName } from "./pixel/PixelSprite";
 
@@ -19,11 +19,16 @@ export interface OperatorCardData {
   xpInLvl: number;
   xpForLvl: number;
   streak: number;
-  totalSeconds: number;
+  /** Zones with at least one node touched (started or completed). */
+  zonesTouched: number;
+  /** Zones where every node is complete. */
+  zonesCleared: number;
+  /** Total zones in the user's region (denominator for ZONES tile). */
+  totalZones: number;
   completedNodes: number;
   totalNodes: number;
-  /** zones sorted by user time desc */
-  topZones: Array<{ zone_id: string; zone_name: string; seconds: number; total: number; completed: number }>;
+  /** Top zones for the specialties section (sorted by completion desc). */
+  topZones: Array<{ zone_id: string; zone_name: string; total: number; completed: number; in_progress: number }>;
   /**
    * Highest-mastery top-level skill (most sub-techniques completed).
    * Null when the user hasn't finished enough sub-techniques to claim one.
@@ -37,8 +42,6 @@ export interface OperatorCardData {
     /** the leaf zone this skill lives in (e.g. "Z04") */
     zone_id: string;
   } | null;
-  /** kept for back-compat with StatsView callers; no longer rendered on card */
-  regions: Array<{ id: string; name: string; pct: number; accent: string; locked: boolean }>;
 }
 
 const CARD_W = 1080;
@@ -46,20 +49,23 @@ const CARD_H = 1920;
 
 // Pick a sprite for the avatar deterministically from the handle hash.
 function pickSigil(handle: string): SpriteName {
-  const sprites: SpriteName[] = ["shield", "shrine", "key", "crown", "bolt", "flame", "brain", "skull"];
+  const sprites = ["shield", "shrine", "key", "crown", "bolt", "flame", "brain", "skull"] as const;
   let h = 0;
   for (let i = 0; i < handle.length; i++) h = (h * 31 + handle.charCodeAt(i)) | 0;
-  return sprites[Math.abs(h) % sprites.length];
+  // Length is a literal 8 so the index is provably in-range; the
+  // `as const` tuple lets TS narrow the return type without a fallback.
+  return sprites[Math.abs(h) % sprites.length] as SpriteName;
 }
 
-export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
+export const OperatorCardPortrait = memo(function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
   const initials = (data.handle || "OP").slice(0, 2).toUpperCase();
   const xpPct = data.xpForLvl > 0 ? (data.xpInLvl / data.xpForLvl) * 100 : 0;
   const sigil = pickSigil(data.handle);
 
   const xpFmt = data.xp.toLocaleString();
-  const timeFmt = formatHmShort(data.totalSeconds);
-  const topZones = data.topZones.filter((z) => z.seconds > 0).slice(0, 3);
+  const topZones = data.topZones
+    .filter((z) => z.completed > 0 || z.in_progress > 0)
+    .slice(0, 3);
 
   return (
     <div
@@ -346,7 +352,7 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
           <StatTile label="TOTAL XP"   value={xpFmt}                                   accent="#5cf2ff" sprite="bolt" />
           <StatTile label="STREAK"     value={`${data.streak}d`}                       accent="#ffb84a" sprite="flame" />
-          <StatTile label="TIME"       value={timeFmt}                                 accent="#a8ff5c" sprite="cog" />
+          <StatTile label="ZONES"      value={`${data.zonesCleared}/${data.totalZones}`} accent="#a8ff5c" sprite="shrine" />
           <StatTile label="NODES"      value={`${data.completedNodes}/${data.totalNodes}`} accent="#ff66e0" sprite="shield" />
         </div>
 
@@ -425,7 +431,7 @@ export function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
       </div>
     </div>
   );
-}
+});
 
 // ===========================================================================
 // Sub-components
@@ -532,8 +538,9 @@ function Segmented({
 function SpecialtyRow({
   zone,
 }: {
-  zone: { zone_id: string; zone_name: string; seconds: number; total: number; completed: number };
+  zone: { zone_id: string; zone_name: string; total: number; completed: number; in_progress: number };
 }) {
+  const pct = zone.total > 0 ? Math.round((zone.completed / zone.total) * 100) : 0;
   return (
     <div
       style={{
@@ -580,7 +587,7 @@ function SpecialtyRow({
           flexShrink: 0,
         }}
       >
-        {formatHmShort(zone.seconds)}
+        {zone.completed}/{zone.total} · {pct}%
       </span>
     </div>
   );
@@ -589,7 +596,7 @@ function SpecialtyRow({
 // ===========================================================================
 // Inline preview wrapper — scaled-down version that fits the available width.
 // ===========================================================================
-export function OperatorCardPreview({
+export const OperatorCardPreview = memo(function OperatorCardPreview({
   data,
   maxWidth = 540,
 }: {
@@ -623,14 +630,14 @@ export function OperatorCardPreview({
       </div>
     </div>
   );
-}
+});
 
 // ===========================================================================
 // Hidden full-size container — html-to-image targets the INNER div.
 // Hide via 0×0 wrapper + overflow:hidden, NOT via opacity on the captured
 // element (opacity:0 leaks into the cloned render and produces a blank PNG).
 // ===========================================================================
-export function OperatorCardOffscreen({
+export const OperatorCardOffscreen = memo(function OperatorCardOffscreen({
   data,
   containerRef,
 }: {
@@ -662,4 +669,4 @@ export function OperatorCardOffscreen({
       </div>
     </div>
   );
-}
+});

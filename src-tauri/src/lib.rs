@@ -1,9 +1,8 @@
 //! Nullpath — Tauri host
 //!
-//! Wires the SQL plugin (loading `migrations/001_initial_schema.sql`),
-//! the opener plugin, and OS idle-detection commands.
-
-mod idle;
+//! Wires the SQL plugin (loading the migration sequence), the opener plugin,
+//! the dialog plugin (used by the operator-card export), and the fs plugin
+//! (used to write the exported PNG once the user picks a path).
 
 use tauri_plugin_sql::{Migration, MigrationKind};
 
@@ -34,6 +33,12 @@ pub fn run() {
             sql: include_str!("../migrations/004_repetition.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "drop session tracking",
+            sql: include_str!("../migrations/005_drop_session_tracking.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -45,10 +50,6 @@ pub fn run() {
                 .add_migrations("sqlite:nullpath.db", migrations)
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![
-            idle::get_idle_seconds,
-            idle::idle_supported_on_platform,
-        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

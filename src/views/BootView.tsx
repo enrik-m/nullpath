@@ -19,7 +19,7 @@ const LINES = [
   { delay: 680,  text: "[ OK ] indexing 23 zones / 820 nodes green", color: "fg-1" },
   { delay: 840,  text: "[ OK ] loading skill graph (web).... green", color: "fg-1" },
   { delay: 1000, text: "[ OK ] linking sqlite store......... green", color: "fg-1" },
-  { delay: 1160, text: "[ OK ] idle telemetry hooks armed... green", color: "fg-1" },
+  { delay: 1160, text: "[ OK ] achievement engine primed.... green", color: "fg-1" },
   { delay: 1320, text: "[ OK ] operator profile ready....... green", color: "fg-1" },
   { delay: 1500, text: "$ welcome, operator.", color: "cyan" },
   { delay: 1640, text: "$ enter the atlas? [Y]_", color: "magenta" },

@@ -70,11 +70,6 @@ export interface NodeRow {
   started_at: string | null;
 }
 
-export interface NodeEdgeRow {
-  from_id: string;
-  to_id: string;
-}
-
 export interface NodeResourceRow {
   id: number;
   node_id: string;
@@ -95,29 +90,18 @@ export interface NodeNoteRow {
   updated_at: string;
 }
 
-export interface SessionRow {
-  id: number;
-  started_at: string;
-  ended_at: string | null;
-  duration_seconds: number;
-  idle_seconds: number;
-  focus_node_id: string | null;
-  note: string | null;
-  auto_ended: number;
-}
-
 export interface StreakDayRow {
-  day: string;       // 'YYYY-MM-DD'
+  /** YYYY-MM-DD local-day key. */
+  day: string;
+  /** Completion events recorded on this day. */
   sessions: number;
-  seconds_studied: number;
+  /** 1 if the user spent a freeze token to bridge a missed day. */
   used_freeze: number;
 }
 
 export interface AppStateRow {
   id: 1;
   handle: string;
-  idle_threshold_seconds: number;
-  idle_hard_cap_seconds: number;
   scanlines_enabled: number;
   sound_enabled: number;
   freeze_tokens: number;
@@ -179,14 +163,3 @@ export interface ZoneStats {
   in_progress_nodes: number;
 }
 
-export interface RegionWithStats extends RegionRow {
-  zones: number;
-  total_nodes: number;
-  completed_nodes: number;
-}
-
-export interface NodeWithChildren extends NodeRow {
-  children: NodeRow[];
-  resources_count: number;
-  has_note: boolean;
-}

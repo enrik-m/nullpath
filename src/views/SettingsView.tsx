@@ -1,5 +1,5 @@
 /**
- * SettingsView — operator profile + idle thresholds + theme toggles.
+ * SettingsView — operator profile, theme toggles, danger-zone reset.
  */
 
 import { useEffect, useState } from "react";
@@ -11,6 +11,7 @@ import { useUi } from "../store";
 import { sfx } from "../lib/sfx";
 import { Button } from "../components/ui/Button";
 import { cn } from "../lib/cn";
+import { LIMITS } from "../lib/limits";
 
 export function SettingsView() {
   const setScanlines = useUi((s) => s.setScanlines);
@@ -50,16 +51,9 @@ export function SettingsView() {
   }
 
   async function resetEverything() {
-    if (!confirm("Wipe all progress, sessions, notes, resources? This cannot be undone.")) return;
+    if (!confirm("Wipe all progress, notes, resources, bounties, achievements? This cannot be undone.")) return;
     sfx.warn();
-    const conn = await db.db();
-    await conn.execute("UPDATE node SET status='available', user_xp=0, completed_at=NULL, started_at=NULL");
-    await conn.execute("DELETE FROM session");
-    await conn.execute("DELETE FROM streak_day");
-    await conn.execute("DELETE FROM node_resource");
-    await conn.execute("DELETE FROM node_note");
-    await conn.execute("DELETE FROM achievement");
-    await conn.execute("UPDATE app_state SET freeze_tokens=0, last_freeze_award_week=NULL WHERE id=1");
+    await db.resetAllProgress();
     location.reload();
   }
 
@@ -87,6 +81,8 @@ export function SettingsView() {
               <input
                 value={state.handle}
                 onChange={(e) => update({ handle: e.target.value })}
+                maxLength={LIMITS.handle}
+                aria-label="Operator handle"
                 className="bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-2 text-sm text-[var(--color-fg-0)] np-mono focus:border-[var(--color-cyan-dim)] focus:outline-none w-full max-w-xs"
               />
             </Field>
@@ -99,36 +95,6 @@ export function SettingsView() {
                 <span className="np-mono text-[10px] text-[var(--color-fg-3)] ml-2">
                   +1 awarded weekly
                 </span>
-              </div>
-            </Field>
-          </Section>
-
-          {/* Session tracking */}
-          <Section title="Session tracking">
-            <Field label="Idle threshold">
-              <Slider
-                value={state.idle_threshold_seconds}
-                min={120}
-                max={1800}
-                step={60}
-                onChange={(v) => update({ idle_threshold_seconds: v })}
-                format={(v) => `${Math.floor(v / 60)} min`}
-              />
-              <div className="text-[12px] text-[var(--color-fg-3)] np-mono mt-1">
-                Auto-pause after this much OS idle
-              </div>
-            </Field>
-            <Field label="Hard cap">
-              <Slider
-                value={state.idle_hard_cap_seconds}
-                min={600}
-                max={7200}
-                step={300}
-                onChange={(v) => update({ idle_hard_cap_seconds: v })}
-                format={(v) => `${Math.floor(v / 60)} min`}
-              />
-              <div className="text-[12px] text-[var(--color-fg-3)] np-mono mt-1">
-                Auto-end the session if idle this long
               </div>
             </Field>
           </Section>
@@ -152,8 +118,8 @@ export function SettingsView() {
           {/* Danger zone */}
           <Section title="Danger zone" tone="danger">
             <div className="text-[13px] text-[var(--color-fg-2)] mb-3">
-              Wipes all progress, sessions, notes, and resources. The skill graph
-              itself stays intact (re-seeded from migrations on next boot).
+              Wipes all progress, notes, resources, bounties, achievements, and
+              streak history. The skill graph itself stays intact.
             </div>
             <Button variant="danger" size="sm" onClick={resetEverything}>
               <RefreshCcw size={12} />
@@ -197,39 +163,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         {label}
       </div>
       {children}
-    </div>
-  );
-}
-
-function Slider({
-  value,
-  min,
-  max,
-  step,
-  onChange,
-  format,
-}: {
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (v: number) => void;
-  format: (v: number) => string;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseInt(e.target.value, 10))}
-        className="flex-1 accent-[var(--color-cyan)]"
-      />
-      <span className="np-mono text-sm text-[var(--color-cyan)] tabular-nums w-16 text-right">
-        {format(value)}
-      </span>
     </div>
   );
 }
