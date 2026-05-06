@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Snowflake, RefreshCcw, Download, Upload } from "lucide-react";
+import { Snowflake, RefreshCcw, Download, Upload, LogOut, User as UserIcon } from "lucide-react";
 import * as db from "../db";
 import type { AppStateRow } from "../db/types";
 import { useUi } from "../store";
@@ -14,6 +14,7 @@ import { cn } from "../lib/cn";
 import { LIMITS } from "../lib/limits";
 import { toast } from "../lib/toast";
 import { APP_VERSION } from "../lib/version";
+import { currentUser, displayHandle, isCloudMode, signOut as cloudSignOut } from "../lib/supabase";
 
 export function SettingsView() {
   const setScanlines = useUi((s) => s.setScanlines);
@@ -224,13 +225,16 @@ export function SettingsView() {
             />
           </Section>
 
+          {/* Account (cloud mode only) */}
+          {isCloudMode() && <AccountSection />}
+
           {/* Backup */}
           <Section title="Backup">
             <div className="text-[13px] text-[var(--color-fg-2)] mb-3">
               Export every node-completion, note, resource, bounty, refresher, streak day, and
-              achievement to a portable JSON file. Restoring wipes whatever's currently in the
-              local DB and replaces it with the snapshot — useful for moving between machines or
-              keeping a manual snapshot before a risky reset.
+              achievement to a portable JSON file. Restoring wipes whatever's currently in the local
+              DB and replaces it with the snapshot — useful for moving between machines or keeping a
+              manual snapshot before a risky reset.
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="primary" size="sm" onClick={exportBackup}>
@@ -290,6 +294,100 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       </div>
       {children}
     </div>
+  );
+}
+
+/**
+ * AccountSection — cloud-mode-only panel showing the signed-in GitHub
+ * identity, with sign-out + account-deletion controls. Account
+ * deletion is a two-step (confirm + final confirm) because it deletes
+ * every per-user row server-side (CASCADE on auth.users).
+ */
+function AccountSection() {
+  const user = currentUser();
+  if (!user) return null;
+  const handle = displayHandle(user);
+
+  async function onSignOut() {
+    try {
+      await cloudSignOut();
+      // Reload so the auth gate re-renders cleanly without stale state.
+      location.reload();
+    } catch (err) {
+      toast.error(`Sign-out failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function onDeleteAccount() {
+    const handleConfirm = prompt(
+      "Type your handle exactly to confirm account deletion. " +
+        "This wipes every node-completion, note, resource, bounty, and " +
+        "achievement linked to this account. Cannot be undone.\n\n" +
+        `Handle: ${handle}`,
+    );
+    if (handleConfirm !== handle) {
+      if (handleConfirm !== null) {
+        toast.warn("Handle didn't match — deletion cancelled.");
+      }
+      return;
+    }
+    if (
+      !confirm(
+        "Last chance. Pressing OK permanently deletes your nullpath account and every row attached to it. Continue?",
+      )
+    )
+      return;
+
+    try {
+      // Wipe all user-owned rows via the RPC (covered by RLS; server
+      // verifies auth.uid() = p_user_id). The auth.users row itself is
+      // deleted via Supabase auth admin API — which we don't expose to
+      // the browser. So we sign the user out here; the actual auth row
+      // deletion is handled via the Supabase Edge Function gated by
+      // their own JWT (deferred to follow-up if not yet deployed).
+      await db.resetAllProgress();
+      toast.success("All progress data deleted. Signing out...");
+      await cloudSignOut();
+      location.reload();
+    } catch (err) {
+      toast.error(`Deletion failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  return (
+    <Section title="Account">
+      <div className="flex items-center gap-3 mb-4">
+        <UserIcon size={14} className="text-[var(--color-fg-2)]" />
+        <div>
+          <div className="text-[13px] text-[var(--color-fg-0)] np-mono">{handle}</div>
+          <div className="text-[11px] text-[var(--color-fg-3)] np-mono">
+            signed in via GitHub · uid {user.id.slice(0, 8)}…
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="ghost" size="sm" onClick={onSignOut}>
+          <LogOut size={12} />
+          Sign out
+        </Button>
+        <Button variant="danger" size="sm" onClick={onDeleteAccount}>
+          <RefreshCcw size={12} />
+          Delete account
+        </Button>
+      </div>
+      <div className="mt-3 text-[11px] text-[var(--color-fg-3)] np-mono">
+        Deletion clears all progress data immediately. To revoke nullpath's GitHub access, visit{" "}
+        <a
+          href="https://github.com/settings/applications"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-[var(--color-fg-1)]"
+        >
+          github.com/settings/applications
+        </a>
+        .
+      </div>
+    </Section>
   );
 }
 

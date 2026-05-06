@@ -15,10 +15,18 @@ import { StatsView } from "./views/StatsView";
 import { BountiesView } from "./views/BountiesView";
 import { AchievementsView } from "./views/AchievementsView";
 import { SettingsView } from "./views/SettingsView";
+import { SignInView } from "./views/SignInView";
 import { Toaster } from "./components/Toaster";
 import { useDailyBriefing } from "./hooks/useDailyBriefing";
 import { primeAchievementEngine, startAchievementWatcher } from "./lib/achievements";
 import * as db from "./db";
+import { initAuth, isCloudMode, onAuthChange, currentUser, displayHandle } from "./lib/supabase";
+import type { User } from "@supabase/supabase-js";
+
+// Sentinel values for the auth state machine. Module-level constants
+// rather than enum members so referential equality works in setState.
+const LOCAL_MODE = Symbol("local-mode");
+const SIGNED_OUT = Symbol("signed-out");
 
 function App() {
   const route = useUi((s) => s.route);
@@ -33,6 +41,51 @@ function App() {
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  // Cloud-mode auth gate. Local-only builds skip this entirely — `user`
+  // stays at the sentinel `LOCAL_MODE` value and never gates rendering.
+  // We track three distinct states:
+  //   - `null`           → cloud mode, auth state still loading on boot
+  //   - `LOCAL_MODE`     → local-only build, never gate
+  //   - `User`           → signed in, render shell
+  //   - `SIGNED_OUT`     → cloud mode, user not authenticated, show signin
+  type AuthState = User | typeof LOCAL_MODE | typeof SIGNED_OUT | null;
+  const [authState, setAuthState] = useState<AuthState>(isCloudMode() ? null : LOCAL_MODE);
+
+  useEffect(() => {
+    if (!isCloudMode()) return;
+    let cancelled = false;
+    initAuth().catch((err) => console.error("[auth] init failed:", err));
+    const off = onAuthChange(async (user) => {
+      if (cancelled) return;
+      setAuthState(user ?? SIGNED_OUT);
+      // On first sign-in, seed the operator handle from GitHub login if
+      // the user hasn't already chosen something custom. The default
+      // handle from the trigger is "operator" — anything else means the
+      // user has personalized it and we leave it alone.
+      if (user) {
+        try {
+          const state = await db.getAppState();
+          if (state.handle === "operator" || !state.handle) {
+            const gh = displayHandle(user);
+            if (gh && gh !== "operator") {
+              await db.updateAppState({ handle: gh });
+            }
+          }
+        } catch (err) {
+          // Non-fatal — the user can set the handle from Settings.
+          console.warn("[auth] handle seed failed:", err);
+        }
+      }
+    });
+    // Seed from cache in case onAuthChange didn't fire synchronously.
+    const cached = currentUser();
+    if (cached) setAuthState(cached);
+    return () => {
+      cancelled = true;
+      off();
+    };
+  }, []);
 
   useDailyBriefing();
 
@@ -86,9 +139,7 @@ function App() {
         // Re-render and throw so ErrorBoundary picks it up with a
         // useful message rather than the views falling into limbo.
         setBootError(
-          err instanceof Error
-            ? err
-            : new Error(`Local database unavailable: ${String(err)}`),
+          err instanceof Error ? err : new Error(`Local database unavailable: ${String(err)}`),
         );
       }
     }
@@ -141,6 +192,27 @@ function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Cloud-mode auth gate. While we're still resolving the cached session,
+  // render nothing — the flicker between "signin screen" and "boot screen"
+  // is worse UX than a 100ms blank moment.
+  if (authState === null) {
+    return (
+      <MotionConfig reducedMotion={prefersReducedMotion ? "always" : "never"}>
+        <div className="h-screen w-screen bg-[var(--bg)]" />
+      </MotionConfig>
+    );
+  }
+
+  // Cloud mode and the user isn't signed in — show the OAuth gate.
+  if (authState === SIGNED_OUT) {
+    return (
+      <MotionConfig reducedMotion={prefersReducedMotion ? "always" : "never"}>
+        <SignInView />
+        <Toaster />
+      </MotionConfig>
+    );
+  }
 
   // Boot view stands alone (no shell)
   if (route.name === "boot") {
