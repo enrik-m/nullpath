@@ -82,7 +82,11 @@
 
 * {
   box-sizing: border-box;
-  /* Force pixel-art rendering on raster bits */
+}
+
+/* Only force pixel rendering on raster sprites + svg-as-img.
+   Text gets normal smoothing so it stays readable. */
+img, svg.pixel-art {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -94,16 +98,23 @@ html, body, #root {
   background: var(--color-bg-0);
   color: var(--color-fg-0);
   font-family: var(--font-pixel);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
-  line-height: 1.45;
-  /* Bitmap fonts read sharper with NO antialiasing */
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  letter-spacing: 0;
+}
+
+/* Press Start 2P + Silkscreen are bitmap fonts — they only look right
+   when *not* smoothed and rendered at integer sizes. Apply the no-smooth
+   rule selectively to the .np-display and .np-screen utility classes. */
+.np-display,
+.np-screen {
   -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: grayscale;
-  font-smooth: never;
-  text-rendering: geometricPrecision;
-  overflow: hidden;
-  letter-spacing: 0.01em;
 }
 
 #root {
@@ -198,12 +209,13 @@ textarea, select {
   color: var(--color-fg-0);
   border: 2px solid var(--color-border-default);
   border-radius: 0;
-  padding: 6px 10px;
+  padding: 7px 10px;
   box-shadow:
     inset 2px 2px 0 0 var(--color-border-shadow),
     inset -2px -2px 0 0 var(--color-border-bright);
   outline: none;
-  font-size: 13px;
+  font-size: 15px;
+  line-height: 1.4;
 }
 input[type="range"] {
   accent-color: var(--color-cyan);

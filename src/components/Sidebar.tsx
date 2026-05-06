@@ -104,7 +104,7 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
           nullpath
           <span className="np-blink ml-1">_</span>
         </div>
-        <div className="np-screen text-[8px] tracking-[0.3em] text-[var(--color-fg-3)] mt-1.5">
+        <div className="np-screen text-[10px] tracking-[0.3em] text-[var(--color-fg-3)] mt-1.5">
           v0.1.0 · OPERATOR OS
         </div>
       </div>
@@ -119,7 +119,7 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
       >
         <Search size={12} className="shrink-0" />
         <span>SEARCH</span>
-        <span className="ml-auto text-[8px] text-[var(--color-fg-3)]">⌘K</span>
+        <span className="ml-auto text-[10px] text-[var(--color-fg-3)]">⌘K</span>
       </button>
 
       {/* Nav */}
@@ -135,7 +135,7 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
               }}
               onMouseEnter={() => sfx.hover()}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 text-left transition-colors np-screen text-[11px] tracking-[0.15em]",
+                "flex items-center gap-3 px-3 py-2 text-left transition-colors np-screen text-[12px] tracking-[0.15em]",
                 "border-2 border-transparent",
                 active
                   ? "bg-[var(--color-cyan-deep)] text-[var(--color-cyan)] border-[var(--color-cyan-dim)]"
@@ -154,7 +154,7 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
               <item.icon size={13} />
               <span className="flex-1">{item.label}</span>
               {item.shortcut && (
-                <span className="text-[8px] text-[var(--color-fg-3)] np-mono">{item.shortcut}</span>
+                <span className="text-[10px] text-[var(--color-fg-3)] np-mono">{item.shortcut}</span>
               )}
             </button>
           );
@@ -166,7 +166,7 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
         <div className="np-pixel px-3 py-2 flex items-center gap-3">
           <PixelSprite name="flame" size={20} color="var(--color-amber)" secondary="var(--color-rose)" highlight="var(--color-fg-0)" />
           <div className="flex-1">
-            <div className="np-screen text-[8px] tracking-[0.2em] text-[var(--color-fg-3)]">STREAK</div>
+            <div className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)]">STREAK</div>
             <div className="np-display text-base text-[var(--color-amber)]">{streak}d</div>
           </div>
         </div>
@@ -189,10 +189,10 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
             {(profile?.handle ?? "OP").slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="np-pixel-text text-[12px] text-[var(--color-fg-0)] truncate">
+            <div className="np-pixel-text text-[13px] text-[var(--color-fg-0)] truncate">
               {profile?.handle ?? "operator"}
             </div>
-            <div className="np-screen text-[8px] tracking-[0.15em] text-[var(--color-fg-3)] flex items-center gap-1">
+            <div className="np-screen text-[10px] tracking-[0.15em] text-[var(--color-fg-3)] flex items-center gap-1">
               <span className="text-[var(--color-cyan)]">LVL {profile?.level ?? 0}</span>
               <span>·</span>
               <span>{profile?.xp.toLocaleString() ?? 0} XP</span>
@@ -214,11 +214,11 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
           <div className="np-pixel-flat px-3 py-2 flex items-center justify-between border-[var(--color-cyan)]">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-[var(--color-cyan)] np-pulse" />
-              <span className="np-screen text-[9px] tracking-[0.2em] text-[var(--color-cyan)]">
+              <span className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-cyan)]">
                 LIVE
               </span>
             </div>
-            <span className="np-mono text-[14px] text-[var(--color-fg-0)]">
+            <span className="np-mono text-[15px] text-[var(--color-fg-0)]">
               {formatHmShort(session.durationSeconds)}
             </span>
           </div>

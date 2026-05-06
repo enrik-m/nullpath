@@ -101,7 +101,7 @@ export function BootView() {
                   NULLPATH
                 </span>
               </div>
-              <div className="np-screen text-[9px] tracking-[0.4em] text-[var(--color-fg-3)] mt-3">
+              <div className="np-screen text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] mt-3">
                 ◇ OFFENSIVE-SECURITY ATLAS ◇
               </div>
             </motion.div>
@@ -111,7 +111,7 @@ export function BootView() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
-              className="np-pixel-inset p-4 np-mono text-[14px] leading-[1.7]"
+              className="np-pixel-inset p-4 np-mono text-[15px] leading-[1.7]"
             >
               {LINES.slice(0, shown).map((line, i) => (
                 <motion.div
@@ -146,7 +146,7 @@ export function BootView() {
               <span className="np-glitch-text" data-text="NULLPATH">NULLPATH</span>
               <span className="np-blink ml-2 text-[var(--color-magenta)]">_</span>
             </div>
-            <div className="np-screen text-[9px] tracking-[0.4em] text-[var(--color-fg-3)] np-blink">
+            <div className="np-screen text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] np-blink">
               LOADING ATLAS...
             </div>
           </div>

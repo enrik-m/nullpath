@@ -131,7 +131,7 @@ export function AtlasView() {
               >
                 {/* Title bar — like an OS window */}
                 <div
-                  className="np-screen text-[9px] tracking-[0.2em] px-3 py-2 flex items-center gap-2 border-b-2"
+                  className="np-screen text-[10px] tracking-[0.2em] px-3 py-2 flex items-center gap-2 border-b-2"
                   style={{
                     background: locked ? "var(--color-bg-3)" : `${card.region.color_accent}22`,
                     borderColor: "var(--color-border-default)",
@@ -176,7 +176,7 @@ export function AtlasView() {
                     <div className="np-display text-xl text-[var(--color-fg-0)] mb-2 leading-tight">
                       {card.region.name.toUpperCase()}
                     </div>
-                    <p className="text-[var(--color-fg-2)] text-[12px] mb-5 min-h-[3em] leading-relaxed">
+                    <p className="text-[var(--color-fg-2)] text-[13px] mb-5 min-h-[3em] leading-relaxed">
                       {card.region.tagline}
                     </p>
 
@@ -225,7 +225,7 @@ export function AtlasView() {
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div>
-      <div className="np-screen text-[8px] tracking-[0.2em] text-[var(--color-fg-3)]">{label}</div>
+      <div className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)]">{label}</div>
       <div
         className="np-display text-base mt-0.5"
         style={{ color: color ?? "var(--color-fg-0)" }}

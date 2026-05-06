@@ -114,7 +114,7 @@ export function SettingsView() {
                 onChange={(v) => update({ idle_threshold_seconds: v })}
                 format={(v) => `${Math.floor(v / 60)} min`}
               />
-              <div className="text-[11px] text-[var(--color-fg-3)] np-mono mt-1">
+              <div className="text-[12px] text-[var(--color-fg-3)] np-mono mt-1">
                 Auto-pause after this much OS idle
               </div>
             </Field>
@@ -127,7 +127,7 @@ export function SettingsView() {
                 onChange={(v) => update({ idle_hard_cap_seconds: v })}
                 format={(v) => `${Math.floor(v / 60)} min`}
               />
-              <div className="text-[11px] text-[var(--color-fg-3)] np-mono mt-1">
+              <div className="text-[12px] text-[var(--color-fg-3)] np-mono mt-1">
                 Auto-end the session if idle this long
               </div>
             </Field>
@@ -151,7 +151,7 @@ export function SettingsView() {
 
           {/* Danger zone */}
           <Section title="Danger zone" tone="danger">
-            <div className="text-[12px] text-[var(--color-fg-2)] mb-3">
+            <div className="text-[13px] text-[var(--color-fg-2)] mb-3">
               Wipes all progress, sessions, notes, and resources. The skill graph
               itself stays intact (re-seeded from migrations on next boot).
             </div>
@@ -248,8 +248,8 @@ function Toggle({
   return (
     <div className="flex items-center justify-between gap-4">
       <div>
-        <div className="text-[13px] text-[var(--color-fg-0)]">{label}</div>
-        {hint && <div className="text-[11px] text-[var(--color-fg-3)] np-mono">{hint}</div>}
+        <div className="text-[14px] text-[var(--color-fg-0)]">{label}</div>
+        {hint && <div className="text-[12px] text-[var(--color-fg-3)] np-mono">{hint}</div>}
       </div>
       <button
         onClick={() => onChange(!value)}

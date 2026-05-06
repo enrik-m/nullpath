@@ -120,21 +120,21 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search 700+ nodes — try 'sqli', 'jwt', 'ssrf', or an id like W01"
-            className="flex-1 bg-transparent border-none outline-none text-[14px] text-[var(--color-fg-0)] np-mono placeholder:text-[var(--color-fg-3)]"
+            className="flex-1 bg-transparent border-none outline-none text-[15px] text-[var(--color-fg-0)] np-mono placeholder:text-[var(--color-fg-3)]"
           />
-          <kbd className="np-mono text-[9px] text-[var(--color-fg-3)] border border-[var(--color-border-default)] rounded px-1.5 py-0.5">
+          <kbd className="np-mono text-[10px] text-[var(--color-fg-3)] border border-[var(--color-border-default)] rounded px-1.5 py-0.5">
             ESC
           </kbd>
         </div>
 
         <div className="max-h-[420px] overflow-y-auto">
           {!q.trim() && recents.length > 0 && (
-            <div className="np-mono text-[9px] tracking-[0.25em] uppercase text-[var(--color-fg-3)] px-4 pt-3 pb-1">
+            <div className="np-mono text-[10px] tracking-[0.25em] uppercase text-[var(--color-fg-3)] px-4 pt-3 pb-1">
               // jump to recent
             </div>
           )}
           {q.trim() && results.length === 0 && (
-            <div className="px-4 py-10 text-center np-mono text-[12px] text-[var(--color-fg-3)]">
+            <div className="px-4 py-10 text-center np-mono text-[13px] text-[var(--color-fg-3)]">
               no nodes match "{q}"
             </div>
           )}
@@ -156,15 +156,15 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                 {n.id}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] text-[var(--color-fg-0)] truncate">{n.name}</div>
+                <div className="text-[14px] text-[var(--color-fg-0)] truncate">{n.name}</div>
                 {n.gloss && (
-                  <div className="text-[11px] text-[var(--color-fg-2)] truncate np-mono">
+                  <div className="text-[12px] text-[var(--color-fg-2)] truncate np-mono">
                     {n.gloss}
                   </div>
                 )}
               </div>
               <DepthTag depth={n.depth} />
-              <span className="np-mono text-[9px] text-[var(--color-fg-3)]">{n.zone_id}</span>
+              <span className="np-mono text-[10px] text-[var(--color-fg-3)]">{n.zone_id}</span>
               {i === highlight && (
                 <ArrowRight size={12} className="text-[var(--color-cyan)]" />
               )}
@@ -172,7 +172,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
           ))}
         </div>
 
-        <div className="px-4 py-2 border-t border-[var(--color-border-default)] flex items-center gap-3 np-mono text-[9px] tracking-[0.15em] uppercase text-[var(--color-fg-3)]">
+        <div className="px-4 py-2 border-t border-[var(--color-border-default)] flex items-center gap-3 np-mono text-[10px] tracking-[0.15em] uppercase text-[var(--color-fg-3)]">
           <span>↑↓ navigate</span>
           <span>↵ open</span>
           <span>esc close</span>

@@ -233,7 +233,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
       >
         {/* OS-window title bar */}
         <div
-          className="np-screen text-[9px] tracking-[0.2em] px-4 py-2 flex items-center gap-2 border-b-2"
+          className="np-screen text-[10px] tracking-[0.2em] px-4 py-2 flex items-center gap-2 border-b-2"
           style={{
             background: `${accent}22`,
             borderColor: "var(--color-border-default)",
@@ -260,7 +260,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
             {node.name}
           </div>
           {node.gloss && (
-            <div className="text-[var(--color-fg-2)] text-[12px] mt-2 leading-relaxed">
+            <div className="text-[var(--color-fg-2)] text-[13px] mt-2 leading-relaxed">
               {node.gloss}
             </div>
           )}
@@ -328,12 +328,12 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                     }}
                     className="w-full text-left np-pixel-flat px-3 py-2 hover:border-[var(--color-cyan-dim)] transition flex items-center gap-2"
                   >
-                    <span className="np-mono text-[9px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
+                    <span className="np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
                       {c.id}
                     </span>
                     <span
                       className={cn(
-                        "text-[12px] flex-1 truncate",
+                        "text-[13px] flex-1 truncate",
                         c.status === "complete"
                           ? "text-[var(--color-lime)]"
                           : c.status === "in_progress"
@@ -410,13 +410,13 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                   placeholder="URL (optional)"
                   value={newRes.url}
                   onChange={(e) => setNewRes({ ...newRes, url: e.target.value })}
-                  className="w-full bg-[var(--color-bg-3)] border border-[var(--color-border-default)] rounded px-2 py-1.5 text-[12px] text-[var(--color-fg-1)] np-mono focus:border-[var(--color-cyan-dim)]"
+                  className="w-full bg-[var(--color-bg-3)] border border-[var(--color-border-default)] rounded px-2 py-1.5 text-[13px] text-[var(--color-fg-1)] np-mono focus:border-[var(--color-cyan-dim)]"
                 />
                 <input
                   placeholder="Quick note (optional)"
                   value={newRes.note}
                   onChange={(e) => setNewRes({ ...newRes, note: e.target.value })}
-                  className="w-full bg-[var(--color-bg-3)] border border-[var(--color-border-default)] rounded px-2 py-1.5 text-[12px] text-[var(--color-fg-1)] focus:border-[var(--color-cyan-dim)]"
+                  className="w-full bg-[var(--color-bg-3)] border border-[var(--color-border-default)] rounded px-2 py-1.5 text-[13px] text-[var(--color-fg-1)] focus:border-[var(--color-cyan-dim)]"
                 />
                 <div className="flex gap-2 justify-end">
                   <Button variant="ghost" size="sm" onClick={() => setAdding(false)}>
@@ -431,7 +431,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
 
             <div className="space-y-1.5">
               {resources.length === 0 && !adding && (
-                <div className="text-[12px] text-[var(--color-fg-3)] np-mono py-2">
+                <div className="text-[13px] text-[var(--color-fg-3)] np-mono py-2">
                   no resources yet — paste a youtube link, blog url, or writeup
                 </div>
               )}
@@ -444,7 +444,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span
-                        className="np-mono text-[9px] tracking-[0.2em] uppercase"
+                        className="np-mono text-[10px] tracking-[0.2em] uppercase"
                         style={{ color: RESOURCE_KIND_COLOR[r.kind] }}
                       >
                         {RESOURCE_KIND_LABEL[r.kind]}
@@ -453,11 +453,11 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                         <Pin size={10} className="text-[var(--color-amber)]" />
                       )}
                     </div>
-                    <div className="text-[12.5px] text-[var(--color-fg-0)] mt-0.5 truncate">
+                    <div className="text-[14px] text-[var(--color-fg-0)] mt-0.5 truncate">
                       {r.title}
                     </div>
                     {r.note && (
-                      <div className="text-[11px] text-[var(--color-fg-2)] mt-0.5 line-clamp-2">
+                      <div className="text-[12px] text-[var(--color-fg-2)] mt-0.5 line-clamp-2">
                         {r.note}
                       </div>
                     )}
@@ -509,14 +509,14 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
               onChange={(e) => onNoteChange(e.target.value)}
               onBlur={flushNote}
               placeholder="freeform markdown notes — concepts, payloads, links, anything"
-              className="np-pixel-inset w-full px-3 py-2 text-[13px] text-[var(--color-fg-0)] np-mono leading-[1.55] focus:outline-none min-h-[140px] resize-y"
+              className="np-pixel-inset w-full px-3 py-2 text-[14px] text-[var(--color-fg-0)] np-mono leading-[1.55] focus:outline-none min-h-[140px] resize-y"
             />
           </section>
         </div>
 
         {/* Footer */}
         <div
-          className="px-4 py-2 border-t-2 border-[var(--color-border-default)] np-screen text-[9px] tracking-[0.2em] text-[var(--color-fg-3)] uppercase flex items-center justify-between"
+          className="px-4 py-2 border-t-2 border-[var(--color-border-default)] np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] uppercase flex items-center justify-between"
           style={{ background: "var(--color-bg-2)" }}
         >
           <span>

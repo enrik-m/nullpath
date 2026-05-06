@@ -170,7 +170,7 @@ export function CodexView() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="filter..."
-            className="ml-auto bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-1.5 text-[12px] text-[var(--color-fg-0)] np-mono focus:border-[var(--color-cyan-dim)] focus:outline-none w-48"
+            className="ml-auto bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-1.5 text-[13px] text-[var(--color-fg-0)] np-mono focus:border-[var(--color-cyan-dim)] focus:outline-none w-48"
           />
         </div>
 
@@ -178,7 +178,7 @@ export function CodexView() {
         <div className="space-y-1.5">
           {filtered.length === 0 && (
             <div className="np-pixel rounded-lg p-12 text-center">
-              <div className="np-mono text-[12px] text-[var(--color-fg-3)] tracking-widest">
+              <div className="np-mono text-[13px] text-[var(--color-fg-3)] tracking-widest">
                 {items.length === 0
                   ? "no resources yet — open a node and start attaching videos / blogs / writeups"
                   : `no resources match these filters`}
@@ -192,15 +192,15 @@ export function CodexView() {
               style={{ borderLeftWidth: 3, borderLeftColor: KIND_COLOR[r.kind] }}
             >
               <span
-                className="np-mono text-[9px] tracking-[0.2em] uppercase shrink-0 w-14 mt-1"
+                className="np-mono text-[10px] tracking-[0.2em] uppercase shrink-0 w-14 mt-1"
                 style={{ color: KIND_COLOR[r.kind] }}
               >
                 {KIND_LABEL[r.kind]}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] text-[var(--color-fg-0)] truncate">{r.title}</div>
+                <div className="text-[14px] text-[var(--color-fg-0)] truncate">{r.title}</div>
                 {r.note && (
-                  <div className="text-[11.5px] text-[var(--color-fg-2)] mt-0.5 line-clamp-2">
+                  <div className="text-[13px] text-[var(--color-fg-2)] mt-0.5 line-clamp-2">
                     {r.note}
                   </div>
                 )}

@@ -48,25 +48,25 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="text-2xl font-bold tracking-tight text-[var(--color-fg-0)]">
               Something blew up.
             </div>
-            <div className="text-[var(--color-fg-2)] text-[13px] mt-2 leading-relaxed">
+            <div className="text-[var(--color-fg-2)] text-[14px] mt-2 leading-relaxed">
               The view crashed mid-render. Your data is safe — nothing got written through this
               path. Try resetting the view; if it crashes again, restart the app.
             </div>
-            <pre className="mt-4 np-mono text-[11px] text-[var(--color-rose)] bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded p-3 max-h-48 overflow-auto">
+            <pre className="mt-4 np-mono text-[12px] text-[var(--color-rose)] bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded p-3 max-h-48 overflow-auto">
 {this.state.error?.toString()}
 {this.state.errorInfo?.componentStack ?? ""}
             </pre>
             <div className="flex gap-2 mt-4">
               <button
                 onClick={this.reset}
-                className="np-mono text-[11px] uppercase tracking-[0.15em] px-4 py-2 rounded bg-[var(--color-cyan-dim)] text-[var(--color-bg-0)] hover:bg-[var(--color-cyan)]"
+                className="np-mono text-[12px] uppercase tracking-[0.15em] px-4 py-2 rounded bg-[var(--color-cyan-dim)] text-[var(--color-bg-0)] hover:bg-[var(--color-cyan)]"
               >
                 <RotateCcw size={12} className="inline mr-2" />
                 Reset view
               </button>
               <button
                 onClick={() => location.reload()}
-                className="np-mono text-[11px] uppercase tracking-[0.15em] px-4 py-2 rounded border border-[var(--color-border-default)] text-[var(--color-fg-1)] hover:text-[var(--color-fg-0)]"
+                className="np-mono text-[12px] uppercase tracking-[0.15em] px-4 py-2 rounded border border-[var(--color-border-default)] text-[var(--color-fg-1)] hover:text-[var(--color-fg-0)]"
               >
                 Reload app
               </button>

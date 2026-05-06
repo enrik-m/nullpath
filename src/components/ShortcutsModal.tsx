@@ -76,7 +76,7 @@ export function ShortcutsModal({ open, onClose }: Props) {
               <div className="space-y-1.5">
                 {items.map((s, i) => (
                   <div key={i} className="flex items-center justify-between">
-                    <span className="text-[12.5px] text-[var(--color-fg-1)]">{s.label}</span>
+                    <span className="text-[14px] text-[var(--color-fg-1)]">{s.label}</span>
                     <div className="flex items-center gap-1">
                       {s.keys.map((k, j) => (
                         <kbd

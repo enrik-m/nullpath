@@ -169,7 +169,7 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
             {focusNode && (
               <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 np-pixel-flat">
                 <Target size={10} className="text-[var(--color-magenta)]" />
-                <span className="np-screen text-[9px] tracking-[0.15em] text-[var(--color-magenta)]">
+                <span className="np-screen text-[10px] tracking-[0.15em] text-[var(--color-magenta)]">
                   {focusNode.id}
                 </span>
                 <span className="text-[10px] text-[var(--color-fg-2)] truncate max-w-[140px]">
@@ -180,7 +180,7 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
             <button
               onClick={toggleHunt}
               className={cn(
-                "np-screen text-[9px] tracking-[0.15em] uppercase px-2 py-1.5 border-2 transition",
+                "np-screen text-[10px] tracking-[0.15em] uppercase px-2 py-1.5 border-2 transition",
                 session.huntMode
                   ? "text-[var(--color-bg-0)] bg-[var(--color-magenta)] border-[var(--color-magenta)]"
                   : "text-[var(--color-fg-3)] border-[var(--color-border-default)] hover:text-[var(--color-magenta)] hover:border-[var(--color-magenta-dim)]",
@@ -203,7 +203,7 @@ export function TopBar({ onRandomKick }: { onRandomKick: () => void }) {
                 <span className="w-2 h-2 bg-[var(--color-cyan)] np-pulse" />
               )}
               <span
-                className="np-mono text-[14px] tabular-nums"
+                className="np-mono text-[15px] tabular-nums"
                 style={{ color: session.paused ? "var(--color-amber)" : "var(--color-cyan)" }}
               >
                 {formatHms(session.durationSeconds)}

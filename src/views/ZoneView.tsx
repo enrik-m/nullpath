@@ -159,23 +159,23 @@ function SkillNode({ data, selected }: NodeProps) {
 
       <div className="flex items-center gap-1.5">
         <span
-          className="np-screen text-[8px] tracking-[0.15em]"
+          className="np-screen text-[10px] tracking-[0.15em]"
           style={{ color: borderColor }}
         >
           {row.id}
         </span>
         {row.owasp_tag && (
-          <span className="np-screen text-[7px] text-[var(--color-fg-3)] tracking-wider">
+          <span className="np-screen text-[9px] text-[var(--color-fg-3)] tracking-wider">
             {row.owasp_tag}
           </span>
         )}
-        {isComplete && <span className="ml-auto np-display text-[9px] text-[var(--color-lime)]">✓</span>}
+        {isComplete && <span className="ml-auto np-display text-[10px] text-[var(--color-lime)]">✓</span>}
         {isInProgress && <span className="ml-auto w-2 h-2 bg-[var(--color-cyan)] np-pulse" />}
       </div>
       <div
         className={cn(
           "leading-tight font-semibold mt-1",
-          isSub ? "text-[11px]" : "text-[12px]",
+          isSub ? "text-[12px]" : "text-[13px]",
           isComplete ? "text-[var(--color-lime)]" : "text-[var(--color-fg-0)]",
         )}
       >
@@ -319,13 +319,13 @@ export function ZoneView({ zoneId }: ZoneViewProps) {
         {/* Floating header */}
         <div className="absolute top-4 left-4 right-4 flex items-start justify-between pointer-events-none">
           <div className="pointer-events-auto np-pixel px-4 py-2" style={{ borderColor: accent }}>
-            <div className="np-screen text-[9px] tracking-[0.3em] text-[var(--color-fg-3)]">
+            <div className="np-screen text-[10px] tracking-[0.3em] text-[var(--color-fg-3)]">
               // ZONE · {zone.id}
             </div>
             <div className="np-display text-base mt-1" style={{ color: accent }}>
               {zone.name.toUpperCase()}
             </div>
-            <div className="np-mono text-[12px] text-[var(--color-fg-2)] mt-1">
+            <div className="np-mono text-[13px] text-[var(--color-fg-2)] mt-1">
               {rows.length} NODES · {rows.filter((r) => r.status === "complete").length} DONE
             </div>
           </div>
@@ -337,7 +337,7 @@ export function ZoneView({ zoneId }: ZoneViewProps) {
                 setTrailMode((v) => !v);
               }}
               className={cn(
-                "np-screen text-[9px] tracking-[0.2em] uppercase px-3 py-2 border-2 transition",
+                "np-screen text-[10px] tracking-[0.2em] uppercase px-3 py-2 border-2 transition",
                 trailMode
                   ? "bg-[var(--color-lime)] text-[var(--color-bg-0)] border-[var(--color-lime)]"
                   : "text-[var(--color-fg-2)] border-[var(--color-border-default)] bg-[var(--color-bg-2)] hover:text-[var(--color-lime)] hover:border-[var(--color-lime-dim)]",
@@ -376,7 +376,7 @@ function FilterButtons({
     { id: "complete", label: "Done" },
   ];
   return (
-    <div className="np-screen text-[9px] flex border-2 border-[var(--color-border-default)] bg-[var(--color-bg-2)]">
+    <div className="np-screen text-[10px] flex border-2 border-[var(--color-border-default)] bg-[var(--color-bg-2)]">
       {items.map((it, i) => (
         <button
           key={it.id}

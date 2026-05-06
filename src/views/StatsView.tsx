@@ -195,7 +195,7 @@ export function StatsView() {
                 // refreshers due · {refreshers.length}
               </div>
             </div>
-            <div className="text-[12px] text-[var(--color-fg-2)] mb-3">
+            <div className="text-[13px] text-[var(--color-fg-2)] mb-3">
               Spaced repetition queue. Mental check: still got it? Tap green if recall lands clean,
               red to push it back to 1-day spacing.
             </div>
@@ -218,7 +218,7 @@ export function StatsView() {
                     <div className="np-mono text-[10px] uppercase tracking-[0.15em] text-[var(--color-magenta)]">
                       {r.node_id} · streak {r.streak}
                     </div>
-                    <div className="text-[12.5px] text-[var(--color-fg-0)] truncate mt-0.5">
+                    <div className="text-[14px] text-[var(--color-fg-0)] truncate mt-0.5">
                       {r.node?.name ?? "—"}
                     </div>
                   </button>
@@ -301,7 +301,7 @@ export function StatsView() {
                     {z.zone_id}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between text-[12px]">
+                    <div className="flex items-center justify-between text-[13px]">
                       <span className="text-[var(--color-fg-1)]">{z.zone_name}</span>
                       <span className="np-mono text-[var(--color-fg-2)]">
                         {formatHmShort(z.seconds)}
@@ -416,19 +416,19 @@ function OperatorCard({
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 np-mono">
           <div>
-            <div className="text-[9px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">XP</div>
+            <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">XP</div>
             <div className="text-base text-[var(--color-fg-0)]">{xp.toLocaleString()}</div>
           </div>
           <div>
-            <div className="text-[9px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">streak</div>
+            <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">streak</div>
             <div className="text-base text-[var(--color-amber)]">{streak}d</div>
           </div>
           <div>
-            <div className="text-[9px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">time</div>
+            <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">time</div>
             <div className="text-base text-[var(--color-lime)]">{formatHmShort(totalSeconds)}</div>
           </div>
           <div>
-            <div className="text-[9px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">nodes</div>
+            <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">nodes</div>
             <div className="text-base text-[var(--color-cyan)]">
               {completedNodes}/{totalNodes}
             </div>
@@ -438,7 +438,7 @@ function OperatorCard({
         {topZones.some((z) => z.seconds > 0) && (
           <>
             <div className="np-divider my-4" />
-            <div className="np-mono text-[9px] tracking-[0.3em] uppercase text-[var(--color-fg-3)] mb-2">
+            <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-3)] mb-2">
               specialties
             </div>
             <div className="flex gap-2 flex-wrap">

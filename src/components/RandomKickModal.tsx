@@ -131,7 +131,7 @@ export function RandomKickModal({ open, onClose }: KickProps) {
         <div className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight">
           How much time do you have?
         </div>
-        <div className="text-[var(--color-fg-2)] text-[13px] mt-1">
+        <div className="text-[var(--color-fg-2)] text-[14px] mt-1">
           Pick a window. We pick a node that fits.
         </div>
 
@@ -145,11 +145,11 @@ export function RandomKickModal({ open, onClose }: KickProps) {
               >
                 <div className="flex items-baseline justify-between">
                   <div className="text-base font-bold text-[var(--color-fg-0)]">{w.label}</div>
-                  <div className="np-mono text-[11px] text-[var(--color-magenta)]">
+                  <div className="np-mono text-[12px] text-[var(--color-magenta)]">
                     ~{w.minutes < 60 ? `${w.minutes}m` : `${Math.floor(w.minutes / 60)}h`}
                   </div>
                 </div>
-                <div className="text-[11px] text-[var(--color-fg-2)] mt-1">{w.desc}</div>
+                <div className="text-[12px] text-[var(--color-fg-2)] mt-1">{w.desc}</div>
               </button>
             ))}
           </div>
@@ -161,7 +161,7 @@ export function RandomKickModal({ open, onClose }: KickProps) {
               picked: {picked.label.toLowerCase()} · ~{picked.minutes}m
             </div>
             {loading ? (
-              <div className="np-mono text-[12px] text-[var(--color-fg-2)] mt-3">
+              <div className="np-mono text-[13px] text-[var(--color-fg-2)] mt-3">
                 rolling the dice...
               </div>
             ) : target ? (
@@ -176,13 +176,13 @@ export function RandomKickModal({ open, onClose }: KickProps) {
                   {target.name}
                 </div>
                 {target.gloss && (
-                  <div className="text-[12px] text-[var(--color-fg-2)] mt-1.5 np-mono leading-relaxed">
+                  <div className="text-[13px] text-[var(--color-fg-2)] mt-1.5 np-mono leading-relaxed">
                     {target.gloss}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="np-mono text-[12px] text-[var(--color-fg-3)] mt-3">
+              <div className="np-mono text-[13px] text-[var(--color-fg-3)] mt-3">
                 no candidates at this size — try a different window
               </div>
             )}

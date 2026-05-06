@@ -130,7 +130,7 @@ function EchoPromptModal({ nodeId }: { nodeId: string }) {
       <div className="np-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-fg-3)] mt-1">
         {node?.id} · echo mode
       </div>
-      <div className="text-[var(--color-fg-2)] text-[13px] mt-4 leading-relaxed">
+      <div className="text-[var(--color-fg-2)] text-[14px] mt-4 leading-relaxed">
         Three-sentence gist — what did you actually learn? This pins to the node's notes
         and forces synthesis. Skip if you want, but doing this once consolidates 10x more
         than re-reading.
@@ -140,7 +140,7 @@ function EchoPromptModal({ nodeId }: { nodeId: string }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="In your own words..."
-        className="w-full mt-3 bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-2 text-[13px] text-[var(--color-fg-0)] np-mono focus:border-[var(--color-cyan-dim)] focus:outline-none min-h-[100px] resize-y"
+        className="w-full mt-3 bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded px-3 py-2 text-[14px] text-[var(--color-fg-0)] np-mono focus:border-[var(--color-cyan-dim)] focus:outline-none min-h-[100px] resize-y"
       />
       <div className="flex gap-2 justify-end mt-4">
         <Button variant="ghost" size="sm" onClick={skip}>
@@ -223,7 +223,7 @@ function IdleResumeModal({ idleSeconds }: { idleSeconds: number }) {
       <div className="mt-2 text-xl font-bold text-[var(--color-fg-0)] tracking-tight">
         Still in there?
       </div>
-      <div className="text-[var(--color-fg-2)] text-[13px] mt-3 leading-relaxed">
+      <div className="text-[var(--color-fg-2)] text-[14px] mt-3 leading-relaxed">
         No keyboard or mouse activity detected on the system. Session is paused.
         Pick how to handle the gap:
       </div>
@@ -295,7 +295,7 @@ function SessionEndModal({
         </div>
       </div>
       {node && (
-        <div className="mt-3 np-mono text-[11px] text-[var(--color-fg-2)] truncate">
+        <div className="mt-3 np-mono text-[12px] text-[var(--color-fg-2)] truncate">
           {node.name}
         </div>
       )}
@@ -330,7 +330,7 @@ function LevelUpModal({ oldLevel, newLevel }: { oldLevel: number; newLevel: numb
         </div>
         <div className="np-mono text-7xl font-bold text-[var(--color-magenta)]">{newLevel}</div>
       </div>
-      <div className="text-[var(--color-fg-2)] text-[13px] mt-4">
+      <div className="text-[var(--color-fg-2)] text-[14px] mt-4">
         Operator capacity raised. Keep moving.
       </div>
       <div className="flex justify-end mt-5">
@@ -366,7 +366,7 @@ function AchievementModal({
         </div>
       </div>
       <div className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight">{name}</div>
-      <div className="text-[var(--color-fg-2)] text-[13px] mt-3 leading-relaxed">
+      <div className="text-[var(--color-fg-2)] text-[14px] mt-3 leading-relaxed">
         {description}
       </div>
       <div className="flex justify-end mt-4">
@@ -460,13 +460,13 @@ function DailyBriefingModal() {
               showModal(null);
             }}
           >
-            <span className="np-mono text-[9px] tracking-[0.2em] uppercase text-[var(--color-cyan)]">
+            <span className="np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-cyan)]">
               {n.id}
             </span>
-            <span className="text-[12.5px] flex-1 truncate">{n.name}</span>
+            <span className="text-[14px] flex-1 truncate">{n.name}</span>
             <span
               className={cn(
-                "np-mono text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-sm border",
+                "np-mono text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-sm border",
                 n.status === "in_progress"
                   ? "text-[var(--color-cyan)] border-[var(--color-cyan-dim)]"
                   : "text-[var(--color-fg-2)] border-[var(--color-border-default)]",
@@ -477,7 +477,7 @@ function DailyBriefingModal() {
           </button>
         ))}
         {suggestions.length === 0 && (
-          <div className="np-mono text-[12px] text-[var(--color-fg-3)]">
+          <div className="np-mono text-[13px] text-[var(--color-fg-3)]">
             no suggestions yet — start a zone to seed the briefing
           </div>
         )}
@@ -496,7 +496,7 @@ function DailyBriefingModal() {
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className="np-pixel rounded px-3 py-2.5">
-      <div className="np-mono text-[9px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
+      <div className="np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
         {label}
       </div>
       <div className="np-mono text-2xl mt-0.5" style={{ color }}>

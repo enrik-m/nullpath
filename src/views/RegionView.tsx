@@ -221,13 +221,13 @@ export function RegionView({ regionId }: RegionViewProps) {
       {/* Region overlay header */}
       <div className="absolute top-0 left-0 right-0 z-10 px-6 py-4 pointer-events-none flex items-start justify-between">
         <div className="np-pixel px-4 py-2 pointer-events-auto" style={{ borderColor: accent }}>
-          <div className="np-screen text-[9px] tracking-[0.3em] text-[var(--color-fg-3)]">
+          <div className="np-screen text-[10px] tracking-[0.3em] text-[var(--color-fg-3)]">
             // REGION · {region.id}
           </div>
           <div className="np-display text-base mt-1" style={{ color: accent }}>
             {region.name.toUpperCase()}
           </div>
-          <div className="text-[var(--color-fg-2)] text-[11px] mt-1 max-w-md">
+          <div className="text-[var(--color-fg-2)] text-[12px] mt-1 max-w-md">
             {region.tagline}
           </div>
         </div>
@@ -238,7 +238,7 @@ export function RegionView({ regionId }: RegionViewProps) {
           >
             FIT VIEW
           </button>
-          <span className="np-screen text-[8px] tracking-[0.2em] text-[var(--color-fg-3)] hidden md:block">
+          <span className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] hidden md:block">
             DRAG · SCROLL
           </span>
         </div>
@@ -539,7 +539,7 @@ function ZoneHoverPanel({
       style={{ borderColor: accent }}
     >
       <div
-        className="np-screen text-[9px] tracking-[0.2em] px-3 py-1.5 border-b-2 flex items-center gap-2"
+        className="np-screen text-[10px] tracking-[0.2em] px-3 py-1.5 border-b-2 flex items-center gap-2"
         style={{
           background: `${accent}22`,
           borderColor: "var(--color-border-default)",
@@ -549,7 +549,7 @@ function ZoneHoverPanel({
         <span className="inline-block w-2 h-2" style={{ background: accent }} />
         ZONE · {zone.zone.id}
         <span
-          className="ml-auto px-1.5 py-0.5 text-[8px]"
+          className="ml-auto px-1.5 py-0.5 text-[10px]"
           style={{
             background: unlocked ? "var(--color-lime)" : "var(--color-bg-3)",
             color: unlocked ? "var(--color-bg-0)" : "var(--color-fg-3)",
@@ -562,7 +562,7 @@ function ZoneHoverPanel({
         <div className="np-display text-sm text-[var(--color-fg-0)] mb-3">
           {zone.zone.name.toUpperCase()}
         </div>
-        <div className="space-y-1.5 np-mono text-[12px]">
+        <div className="space-y-1.5 np-mono text-[13px]">
           <div className="flex justify-between text-[var(--color-fg-1)]">
             <span>NODES</span><span>{total}</span>
           </div>
@@ -576,7 +576,7 @@ function ZoneHoverPanel({
         {parentNames.length > 0 && (
           <>
             <div className="np-divider my-3" />
-            <div className="np-screen text-[8px] tracking-[0.2em] text-[var(--color-fg-3)] mb-1">
+            <div className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] mb-1">
               UNLOCKED BY
             </div>
             <div className="text-[10px] text-[var(--color-fg-2)]">
@@ -584,7 +584,7 @@ function ZoneHoverPanel({
             </div>
           </>
         )}
-        <div className="mt-3 np-screen text-[8px] tracking-[0.2em] text-[var(--color-fg-3)] np-blink">
+        <div className="mt-3 np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] np-blink">
           ▶ CLICK TO ENTER
         </div>
       </div>

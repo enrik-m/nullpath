@@ -103,7 +103,7 @@ export function BountiesView() {
         {/* List */}
         {items.length === 0 ? (
           <div className="np-pixel rounded-lg p-12 text-center">
-            <div className="np-mono text-[12px] text-[var(--color-fg-3)] tracking-widest">
+            <div className="np-mono text-[13px] text-[var(--color-fg-3)] tracking-widest">
               no submissions yet — log one when you ship a real finding
             </div>
           </div>
@@ -128,13 +128,13 @@ export function BountiesView() {
                     key={b.id}
                     className="border-b border-[var(--color-border-default)] hover:bg-[var(--color-bg-3)] transition-colors"
                   >
-                    <td className="px-4 py-3 np-mono text-[11px] text-[var(--color-fg-2)]">
+                    <td className="px-4 py-3 np-mono text-[12px] text-[var(--color-fg-2)]">
                       {new Date(b.submitted_at).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 text-[12.5px] text-[var(--color-fg-0)]">
+                    <td className="px-4 py-3 text-[14px] text-[var(--color-fg-0)]">
                       {b.program}
                     </td>
-                    <td className="px-4 py-3 text-[12.5px] text-[var(--color-fg-1)] max-w-[280px] truncate">
+                    <td className="px-4 py-3 text-[14px] text-[var(--color-fg-1)] max-w-[280px] truncate">
                       {b.title}
                     </td>
                     <td className="px-4 py-3">
@@ -156,10 +156,10 @@ export function BountiesView() {
                         {b.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 np-mono text-[12px] text-right text-[var(--color-amber)]">
+                    <td className="px-4 py-3 np-mono text-[13px] text-right text-[var(--color-amber)]">
                       {b.payout_usd ? `$${b.payout_usd.toLocaleString()}` : "—"}
                     </td>
-                    <td className="px-4 py-3 np-mono text-[10.5px] text-[var(--color-magenta)]">
+                    <td className="px-4 py-3 np-mono text-[12px] text-[var(--color-magenta)]">
                       {b.cve_id ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-right">
