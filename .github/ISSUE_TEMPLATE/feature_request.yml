@@ -1,0 +1,54 @@
+name: Feature request
+description: Suggest an improvement or a new capability
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: check the project scope. Nullpath is a tracker
+        for offsec career progress — it's not a learning platform, not
+        a CTF runner, not a HackTheBox replacement. Suggestions that
+        widen the scope are likely to be declined; suggestions that
+        sharpen the existing experience get prioritized.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the friction or gap you hit, not the feature you imagine.
+      placeholder: When I try to ..., I have to ... which is annoying because ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: How would the app behave differently?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What did you try first? Existing workarounds?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Where in the app does this live?
+      options:
+        - Atlas / Region / Zone (skill graph)
+        - Codex (resource library)
+        - Stats / Operator card
+        - Bounties ledger
+        - Trophy room / achievements
+        - Settings
+        - Sidebar / Top bar / shell chrome
+        - Sound / animation / theming
+        - DB / sync / backup
+        - Other
+    validations:
+      required: true

@@ -1,0 +1,51 @@
+# Dependabot — auto-PR for dep upgrades.
+#
+# Three ecosystems: npm (frontend deps), cargo (Rust shell), and
+# github-actions (the CI workflow itself). Weekly cadence keeps the
+# noise low; security updates fire immediately regardless.
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      # Group ecosystem upgrades so we don't get 12 PRs every Monday
+      tauri:
+        patterns:
+          - "@tauri-apps/*"
+      eslint:
+        patterns:
+          - "eslint*"
+          - "@eslint/*"
+          - "typescript-eslint"
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "jsdom"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react*"
+
+  - package-ecosystem: "cargo"
+    directory: "/src-tauri"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    groups:
+      tauri-rust:
+        patterns:
+          - "tauri*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2
