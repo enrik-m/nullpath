@@ -18,6 +18,25 @@ import {
 } from "../lib/resourceKinds";
 import { openSafeUrl } from "../lib/url";
 import { toast } from "../lib/toast";
+import { MaybeVirtualList } from "../components/VirtualList";
+
+/**
+ * Each resource row is rendered at this fixed pixel height. Used by the
+ * virtualizer to compute scrollable extent — must match the actual
+ * rendered height (np-pixel padding + content + a slot of vertical
+ * gap). If the row layout changes, update this constant.
+ */
+const ROW_HEIGHT = 96;
+/**
+ * Below this many filtered items we render a plain column (no
+ * virtualization overhead). Above it we hand off to react-window.
+ */
+const VIRT_THRESHOLD = 100;
+/**
+ * Pixel height of the scrollable region the virtual list mounts in.
+ * Page is overflow-auto so this is just the inner viewport budget.
+ */
+const VIRT_VIEWPORT = 720;
 
 interface ResourceWithNode extends NodeResourceRow {
   node_name: string;
@@ -164,77 +183,84 @@ export function CodexView() {
         </div>
 
         {/* List */}
-        <div className="space-y-1.5">
-          {filtered.length === 0 && (
-            <div className="np-pixel rounded-lg p-12 text-center">
-              <div className="np-mono text-[13px] text-[var(--color-fg-3)] tracking-widest">
-                {items.length === 0
-                  ? "no resources yet — open a node and start attaching videos / blogs / writeups"
-                  : `no resources match these filters`}
-              </div>
+        {filtered.length === 0 ? (
+          <div className="np-pixel rounded-lg p-12 text-center">
+            <div className="np-mono text-[13px] text-[var(--color-fg-3)] tracking-widest">
+              {items.length === 0
+                ? "no resources yet — open a node and start attaching videos / blogs / writeups"
+                : `no resources match these filters`}
             </div>
-          )}
-          {filtered.map((r) => (
-            <div
-              key={r.id}
-              className="np-pixel rounded p-3 flex items-start gap-3 hover:border-[var(--color-cyan-dim)] transition"
-              style={{ borderLeftWidth: 3, borderLeftColor: KIND_COLOR[r.kind] }}
-            >
-              <span
-                className="np-mono text-[10px] tracking-[0.2em] uppercase shrink-0 w-14 mt-1"
-                style={{ color: KIND_COLOR[r.kind] }}
+          </div>
+        ) : (
+          <MaybeVirtualList
+            items={filtered}
+            rowHeight={ROW_HEIGHT}
+            height={VIRT_VIEWPORT}
+            threshold={VIRT_THRESHOLD}
+            className="space-y-1.5"
+          >
+            {({ item: r, style }) => (
+              <div
+                key={r.id}
+                style={{ ...style, borderLeftWidth: 3, borderLeftColor: KIND_COLOR[r.kind] }}
+                className="np-pixel rounded p-3 flex items-start gap-3 hover:border-[var(--color-cyan-dim)] transition"
               >
-                {KIND_LABEL[r.kind]}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-[14px] text-[var(--color-fg-0)] truncate">{r.title}</div>
-                {r.note && (
-                  <div className="text-[13px] text-[var(--color-fg-2)] mt-0.5 line-clamp-2">
-                    {r.note}
-                  </div>
-                )}
-                <button
-                  onClick={() => {
-                    sfx.click();
-                    go({ name: "zone", zoneId: r.node_zone });
-                    selectNode(r.node_id);
-                  }}
-                  className="np-mono text-[10px] text-[var(--color-cyan)] hover:underline tracking-[0.15em] uppercase mt-1.5 inline-flex items-center gap-1"
+                <span
+                  className="np-mono text-[10px] tracking-[0.2em] uppercase shrink-0 w-14 mt-1"
+                  style={{ color: KIND_COLOR[r.kind] }}
                 >
-                  → {r.node_id} {r.node_name}
-                </button>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {r.url && (
+                  {KIND_LABEL[r.kind]}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] text-[var(--color-fg-0)] truncate">{r.title}</div>
+                  {r.note && (
+                    <div className="text-[13px] text-[var(--color-fg-2)] mt-0.5 line-clamp-2">
+                      {r.note}
+                    </div>
+                  )}
                   <button
-                    onClick={() => openExternal(r.url!)}
-                    aria-label="Open link"
-                    title="Open link"
-                    className="text-[var(--color-fg-3)] hover:text-[var(--color-cyan)] p-1.5"
+                    onClick={() => {
+                      sfx.click();
+                      go({ name: "zone", zoneId: r.node_zone });
+                      selectNode(r.node_id);
+                    }}
+                    className="np-mono text-[10px] text-[var(--color-cyan)] hover:underline tracking-[0.15em] uppercase mt-1.5 inline-flex items-center gap-1"
                   >
-                    <ExternalLink size={13} />
+                    → {r.node_id} {r.node_name}
                   </button>
-                )}
-                <button
-                  onClick={() => togglePin(r.id)}
-                  aria-label={r.pinned ? "Unpin resource" : "Pin resource"}
-                  title={r.pinned ? "Unpin" : "Pin"}
-                  className="text-[var(--color-fg-3)] hover:text-[var(--color-amber)] p-1.5"
-                >
-                  {r.pinned ? <PinOff size={13} /> : <Pin size={13} />}
-                </button>
-                <button
-                  onClick={() => deleteOne(r.id)}
-                  aria-label="Delete resource"
-                  title="Delete"
-                  className="text-[var(--color-fg-3)] hover:text-[var(--color-rose)] p-1.5"
-                >
-                  <Trash2 size={13} />
-                </button>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {r.url && (
+                    <button
+                      onClick={() => openExternal(r.url!)}
+                      aria-label="Open link"
+                      title="Open link"
+                      className="text-[var(--color-fg-3)] hover:text-[var(--color-cyan)] p-1.5"
+                    >
+                      <ExternalLink size={13} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => togglePin(r.id)}
+                    aria-label={r.pinned ? "Unpin resource" : "Pin resource"}
+                    title={r.pinned ? "Unpin" : "Pin"}
+                    className="text-[var(--color-fg-3)] hover:text-[var(--color-amber)] p-1.5"
+                  >
+                    {r.pinned ? <PinOff size={13} /> : <Pin size={13} />}
+                  </button>
+                  <button
+                    onClick={() => deleteOne(r.id)}
+                    aria-label="Delete resource"
+                    title="Delete"
+                    className="text-[var(--color-fg-3)] hover:text-[var(--color-rose)] p-1.5"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            )}
+          </MaybeVirtualList>
+        )}
       </div>
     </div>
   );
