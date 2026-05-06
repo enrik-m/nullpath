@@ -27,6 +27,7 @@
     "@fontsource/press-start-2p": "^5.2.7",
     "@fontsource/roboto": "^5.2.10",
     "@fontsource/silkscreen": "^5.2.8",
+    "@supabase/supabase-js": "^2.105.3",
     "@tailwindcss/vite": "^4.2.4",
     "@types/react-window": "^1.8.8",
     "@xyflow/react": "^12.10.2",
