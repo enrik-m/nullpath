@@ -28,7 +28,13 @@ export interface OperatorCardData {
   completedNodes: number;
   totalNodes: number;
   /** Top zones for the specialties section (sorted by completion desc). */
-  topZones: Array<{ zone_id: string; zone_name: string; total: number; completed: number; in_progress: number }>;
+  topZones: Array<{
+    zone_id: string;
+    zone_name: string;
+    total: number;
+    completed: number;
+    in_progress: number;
+  }>;
   /**
    * Highest-mastery top-level skill (most sub-techniques completed).
    * Null when the user hasn't finished enough sub-techniques to claim one.
@@ -57,15 +63,17 @@ function pickSigil(handle: string): SpriteName {
   return sprites[Math.abs(h) % sprites.length] as SpriteName;
 }
 
-export const OperatorCardPortrait = memo(function OperatorCardPortrait({ data }: { data: OperatorCardData }) {
+export const OperatorCardPortrait = memo(function OperatorCardPortrait({
+  data,
+}: {
+  data: OperatorCardData;
+}) {
   const initials = (data.handle || "OP").slice(0, 2).toUpperCase();
   const xpPct = data.xpForLvl > 0 ? (data.xpInLvl / data.xpForLvl) * 100 : 0;
   const sigil = pickSigil(data.handle);
 
   const xpFmt = data.xp.toLocaleString();
-  const topZones = data.topZones
-    .filter((z) => z.completed > 0 || z.in_progress > 0)
-    .slice(0, 3);
+  const topZones = data.topZones.filter((z) => z.completed > 0 || z.in_progress > 0).slice(0, 3);
 
   return (
     <div
@@ -86,7 +94,10 @@ export const OperatorCardPortrait = memo(function OperatorCardPortrait({ data }:
       <div
         style={{
           position: "absolute",
-          top: 0, right: 0, bottom: 0, left: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
           backgroundImage:
             "repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 2px, transparent 2px, transparent 5px)",
           mixBlendMode: "multiply",
@@ -100,7 +111,10 @@ export const OperatorCardPortrait = memo(function OperatorCardPortrait({ data }:
       <div
         style={{
           position: "absolute",
-          top: 28, right: 28, bottom: 28, left: 28,
+          top: 28,
+          right: 28,
+          bottom: 28,
+          left: 28,
           border: "8px solid #3a4480",
           boxShadow:
             "inset 8px 8px 0 0 #5a6cb8, inset -8px -8px 0 0 #0a0d1f, 0 0 100px rgba(92,242,255,0.18)",
@@ -112,7 +126,10 @@ export const OperatorCardPortrait = memo(function OperatorCardPortrait({ data }:
       <div
         style={{
           position: "absolute",
-          top: 80, right: 80, bottom: 80, left: 80,
+          top: 80,
+          right: 80,
+          bottom: 80,
+          left: 80,
           display: "flex",
           flexDirection: "column",
           gap: 56,
@@ -180,7 +197,15 @@ export const OperatorCardPortrait = memo(function OperatorCardPortrait({ data }:
           </div>
 
           {/* Identity column */}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
             <div
               style={{
                 fontFamily: "'Silkscreen', monospace",
@@ -259,7 +284,9 @@ export const OperatorCardPortrait = memo(function OperatorCardPortrait({ data }:
                 gap: 12,
               }}
             >
-              <span style={{ display: "inline-block", width: 14, height: 14, background: "#ff66e0" }} />
+              <span
+                style={{ display: "inline-block", width: 14, height: 14, background: "#ff66e0" }}
+              />
               SIGNATURE SKILL
             </div>
             <div
@@ -316,14 +343,27 @@ export const OperatorCardPortrait = memo(function OperatorCardPortrait({ data }:
               </span>
             </div>
             <div style={{ marginTop: 18 }}>
-              <Segmented value={data.bestSkill.pct} segments={28} color="#ff66e0" trackColor="#2a1840" height={20} />
+              <Segmented
+                value={data.bestSkill.pct}
+                segments={28}
+                color="#ff66e0"
+                trackColor="#2a1840"
+                height={20}
+              />
             </div>
           </div>
         )}
 
         {/* ── XP progress to next level ──────────────────── */}
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+              marginBottom: 16,
+            }}
+          >
             <span
               style={{
                 fontFamily: "'Silkscreen', monospace",
@@ -345,15 +385,31 @@ export const OperatorCardPortrait = memo(function OperatorCardPortrait({ data }:
               {data.xpInLvl.toLocaleString()} / {data.xpForLvl.toLocaleString()} XP
             </span>
           </div>
-          <Segmented value={xpPct / 100} segments={32} color="#5cf2ff" trackColor="#1f2750" height={36} />
+          <Segmented
+            value={xpPct / 100}
+            segments={32}
+            color="#5cf2ff"
+            trackColor="#1f2750"
+            height={36}
+          />
         </div>
 
         {/* ── Stats 2×2 ───────────────────────────────────── */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
-          <StatTile label="TOTAL XP"   value={xpFmt}                                   accent="#5cf2ff" sprite="bolt" />
-          <StatTile label="STREAK"     value={`${data.streak}d`}                       accent="#ffb84a" sprite="flame" />
-          <StatTile label="ZONES"      value={`${data.zonesCleared}/${data.totalZones}`} accent="#a8ff5c" sprite="shrine" />
-          <StatTile label="NODES"      value={`${data.completedNodes}/${data.totalNodes}`} accent="#ff66e0" sprite="shield" />
+          <StatTile label="TOTAL XP" value={xpFmt} accent="#5cf2ff" sprite="bolt" />
+          <StatTile label="STREAK" value={`${data.streak}d`} accent="#ffb84a" sprite="flame" />
+          <StatTile
+            label="ZONES"
+            value={`${data.zonesCleared}/${data.totalZones}`}
+            accent="#a8ff5c"
+            sprite="shrine"
+          />
+          <StatTile
+            label="NODES"
+            value={`${data.completedNodes}/${data.totalNodes}`}
+            accent="#ff66e0"
+            sprite="shield"
+          />
         </div>
 
         {/* ── Specialties (top zones by hours) ──────────────
@@ -373,7 +429,9 @@ export const OperatorCardPortrait = memo(function OperatorCardPortrait({ data }:
                 gap: 14,
               }}
             >
-              <span style={{ display: "inline-block", width: 16, height: 16, background: "#5cf2ff" }} />
+              <span
+                style={{ display: "inline-block", width: 16, height: 16, background: "#5cf2ff" }}
+              />
               SPECIALTIES
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -538,7 +596,13 @@ function Segmented({
 function SpecialtyRow({
   zone,
 }: {
-  zone: { zone_id: string; zone_name: string; total: number; completed: number; in_progress: number };
+  zone: {
+    zone_id: string;
+    zone_name: string;
+    total: number;
+    completed: number;
+    in_progress: number;
+  };
 }) {
   const pct = zone.total > 0 ? Math.round((zone.completed / zone.total) * 100) : 0;
   return (

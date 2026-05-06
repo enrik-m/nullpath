@@ -8,11 +8,11 @@
 import { cn } from "../../lib/cn";
 
 interface Props {
-  value: number;       // 0-1
-  segments?: number;   // how many cells across (default 20)
-  color?: string;      // CSS color of filled cells
+  value: number; // 0-1
+  segments?: number; // how many cells across (default 20)
+  color?: string; // CSS color of filled cells
   trackColor?: string; // CSS color of empty cells
-  height?: number;     // px
+  height?: number; // px
   className?: string;
 }
 

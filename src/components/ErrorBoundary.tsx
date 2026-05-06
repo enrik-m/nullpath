@@ -53,8 +53,8 @@ export class ErrorBoundary extends Component<Props, State> {
               path. Try resetting the view; if it crashes again, restart the app.
             </div>
             <pre className="mt-4 np-mono text-[12px] text-[var(--color-rose)] bg-[var(--color-bg-2)] border border-[var(--color-border-default)] rounded p-3 max-h-48 overflow-auto">
-{this.state.error?.toString()}
-{this.state.errorInfo?.componentStack ?? ""}
+              {this.state.error?.toString()}
+              {this.state.errorInfo?.componentStack ?? ""}
             </pre>
             <div className="flex gap-2 mt-4">
               <button

@@ -16,9 +16,18 @@ import type { ZoneRow, ZoneStats, RegionRow } from "../db/types";
 import { useUi } from "../store";
 import { sfx } from "../lib/sfx";
 
-interface RegionViewProps { regionId: string; }
-interface ZoneNode { zone: ZoneRow; stats: ZoneStats | null; }
-interface View { x: number; y: number; scale: number; }
+interface RegionViewProps {
+  regionId: string;
+}
+interface ZoneNode {
+  zone: ZoneRow;
+  stats: ZoneStats | null;
+}
+interface View {
+  x: number;
+  y: number;
+  scale: number;
+}
 
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 2.4;
@@ -87,14 +96,19 @@ export function RegionView({ regionId }: RegionViewProps) {
       setLoading(false);
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [regionId]);
 
   const fitView = useCallback(() => {
     if (!containerRef.current || zones.length === 0) return;
     const rect = containerRef.current.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      maxX = -Infinity,
+      minY = Infinity,
+      maxY = -Infinity;
     for (const z of zones) {
       const x = z.zone.cx ?? 0;
       const y = z.zone.cy ?? 0;
@@ -115,7 +129,9 @@ export function RegionView({ regionId }: RegionViewProps) {
     });
   }, [zones]);
 
-  useLayoutEffect(() => { fitView(); }, [fitView]);
+  useLayoutEffect(() => {
+    fitView();
+  }, [fitView]);
 
   const zoneById = useMemo(() => {
     const m = new Map<string, ZoneNode>();
@@ -178,7 +194,10 @@ export function RegionView({ regionId }: RegionViewProps) {
   }, []);
 
   const onMouseUp = useCallback(() => {
-    if (dragRef.current) { dragRef.current = null; setIsDragging(false); }
+    if (dragRef.current) {
+      dragRef.current = null;
+      setIsDragging(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -302,20 +321,24 @@ export function RegionView({ regionId }: RegionViewProps) {
     <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
       {/* Region overlay header */}
       <div className="absolute top-0 left-0 right-0 z-10 px-3 sm:px-6 py-3 sm:py-4 pointer-events-none flex items-start justify-between gap-3">
-        <div className="np-pixel px-3 sm:px-4 py-2 pointer-events-auto max-w-[60%] sm:max-w-none" style={{ borderColor: accent }}>
+        <div
+          className="np-pixel px-3 sm:px-4 py-2 pointer-events-auto max-w-[60%] sm:max-w-none"
+          style={{ borderColor: accent }}
+        >
           <div className="np-screen text-[10px] tracking-[0.3em] text-[var(--color-fg-3)]">
             // REGION · {region.id}
           </div>
           <div className="np-display text-base mt-1" style={{ color: accent }}>
             {region.name.toUpperCase()}
           </div>
-          <div className="text-[var(--color-fg-2)] text-[12px] mt-1 max-w-md">
-            {region.tagline}
-          </div>
+          <div className="text-[var(--color-fg-2)] text-[12px] mt-1 max-w-md">{region.tagline}</div>
         </div>
         <div className="flex items-center gap-2 pointer-events-auto">
           <button
-            onClick={() => { sfx.click(); fitView(); }}
+            onClick={() => {
+              sfx.click();
+              fitView();
+            }}
             className="np-btn np-btn-ghost np-btn-sm"
           >
             FIT VIEW
@@ -359,7 +382,14 @@ export function RegionView({ regionId }: RegionViewProps) {
       >
         <svg width="100%" height="100%" style={{ display: "block" }} shapeRendering="crispEdges">
           <defs>
-            <pattern id="dot-pattern" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+            <pattern
+              id="dot-pattern"
+              x="0"
+              y="0"
+              width="6"
+              height="6"
+              patternUnits="userSpaceOnUse"
+            >
               <rect x="0" y="0" width="2" height="2" fill="var(--color-fg-3)" />
             </pattern>
           </defs>
@@ -442,9 +472,7 @@ export function RegionView({ regionId }: RegionViewProps) {
           zone={zoneById.get(hovered)!}
           accent={accent}
           unlocked={isZoneUnlocked(hovered)}
-          parentNames={(ZONE_PARENTS[hovered] ?? []).map(
-            (p) => zoneById.get(p)?.zone.name ?? p,
-          )}
+          parentNames={(ZONE_PARENTS[hovered] ?? []).map((p) => zoneById.get(p)?.zone.name ?? p)}
         />
       )}
     </div>
@@ -479,13 +507,7 @@ function PixelZoneNode({
   const isComplete = total > 0 && completed === total;
   const isActive = inProgress > 0;
 
-  const accentColor = isComplete
-    ? "#a8ff5c"
-    : isActive
-      ? accent
-      : unlocked
-        ? "#b0b8e0"
-        : "#4a5485";
+  const accentColor = isComplete ? "#a8ff5c" : isActive ? accent : unlocked ? "#b0b8e0" : "#4a5485";
 
   // Tile size — 56x56 unit pixel-art monument
   const W = 56;
@@ -651,13 +673,18 @@ function ZoneHoverPanel({
         </div>
         <div className="space-y-1.5 np-mono text-[13px]">
           <div className="flex justify-between text-[var(--color-fg-1)]">
-            <span>NODES</span><span>{total}</span>
+            <span>NODES</span>
+            <span>{total}</span>
           </div>
           <div className="flex justify-between text-[var(--color-cyan)]">
-            <span>IN PROGRESS</span><span>{inProgress}</span>
+            <span>IN PROGRESS</span>
+            <span>{inProgress}</span>
           </div>
           <div className="flex justify-between text-[var(--color-lime)]">
-            <span>COMPLETE</span><span>{completed} ({pct}%)</span>
+            <span>COMPLETE</span>
+            <span>
+              {completed} ({pct}%)
+            </span>
           </div>
         </div>
         {parentNames.length > 0 && (
@@ -666,9 +693,7 @@ function ZoneHoverPanel({
             <div className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] mb-1">
               UNLOCKED BY
             </div>
-            <div className="text-[10px] text-[var(--color-fg-2)]">
-              {parentNames.join(" · ")}
-            </div>
+            <div className="text-[10px] text-[var(--color-fg-2)]">{parentNames.join(" · ")}</div>
           </>
         )}
         <div className="mt-3 np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)] np-blink">

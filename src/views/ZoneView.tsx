@@ -162,10 +162,7 @@ function SkillNode({ data, selected }: NodeProps) {
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
 
       <div className="flex items-center gap-1.5">
-        <span
-          className="np-screen text-[10px] tracking-[0.15em]"
-          style={{ color: borderColor }}
-        >
+        <span className="np-screen text-[10px] tracking-[0.15em]" style={{ color: borderColor }}>
           {row.id}
         </span>
         {row.owasp_tag && (
@@ -173,7 +170,9 @@ function SkillNode({ data, selected }: NodeProps) {
             {row.owasp_tag}
           </span>
         )}
-        {isComplete && <span className="ml-auto np-display text-[10px] text-[var(--color-lime)]">✓</span>}
+        {isComplete && (
+          <span className="ml-auto np-display text-[10px] text-[var(--color-lime)]">✓</span>
+        )}
         {isInProgress && <span className="ml-auto w-2 h-2 bg-[var(--color-cyan)] np-pulse" />}
       </div>
       <div

@@ -162,9 +162,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
               </div>
               <DepthTag depth={n.depth} />
               <span className="np-mono text-[10px] text-[var(--color-fg-3)]">{n.zone_id}</span>
-              {i === highlight && (
-                <ArrowRight size={12} className="text-[var(--color-cyan)]" />
-              )}
+              {i === highlight && <ArrowRight size={12} className="text-[var(--color-cyan)]" />}
             </button>
           ))}
         </div>
@@ -173,7 +171,9 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
           <span>↑↓ navigate</span>
           <span>↵ open</span>
           <span>esc close</span>
-          <span className="ml-auto">{list.length} result{list.length === 1 ? "" : "s"}</span>
+          <span className="ml-auto">
+            {list.length} result{list.length === 1 ? "" : "s"}
+          </span>
         </div>
       </motion.div>
     </motion.div>

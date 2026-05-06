@@ -51,7 +51,12 @@ export function SettingsView() {
   }
 
   async function resetEverything() {
-    if (!confirm("Wipe all progress, notes, resources, bounties, achievements? This cannot be undone.")) return;
+    if (
+      !confirm(
+        "Wipe all progress, notes, resources, bounties, achievements? This cannot be undone.",
+      )
+    )
+      return;
     sfx.warn();
     await db.resetAllProgress();
     location.reload();
@@ -118,8 +123,8 @@ export function SettingsView() {
           {/* Danger zone */}
           <Section title="Danger zone" tone="danger">
             <div className="text-[13px] text-[var(--color-fg-2)] mb-3">
-              Wipes all progress, notes, resources, bounties, achievements, and
-              streak history. The skill graph itself stays intact.
+              Wipes all progress, notes, resources, bounties, achievements, and streak history. The
+              skill graph itself stays intact.
             </div>
             <Button variant="danger" size="sm" onClick={resetEverything}>
               <RefreshCcw size={12} />
@@ -143,10 +148,7 @@ function Section({
 }) {
   return (
     <div
-      className={cn(
-        "np-pixel rounded-lg p-5",
-        tone === "danger" && "border-[var(--color-rose)]",
-      )}
+      className={cn("np-pixel rounded-lg p-5", tone === "danger" && "border-[var(--color-rose)]")}
     >
       <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-2)] mb-4">
         // {title.toLowerCase()}

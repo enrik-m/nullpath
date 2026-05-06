@@ -28,11 +28,7 @@ import type { NodeRow, NodeResourceRow, ResourceKind } from "../db/types";
 import { useUi, xpForCompletingNode } from "../store";
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
-import {
-  RESOURCE_KIND_LABEL,
-  RESOURCE_KIND_COLOR,
-  RESOURCE_KINDS,
-} from "../lib/resourceKinds";
+import { RESOURCE_KIND_LABEL, RESOURCE_KIND_COLOR, RESOURCE_KINDS } from "../lib/resourceKinds";
 import { isSafeUrl, openSafeUrl } from "../lib/url";
 import { toast } from "../lib/toast";
 import { LIMITS } from "../lib/limits";
@@ -60,7 +56,12 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
   const noteSaveTimer = useRef<number | null>(null);
 
   const [adding, setAdding] = useState(false);
-  const [newRes, setNewRes] = useState<{ kind: ResourceKind; title: string; url: string; note: string }>({
+  const [newRes, setNewRes] = useState<{
+    kind: ResourceKind;
+    title: string;
+    url: string;
+    note: string;
+  }>({
     kind: "video",
     title: "",
     url: "",
@@ -199,9 +200,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
         transition={{ type: "tween", duration: 0.2, ease: "linear" }}
         className={cn(
           "flex flex-col overflow-hidden",
-          isMobile
-            ? "fixed inset-x-0 bottom-0 top-14 z-40"
-            : "w-[460px] shrink-0 h-full",
+          isMobile ? "fixed inset-x-0 bottom-0 top-14 z-40" : "w-[460px] shrink-0 h-full",
         )}
         style={{
           background: "var(--color-bg-1)",
@@ -226,7 +225,10 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
           <span className="ml-auto flex items-center gap-2">
             <span className="text-[var(--color-fg-3)]">▢ ▢</span>
             <button
-              onClick={() => { sfx.click(); onClose(); }}
+              onClick={() => {
+                sfx.click();
+                onClose();
+              }}
               className="hover:text-[var(--color-rose)] transition px-1"
               aria-label="Close"
             >
@@ -263,7 +265,10 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
         </div>
 
         {/* Action bar */}
-        <div className="px-4 py-3 border-b-2 border-[var(--color-border-default)] flex items-center gap-2 flex-wrap" style={{ background: "var(--color-bg-2)" }}>
+        <div
+          className="px-4 py-3 border-b-2 border-[var(--color-border-default)] flex items-center gap-2 flex-wrap"
+          style={{ background: "var(--color-bg-2)" }}
+        >
           {node.status === "available" && (
             <Button variant="primary" size="sm" onClick={markInProgress}>
               <PlayCircle size={11} />
@@ -352,29 +357,27 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                 className="np-pixel-flat p-3 mb-3 space-y-2"
               >
                 <div className="flex gap-1.5 flex-wrap">
-                  {RESOURCE_KINDS.map(
-                    (k) => (
-                      <button
-                        key={k}
-                        onClick={() => {
-                          sfx.hover();
-                          setNewRes({ ...newRes, kind: k });
-                        }}
-                        className={cn(
-                          "np-mono text-[10px] tracking-[0.1em] uppercase px-2 py-1 rounded transition",
-                          newRes.kind === k
-                            ? "text-[var(--color-bg-0)]"
-                            : "text-[var(--color-fg-2)] hover:text-[var(--color-fg-0)]",
-                        )}
-                        style={{
-                          background:
-                            newRes.kind === k ? RESOURCE_KIND_COLOR[k] : "var(--color-bg-3)",
-                        }}
-                      >
-                        {RESOURCE_KIND_LABEL[k]}
-                      </button>
-                    ),
-                  )}
+                  {RESOURCE_KINDS.map((k) => (
+                    <button
+                      key={k}
+                      onClick={() => {
+                        sfx.hover();
+                        setNewRes({ ...newRes, kind: k });
+                      }}
+                      className={cn(
+                        "np-mono text-[10px] tracking-[0.1em] uppercase px-2 py-1 rounded transition",
+                        newRes.kind === k
+                          ? "text-[var(--color-bg-0)]"
+                          : "text-[var(--color-fg-2)] hover:text-[var(--color-fg-0)]",
+                      )}
+                      style={{
+                        background:
+                          newRes.kind === k ? RESOURCE_KIND_COLOR[k] : "var(--color-bg-3)",
+                      }}
+                    >
+                      {RESOURCE_KIND_LABEL[k]}
+                    </button>
+                  ))}
                 </div>
                 <input
                   autoFocus
@@ -433,9 +436,7 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
                       >
                         {RESOURCE_KIND_LABEL[r.kind]}
                       </span>
-                      {r.pinned === 1 && (
-                        <Pin size={10} className="text-[var(--color-amber)]" />
-                      )}
+                      {r.pinned === 1 && <Pin size={10} className="text-[var(--color-amber)]" />}
                     </div>
                     <div className="text-[14px] text-[var(--color-fg-0)] mt-0.5 truncate">
                       {r.title}
@@ -551,9 +552,7 @@ function SectionHeader({
     >
       <span className="text-[var(--color-cyan)]">▸</span>
       <span>{title}</span>
-      {typeof count === "number" && (
-        <span className="text-[var(--color-fg-3)]">[{count}]</span>
-      )}
+      {typeof count === "number" && <span className="text-[var(--color-fg-3)]">[{count}]</span>}
     </div>
   );
 }

@@ -19,8 +19,7 @@ function audio(): AudioContext {
   if (!ctx) {
     // Safari < 14 still ships the webkit-prefixed constructor.
     type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext };
-    const Ctor =
-      window.AudioContext || (window as WebkitWindow).webkitAudioContext;
+    const Ctor = window.AudioContext || (window as WebkitWindow).webkitAudioContext;
     if (!Ctor) {
       throw new Error("Web Audio API not available in this browser");
     }

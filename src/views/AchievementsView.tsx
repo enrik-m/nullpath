@@ -123,11 +123,7 @@ export function AchievementsView() {
   return (
     <div className="flex-1 overflow-auto">
       <div className="px-4 sm:px-10 py-6 sm:py-10 max-w-[1200px] mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="np-mono text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] uppercase mb-2">
             // achievements
           </div>
@@ -172,8 +168,7 @@ export function AchievementsView() {
               </div>
             </div>
             <div className="np-mono text-[12px] text-[var(--color-cyan)] tracking-[0.15em] shrink-0">
-              {formatValue(nextUp, nextUp.current)} /{" "}
-              {formatValue(nextUp, nextUp.target)}
+              {formatValue(nextUp, nextUp.current)} / {formatValue(nextUp, nextUp.target)}
             </div>
           </motion.div>
         )}
@@ -246,9 +241,7 @@ function AchievementTile({ a }: { a: DisplayRow }) {
   // target of 1 is binary ("done / not done") and a progress bar there
   // is just visual noise.
   const showProgress = !a.unlocked && a.target > 1;
-  const progressPct = showProgress
-    ? Math.min(100, Math.round((a.current / a.target) * 100))
-    : 0;
+  const progressPct = showProgress ? Math.min(100, Math.round((a.current / a.target) * 100)) : 0;
 
   return (
     <motion.div
@@ -263,8 +256,7 @@ function AchievementTile({ a }: { a: DisplayRow }) {
       style={
         a.unlocked
           ? {
-              boxShadow:
-                "0 0 14px color-mix(in oklab, var(--color-amber) 18%, transparent)",
+              boxShadow: "0 0 14px color-mix(in oklab, var(--color-amber) 18%, transparent)",
             }
           : undefined
       }
@@ -310,7 +302,9 @@ function AchievementTile({ a }: { a: DisplayRow }) {
         {showProgress && (
           <div className="mt-2">
             <div className="flex items-center justify-between np-mono text-[10px] text-[var(--color-fg-3)] tracking-[0.15em] mb-1">
-              <span>{formatValue(a, a.current)} / {formatValue(a, a.target)}</span>
+              <span>
+                {formatValue(a, a.current)} / {formatValue(a, a.target)}
+              </span>
               <span>{progressPct}%</span>
             </div>
             <div className="h-1 rounded-full bg-[var(--color-bg-3)] overflow-hidden">

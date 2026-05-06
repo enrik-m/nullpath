@@ -37,10 +37,10 @@
   --color-bg-4: #2c3668;
 
   /* Borders — dim → default → highlight (for raised pixel bevels) */
-  --color-border-dim:    #1f2750;
-  --color-border-default:#3a4480;
+  --color-border-dim: #1f2750;
+  --color-border-default: #3a4480;
   --color-border-bright: #5a6cb8;
-  --color-border-hi:     #7d92e0;
+  --color-border-hi: #7d92e0;
   --color-border-shadow: #0a0d1f;
 
   /* Text — primary → secondary → muted → faint */
@@ -78,17 +78,18 @@
   --color-depth-res: #ff5c7a;
 
   /* Status colors */
-  --color-status-locked:     #4a5485;
-  --color-status-available:  #b0b8e0;
-  --color-status-in-progress:#5cf2ff;
-  --color-status-complete:   #a8ff5c;
+  --color-status-locked: #4a5485;
+  --color-status-available: #b0b8e0;
+  --color-status-in-progress: #5cf2ff;
+  --color-status-complete: #a8ff5c;
 
   /* Fonts */
-  --font-sans:    "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-pixel:   "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;  /* alias for back-compat */
-  --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-pixel:
+    "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif; /* alias for back-compat */
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-display: "Press Start 2P", "Silkscreen", monospace;
-  --font-screen:  "Silkscreen", "Press Start 2P", monospace;
+  --font-screen: "Silkscreen", "Press Start 2P", monospace;
 }
 
 * {
@@ -97,12 +98,15 @@
 
 /* Only force pixel rendering on raster sprites + svg-as-img.
    Text gets normal smoothing so it stays readable. */
-img, svg.pixel-art {
+img,
+svg.pixel-art {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -154,14 +158,13 @@ body[data-scanlines="on"]::after {
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.16) 0px,
-      rgba(0, 0, 0, 0.16) 2px,
-      transparent 2px,
-      transparent 4px
-    );
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.16) 0px,
+    rgba(0, 0, 0, 0.16) 2px,
+    transparent 2px,
+    transparent 4px
+  );
   mix-blend-mode: multiply;
   opacity: 0.5;
 }
@@ -205,17 +208,26 @@ button {
   cursor: pointer;
   -webkit-font-smoothing: none;
 }
-button:disabled { cursor: not-allowed; }
+button:disabled {
+  cursor: not-allowed;
+}
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: var(--font-pixel);
   -webkit-font-smoothing: none;
 }
 
 /* Pixel-styled form inputs (apply globally) */
-input[type="text"], input[type="number"], input[type="date"],
-input[type="email"], input[type="url"], input[type="password"],
-textarea, select {
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+textarea,
+select {
   background: var(--color-bg-1);
   color: var(--color-fg-0);
   border: 2px solid var(--color-border-default);
@@ -232,14 +244,17 @@ textarea, select {
 input[type="range"] {
   accent-color: var(--color-cyan);
 }
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   border-color: var(--color-cyan-dim);
   box-shadow:
     inset 2px 2px 0 0 var(--color-border-shadow),
     inset -2px -2px 0 0 var(--color-cyan-dim),
     0 0 0 2px var(--color-cyan-glow);
 }
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--color-fg-3);
 }
 
@@ -296,7 +311,9 @@ input::placeholder, textarea::placeholder {
     inset -2px -2px 0 0 var(--color-border-shadow),
     0 3px 0 0 var(--color-border-shadow);
   cursor: pointer;
-  transition: transform 60ms steps(2), box-shadow 60ms steps(2);
+  transition:
+    transform 60ms steps(2),
+    box-shadow 60ms steps(2);
   user-select: none;
 }
 .np-btn:hover:not(:disabled) {
@@ -372,9 +389,18 @@ input::placeholder, textarea::placeholder {
   transform: none;
 }
 
-.np-btn-sm  { padding: 4px 10px 6px; font-size: 11px; }
-.np-btn-md  { padding: 6px 14px 8px; font-size: 12px; }
-.np-btn-lg  { padding: 8px 18px 10px; font-size: 13px; }
+.np-btn-sm {
+  padding: 4px 10px 6px;
+  font-size: 11px;
+}
+.np-btn-md {
+  padding: 6px 14px 8px;
+  font-size: 12px;
+}
+.np-btn-lg {
+  padding: 8px 18px 10px;
+  font-size: 13px;
+}
 
 /* Pixel tag — chunky inline badge */
 .np-tag {
@@ -420,38 +446,73 @@ input::placeholder, textarea::placeholder {
 }
 
 /* Mono / display fonts as utility classes */
-.np-mono { font-family: var(--font-mono); letter-spacing: 0.04em; }
-.np-screen { font-family: var(--font-screen); letter-spacing: 0.08em; }
-.np-display { font-family: var(--font-display); letter-spacing: 0.04em; }
+.np-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+.np-screen {
+  font-family: var(--font-screen);
+  letter-spacing: 0.08em;
+}
+.np-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}
 
 /* ============================================================
    ANIMATIONS — all pixel-stepped, no smooth interpolation
    ============================================================ */
 
 @keyframes np-pulse-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }
 .np-pulse {
   animation: np-pulse-glow 1.6s steps(8) infinite;
 }
 
 @keyframes np-blink {
-  0%, 60% { opacity: 1; }
-  60.01%, 100% { opacity: 0; }
+  0%,
+  60% {
+    opacity: 1;
+  }
+  60.01%,
+  100% {
+    opacity: 0;
+  }
 }
 .np-blink {
   animation: np-blink 0.9s steps(1) infinite;
 }
 
 @keyframes np-flicker {
-  0%, 70% { opacity: 1; }
-  72% { opacity: 0.7; }
-  74% { opacity: 1; }
-  88% { opacity: 1; }
-  90% { opacity: 0.4; }
-  92% { opacity: 1; }
-  100% { opacity: 1; }
+  0%,
+  70% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0.7;
+  }
+  74% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 .np-flicker {
   animation: np-flicker 4s steps(1) infinite;
@@ -482,14 +543,36 @@ input::placeholder, textarea::placeholder {
   z-index: -1;
 }
 @keyframes np-glitch-before {
-  0%, 95%, 100% { transform: translate(0, 0); opacity: 0; }
-  96% { transform: translate(-2px, 0); opacity: 0.85; }
-  97% { transform: translate(0, 0); opacity: 0; }
+  0%,
+  95%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  96% {
+    transform: translate(-2px, 0);
+    opacity: 0.85;
+  }
+  97% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
 }
 @keyframes np-glitch-after {
-  0%, 95%, 100% { transform: translate(0, 0); opacity: 0; }
-  96% { transform: translate(2px, 0); opacity: 0.85; }
-  97% { transform: translate(0, 0); opacity: 0; }
+  0%,
+  95%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  96% {
+    transform: translate(2px, 0);
+    opacity: 0.85;
+  }
+  97% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
 }
 
 /* Honor the OS-level reduced-motion preference. We disable our looping
@@ -520,7 +603,9 @@ input::placeholder, textarea::placeholder {
   border-radius: 0 !important;
   font-family: var(--font-pixel) !important;
 }
-.react-flow__attribution { display: none !important; }
+.react-flow__attribution {
+  display: none !important;
+}
 .react-flow__controls {
   border-radius: 0 !important;
   background: var(--color-bg-2) !important;

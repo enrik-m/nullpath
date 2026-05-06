@@ -50,9 +50,7 @@ export function StatsView() {
   const [zones, setZones] = useState<ZoneProgress[]>([]);
   const [streakDays, setStreakDays] = useState<StreakDayRow[]>([]);
   const [streak, setStreak] = useState(0);
-  const [refreshers, setRefreshers] = useState<
-    Array<RefresherRow & { node: NodeRow | null }>
-  >([]);
+  const [refreshers, setRefreshers] = useState<Array<RefresherRow & { node: NodeRow | null }>>([]);
   const go = useUi((s) => s.go);
   const selectNode = useUi((s) => s.selectNode);
   const [completedNodes, setCompletedNodes] = useState(0);
@@ -139,12 +137,8 @@ export function StatsView() {
         return a.zone_id.localeCompare(b.zone_id);
       });
       setZones(zoneArr);
-      setZonesTouched(
-        zoneArr.filter((z) => z.completed > 0 || z.in_progress > 0).length,
-      );
-      setZonesCleared(
-        zoneArr.filter((z) => z.total > 0 && z.completed === z.total).length,
-      );
+      setZonesTouched(zoneArr.filter((z) => z.completed > 0 || z.in_progress > 0).length);
+      setZonesCleared(zoneArr.filter((z) => z.total > 0 && z.completed === z.total).length);
     }
     load();
     return () => {
@@ -178,7 +172,20 @@ export function StatsView() {
       topZones: zones.slice(0, 3),
       bestSkill,
     }),
-    [handle, level, xp, intoLvl, lvlSpan, streak, zonesTouched, zonesCleared, completedNodes, totalNodes, zones, bestSkill],
+    [
+      handle,
+      level,
+      xp,
+      intoLvl,
+      lvlSpan,
+      streak,
+      zonesTouched,
+      zonesCleared,
+      completedNodes,
+      totalNodes,
+      zones,
+      bestSkill,
+    ],
   );
 
   // 56-day completion heatmap (8 weeks). Intensity scales by completion
@@ -250,7 +257,8 @@ export function StatsView() {
 
       // 4. Suggest a filename using the user's actual handle.
       const today = new Date().toISOString().split("T")[0];
-      const safeHandle = (handle || "operator").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "operator";
+      const safeHandle =
+        (handle || "operator").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "operator";
       const defaultName = `nullpath-${safeHandle}-${today}.png`;
 
       // 5. Open the native save dialog so the user picks the location.
@@ -314,16 +322,8 @@ export function StatsView() {
                 accent="var(--color-magenta)"
                 sub={`${Math.round(lvlPct)}% to ${level + 1}`}
               />
-              <Stat
-                label="Total XP"
-                value={`${xp.toLocaleString()}`}
-                accent="var(--color-cyan)"
-              />
-              <Stat
-                label="Streak"
-                value={`${streak}d`}
-                accent="var(--color-amber)"
-              />
+              <Stat label="Total XP" value={`${xp.toLocaleString()}`} accent="var(--color-cyan)" />
+              <Stat label="Streak" value={`${streak}d`} accent="var(--color-amber)" />
               <Stat
                 label="Nodes"
                 value={`${completedNodes}/${totalNodes}`}
@@ -342,15 +342,12 @@ export function StatsView() {
                   </div>
                 </div>
                 <div className="text-[13px] text-[var(--color-fg-2)] mb-3">
-                  Spaced repetition queue. Mental check: still got it? Tap green if recall lands clean,
-                  red to push it back to 1-day spacing.
+                  Spaced repetition queue. Mental check: still got it? Tap green if recall lands
+                  clean, red to push it back to 1-day spacing.
                 </div>
                 <div className="space-y-1.5">
                   {refreshers.slice(0, 6).map((r) => (
-                    <div
-                      key={r.id}
-                      className="np-pixel rounded px-3 py-2 flex items-center gap-3"
-                    >
+                    <div key={r.id} className="np-pixel rounded px-3 py-2 flex items-center gap-3">
                       <button
                         onClick={() => {
                           sfx.click();
@@ -399,7 +396,10 @@ export function StatsView() {
               <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-2)] mb-3">
                 // completions · last 8 weeks
               </div>
-              <div className="grid grid-cols-[repeat(56,1fr)] gap-[3px]" style={{ gridAutoFlow: "row" }}>
+              <div
+                className="grid grid-cols-[repeat(56,1fr)] gap-[3px]"
+                style={{ gridAutoFlow: "row" }}
+              >
                 {heatmap.map((c) => (
                   <div
                     key={c.day}
@@ -496,7 +496,8 @@ export function StatsView() {
                 })}
               </div>
             </div>
-          </div>{/* end left column */}
+          </div>
+          {/* end left column */}
 
           {/* ═══════ RIGHT COLUMN — sticky operator card ═══════ */}
           <aside className="lg:sticky lg:top-6 lg:self-start space-y-3">
@@ -505,7 +506,11 @@ export function StatsView() {
                 <span className="inline-block w-2 h-2 bg-[var(--color-magenta)]" />
                 OPERATOR CARD
               </div>
-              <Suspense fallback={<div className="aspect-[1080/1920] w-full max-w-[352px] mx-auto bg-[var(--color-bg-3)]" />}>
+              <Suspense
+                fallback={
+                  <div className="aspect-[1080/1920] w-full max-w-[352px] mx-auto bg-[var(--color-bg-3)]" />
+                }
+              >
                 <OperatorCardPreview data={cardData} maxWidth={352} />
               </Suspense>
               <div className="np-screen text-[9px] tracking-[0.2em] text-[var(--color-fg-3)] mt-2 text-center">
@@ -513,12 +518,19 @@ export function StatsView() {
               </div>
             </div>
 
-            <Button variant="primary" size="md" onClick={exportCard} disabled={exporting} className="w-full">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={exportCard}
+              disabled={exporting}
+              className="w-full"
+            >
               <Camera size={13} />
               {exporting ? "RENDERING…" : "EXPORT CARD"}
             </Button>
           </aside>
-        </div>{/* end grid */}
+        </div>
+        {/* end grid */}
 
         {/* Hidden full-size card — html-to-image targets this on Export */}
         <Suspense fallback={null}>

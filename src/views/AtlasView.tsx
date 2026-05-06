@@ -42,10 +42,7 @@ export function AtlasView() {
       // independent and the serial loop was visibly slow on cold start.
       const out = await Promise.all(
         regions.map(async (r) => {
-          const [zones, stats] = await Promise.all([
-            db.getZones(r.id),
-            db.getZoneStats(r.id),
-          ]);
+          const [zones, stats] = await Promise.all([db.getZones(r.id), db.getZoneStats(r.id)]);
           const totalNodes = stats.reduce((s, z) => s + z.total_nodes, 0);
           const completedNodes = stats.reduce((s, z) => s + z.completed_nodes, 0);
           return { region: r, zoneCount: zones.length, totalNodes, completedNodes };
@@ -65,9 +62,7 @@ export function AtlasView() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="np-mono text-[var(--color-fg-2)] text-base np-blink">
-          loading atlas...
-        </div>
+        <div className="np-mono text-[var(--color-fg-2)] text-base np-blink">loading atlas...</div>
       </div>
     );
   }
@@ -89,8 +84,8 @@ export function AtlasView() {
             Career disciplines
           </h1>
           <p className="text-[var(--color-fg-2)] mt-3 text-sm max-w-xl">
-            Each region is a graph of skills. Pick one to enter. Locked regions
-            unlock once you complete the prior ones.
+            Each region is a graph of skills. Pick one to enter. Locked regions unlock once you
+            complete the prior ones.
           </p>
         </motion.div>
 
@@ -100,9 +95,7 @@ export function AtlasView() {
             const locked = card.region.is_locked === 1;
             const desc = REGION_DESCRIPTORS[card.region.id];
             const pct =
-              card.totalNodes > 0
-                ? Math.round((card.completedNodes / card.totalNodes) * 100)
-                : 0;
+              card.totalNodes > 0 ? Math.round((card.completedNodes / card.totalNodes) * 100) : 0;
             return (
               <motion.button
                 key={card.region.id}
@@ -137,11 +130,12 @@ export function AtlasView() {
                     color: locked ? "var(--color-fg-3)" : card.region.color_accent,
                   }}
                 >
-                  <span className="inline-block w-2 h-2" style={{ background: locked ? "var(--color-fg-3)" : card.region.color_accent }} />
+                  <span
+                    className="inline-block w-2 h-2"
+                    style={{ background: locked ? "var(--color-fg-3)" : card.region.color_accent }}
+                  />
                   {desc?.glyph ?? "[ region ]"}
-                  <span className="ml-auto text-[var(--color-fg-3)]">
-                    {locked ? "■" : "▣"}
-                  </span>
+                  <span className="ml-auto text-[var(--color-fg-3)]">{locked ? "■" : "▣"}</span>
                 </div>
 
                 {/* Body */}
@@ -225,10 +219,7 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
   return (
     <div>
       <div className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)]">{label}</div>
-      <div
-        className="np-display text-base mt-0.5"
-        style={{ color: color ?? "var(--color-fg-0)" }}
-      >
+      <div className="np-display text-base mt-0.5" style={{ color: color ?? "var(--color-fg-0)" }}>
         {value}
       </div>
     </div>

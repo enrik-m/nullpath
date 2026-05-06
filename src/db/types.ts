@@ -20,13 +20,7 @@ export type NodeDepth = "intro" | "std" | "adv" | "res";
 
 export type NodeStatus = "available" | "in_progress" | "complete";
 
-export type ResourceKind =
-  | "video"
-  | "blog"
-  | "writeup"
-  | "lab"
-  | "tool"
-  | "misc";
+export type ResourceKind = "video" | "blog" | "writeup" | "lab" | "tool" | "misc";
 
 export type Visibility = "private" | "guild" | "public";
 
@@ -44,7 +38,7 @@ export interface RegionRow {
 }
 
 export interface ZoneRow {
-  id: string;        // 'Z04'
+  id: string; // 'Z04'
   region_id: RegionId;
   name: string;
   theme: string | null;
@@ -54,7 +48,7 @@ export interface ZoneRow {
 }
 
 export interface NodeRow {
-  id: string;        // 'W01' | 'W01a'
+  id: string; // 'W01' | 'W01a'
   zone_id: string;
   parent_id: string | null;
   name: string;
@@ -162,4 +156,3 @@ export interface ZoneStats {
   completed_nodes: number;
   in_progress_nodes: number;
 }
-

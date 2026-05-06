@@ -12,12 +12,12 @@ import { sfx, unlockAudio } from "../lib/sfx";
 import * as db from "../db";
 
 const LINES = [
-  { delay: 0,    text: ">>> nullpath_kernel.boot()", color: "fg-2" },
-  { delay: 200,  text: "[ OK ] CRT warm-up.................. green", color: "fg-1" },
-  { delay: 360,  text: "[ OK ] mounting atlas............... green", color: "fg-1" },
-  { delay: 520,  text: "[ OK ] decoding constellation maps.. green", color: "fg-1" },
-  { delay: 680,  text: "[ OK ] indexing 23 zones / 820 nodes green", color: "fg-1" },
-  { delay: 840,  text: "[ OK ] loading skill graph (web).... green", color: "fg-1" },
+  { delay: 0, text: ">>> nullpath_kernel.boot()", color: "fg-2" },
+  { delay: 200, text: "[ OK ] CRT warm-up.................. green", color: "fg-1" },
+  { delay: 360, text: "[ OK ] mounting atlas............... green", color: "fg-1" },
+  { delay: 520, text: "[ OK ] decoding constellation maps.. green", color: "fg-1" },
+  { delay: 680, text: "[ OK ] indexing 23 zones / 820 nodes green", color: "fg-1" },
+  { delay: 840, text: "[ OK ] loading skill graph (web).... green", color: "fg-1" },
   { delay: 1000, text: "[ OK ] linking sqlite store......... green", color: "fg-1" },
   { delay: 1160, text: "[ OK ] achievement engine primed.... green", color: "fg-1" },
   { delay: 1320, text: "[ OK ] operator profile ready....... green", color: "fg-1" },
@@ -50,7 +50,9 @@ export function BootView() {
       }
     }
     check();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [go]);
 
   useEffect(() => {
@@ -143,7 +145,9 @@ export function BootView() {
         ) : (
           <div className="flex flex-col items-center gap-4">
             <div className="np-display text-4xl np-flicker text-[var(--color-cyan)]">
-              <span className="np-glitch-text" data-text="NULLPATH">NULLPATH</span>
+              <span className="np-glitch-text" data-text="NULLPATH">
+                NULLPATH
+              </span>
               <span className="np-blink ml-2 text-[var(--color-magenta)]">_</span>
             </div>
             <div className="np-screen text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] np-blink">

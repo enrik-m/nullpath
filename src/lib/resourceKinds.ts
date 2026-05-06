@@ -26,11 +26,4 @@ export const RESOURCE_KIND_COLOR: Record<ResourceKind, string> = {
 };
 
 /** Display order used by the Codex filter row and the NodePanel chip set. */
-export const RESOURCE_KINDS: ResourceKind[] = [
-  "video",
-  "blog",
-  "writeup",
-  "lab",
-  "tool",
-  "misc",
-];
+export const RESOURCE_KINDS: ResourceKind[] = ["video", "blog", "writeup", "lab", "tool", "misc"];

@@ -97,9 +97,7 @@ function App() {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
       const inField =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable;
+        target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
 
       // ⌘K / Ctrl+K — global search (works even in fields)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {

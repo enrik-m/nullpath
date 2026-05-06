@@ -6,11 +6,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, X, Trash2, Edit3 } from "lucide-react";
 import * as db from "../db";
-import type {
-  BountySubmissionRow,
-  BountySeverity,
-  BountyStatus,
-} from "../db/types";
+import type { BountySubmissionRow, BountySeverity, BountyStatus } from "../db/types";
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
 import { Button } from "../components/ui/Button";
@@ -70,7 +66,11 @@ export function BountiesView() {
   return (
     <div className="flex-1 overflow-auto">
       <div className="px-4 sm:px-10 py-6 sm:py-10 max-w-[1100px]">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-end justify-between flex-wrap gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 flex items-end justify-between flex-wrap gap-4"
+        >
           <div>
             <div className="np-mono text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] uppercase mb-2">
               // bounty ledger
@@ -131,9 +131,7 @@ export function BountiesView() {
                     <td className="px-4 py-3 np-mono text-[12px] text-[var(--color-fg-2)]">
                       {new Date(b.submitted_at).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 text-[14px] text-[var(--color-fg-0)]">
-                      {b.program}
-                    </td>
+                    <td className="px-4 py-3 text-[14px] text-[var(--color-fg-0)]">{b.program}</td>
                     <td className="px-4 py-3 text-[14px] text-[var(--color-fg-1)] max-w-[280px] truncate">
                       {b.title}
                     </td>
@@ -206,15 +204,7 @@ export function BountiesView() {
   );
 }
 
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent: string;
-}) {
+function Stat({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
     <div className="np-pixel rounded p-4">
       <div className="np-mono text-[10px] tracking-[0.2em] uppercase text-[var(--color-fg-3)]">
@@ -259,9 +249,7 @@ function BountyForm({
       status,
       payout_usd: payout ? parseInt(payout, 10) : null,
       cve_id: cve.trim() || null,
-      submitted_at: submittedAt
-        ? new Date(submittedAt).toISOString()
-        : new Date().toISOString(),
+      submitted_at: submittedAt ? new Date(submittedAt).toISOString() : new Date().toISOString(),
       notes: notes.trim() || null,
     };
     if (existing) {

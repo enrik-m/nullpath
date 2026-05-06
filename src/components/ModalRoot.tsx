@@ -172,9 +172,8 @@ function EchoPromptModal({ nodeId }: { nodeId: string }) {
         {node?.id} · echo mode
       </div>
       <div className="text-[var(--color-fg-2)] text-[14px] mt-4 leading-relaxed">
-        Three-sentence gist — what did you actually learn? This pins to the node's notes
-        and forces synthesis. Skip if you want, but doing this once consolidates 10x more
-        than re-reading.
+        Three-sentence gist — what did you actually learn? This pins to the node's notes and forces
+        synthesis. Skip if you want, but doing this once consolidates 10x more than re-reading.
       </div>
       <textarea
         autoFocus
@@ -279,9 +278,7 @@ function AchievementModal({
         </div>
       </div>
 
-      <div className="text-[var(--color-fg-2)] text-[14px] mt-4 leading-relaxed">
-        {description}
-      </div>
+      <div className="text-[var(--color-fg-2)] text-[14px] mt-4 leading-relaxed">{description}</div>
       <div className="flex justify-end mt-4">
         <Button variant="primary" size="sm" onClick={() => showModal(null)}>
           Nice
@@ -300,9 +297,7 @@ function DailyBriefingModal() {
   const [streak, setStreak] = useState(0);
   const [freezeTokens, setFreezeTokens] = useState(0);
   const [suggestions, setSuggestions] = useState<NodeRow[]>([]);
-  const [hotZone, setHotZone] = useState<{ id: string; name: string; accent: string } | null>(
-    null,
-  );
+  const [hotZone, setHotZone] = useState<{ id: string; name: string; accent: string } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -314,7 +309,9 @@ function DailyBriefingModal() {
       // Pick 3 suggestions: 1 from your weakest in-progress zone, 2 from
       // available std-depth in zones you've started.
       const all = await db.getAllNodes();
-      const open = all.filter((n) => n.status === "available" && (n.depth === "std" || n.depth === "intro"));
+      const open = all.filter(
+        (n) => n.status === "available" && (n.depth === "std" || n.depth === "intro"),
+      );
       const inProg = all.filter((n) => n.status === "in_progress");
       const picks: NodeRow[] = [];
       // Prioritize in-progress
@@ -343,7 +340,12 @@ function DailyBriefingModal() {
   return (
     <div className="np-pixel rounded-lg w-[560px] max-w-full p-4 sm:p-6 border-[var(--color-cyan-dim)]">
       <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-3)]">
-        // daily briefing · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+        // daily briefing ·{" "}
+        {new Date().toLocaleDateString(undefined, {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        })}
       </div>
       <div className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight">
         Welcome back, operator.
@@ -352,7 +354,11 @@ function DailyBriefingModal() {
       <div className="grid grid-cols-3 gap-3 mt-5">
         <Stat label="Streak" value={`${streak}d`} color="var(--color-amber)" />
         <Stat label="Freeze" value={`${freezeTokens}`} color="var(--color-cyan)" />
-        <Stat label="Hot zone" value={hotZone?.id ?? "—"} color={hotZone?.accent ?? "var(--color-fg-2)"} />
+        <Stat
+          label="Hot zone"
+          value={hotZone?.id ?? "—"}
+          color={hotZone?.accent ?? "var(--color-fg-2)"}
+        />
       </div>
 
       <div className="np-divider my-5" />

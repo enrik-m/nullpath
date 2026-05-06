@@ -9,10 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, CheckCircle2, Info, XCircle, X } from "lucide-react";
 import { useToasts, type ToastKind } from "../lib/toast";
 
-const KIND_META: Record<
-  ToastKind,
-  { color: string; bg: string; icon: typeof Info }
-> = {
+const KIND_META: Record<ToastKind, { color: string; bg: string; icon: typeof Info }> = {
   info: { color: "var(--color-cyan)", bg: "var(--color-cyan-dim)", icon: Info },
   success: { color: "var(--color-lime)", bg: "var(--color-lime-dim)", icon: CheckCircle2 },
   warn: { color: "var(--color-amber)", bg: "var(--color-amber-dim)", icon: AlertTriangle },

@@ -55,9 +55,7 @@ describe("isSafeUrl / parseSafeUrl", () => {
 
 describe("openSafeUrl", () => {
   it("throws on a disallowed scheme", async () => {
-    await expect(openSafeUrl("javascript:alert(1)")).rejects.toThrow(
-      /disallowed scheme/i,
-    );
+    await expect(openSafeUrl("javascript:alert(1)")).rejects.toThrow(/disallowed scheme/i);
   });
 
   it("does not throw on a safe URL (mocked opener no-ops)", async () => {

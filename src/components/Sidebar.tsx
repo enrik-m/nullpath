@@ -43,7 +43,13 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
   // mutation) means we don't refetch all 820 nodes on every navigation.
   const dataVersion = useUi((s) => s.dataVersion);
   const isMobile = useIsMobile();
-  const [profile, setProfile] = useState<{ handle: string; level: number; xp: number; xpInLvl: number; xpNeeded: number } | null>(null);
+  const [profile, setProfile] = useState<{
+    handle: string;
+    level: number;
+    xp: number;
+    xpInLvl: number;
+    xpNeeded: number;
+  } | null>(null);
   const [streak, setStreak] = useState(0);
 
   useEffect(() => {
@@ -80,7 +86,10 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
   }, [dataVersion]);
 
   const isActive = (r: Route) => {
-    if (r.name === "atlas" && (route.name === "atlas" || route.name === "region" || route.name === "zone"))
+    if (
+      r.name === "atlas" &&
+      (route.name === "atlas" || route.name === "region" || route.name === "zone")
+    )
       return true;
     return r.name === route.name;
   };
@@ -99,10 +108,7 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
         className="px-4 py-4 select-none flex items-start justify-between gap-2"
         style={{ borderBottom: "2px solid var(--color-border-default)" }}
       >
-        <button
-          onClick={() => navigate({ name: "atlas" })}
-          className="text-left flex-1"
-        >
+        <button onClick={() => navigate({ name: "atlas" })} className="text-left flex-1">
           <div className="np-display text-xl text-[var(--color-cyan)] np-flicker leading-none">
             nullpath
             <span className="np-blink ml-1">_</span>
@@ -168,7 +174,9 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
               <item.icon size={13} />
               <span className="flex-1">{item.label}</span>
               {item.shortcut && (
-                <span className="text-[10px] text-[var(--color-fg-3)] np-mono">{item.shortcut}</span>
+                <span className="text-[10px] text-[var(--color-fg-3)] np-mono">
+                  {item.shortcut}
+                </span>
               )}
             </button>
           );
@@ -178,9 +186,17 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
       <div className="mt-auto px-3 pb-3 flex flex-col gap-2">
         {/* Streak chip */}
         <div className="np-pixel px-3 py-2 flex items-center gap-3">
-          <PixelSprite name="flame" size={20} color="var(--color-amber)" secondary="var(--color-rose)" highlight="var(--color-fg-0)" />
+          <PixelSprite
+            name="flame"
+            size={20}
+            color="var(--color-amber)"
+            secondary="var(--color-rose)"
+            highlight="var(--color-fg-0)"
+          />
           <div className="flex-1">
-            <div className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)]">STREAK</div>
+            <div className="np-screen text-[10px] tracking-[0.2em] text-[var(--color-fg-3)]">
+              STREAK
+            </div>
             <div className="np-display text-base text-[var(--color-amber)]">{streak}d</div>
           </div>
         </div>
@@ -196,8 +212,7 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
             style={{
               background:
                 "linear-gradient(135deg, var(--color-cyan) 0%, var(--color-magenta) 100%)",
-              boxShadow:
-                "inset 2px 2px 0 0 #ffffff44, inset -2px -2px 0 0 #00000088",
+              boxShadow: "inset 2px 2px 0 0 #ffffff44, inset -2px -2px 0 0 #00000088",
             }}
           >
             {(profile?.handle ?? "OP").slice(0, 2).toUpperCase()}
@@ -222,7 +237,6 @@ export function Sidebar({ onSearchClick }: { onSearchClick: () => void }) {
             height={4}
           />
         )}
-
       </div>
     </>
   );

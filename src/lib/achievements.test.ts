@@ -7,11 +7,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import {
-  getAchievementCatalog,
-  isUnlocked,
-  type AchievementCtx,
-} from "./achievements";
+import { getAchievementCatalog, isUnlocked, type AchievementCtx } from "./achievements";
 import { resolveAchievementIcon } from "./achievementIcons";
 
 function emptyCtx(): AchievementCtx {

@@ -84,7 +84,7 @@ export function isoWeek(d: Date = new Date()): string {
   const firstThursday = target.valueOf();
   target.setMonth(0, 1);
   if (target.getDay() !== 4) {
-    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+    target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
   }
   const week = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
@@ -96,34 +96,25 @@ export function isoWeek(d: Date = new Date()): string {
 
 export async function getRegions(): Promise<RegionRow[]> {
   const conn = await db();
-  return conn.select<RegionRow[]>(
-    "SELECT * FROM region ORDER BY sort_order ASC",
-  );
+  return conn.select<RegionRow[]>("SELECT * FROM region ORDER BY sort_order ASC");
 }
 
 export async function getRegion(id: string): Promise<RegionRow | null> {
   const conn = await db();
-  const rows = await conn.select<RegionRow[]>(
-    "SELECT * FROM region WHERE id = $1",
-    [id],
-  );
+  const rows = await conn.select<RegionRow[]>("SELECT * FROM region WHERE id = $1", [id]);
   return rows[0] ?? null;
 }
 
 export async function getZones(regionId: string): Promise<ZoneRow[]> {
   const conn = await db();
-  return conn.select<ZoneRow[]>(
-    "SELECT * FROM zone WHERE region_id = $1 ORDER BY sort_order ASC",
-    [regionId],
-  );
+  return conn.select<ZoneRow[]>("SELECT * FROM zone WHERE region_id = $1 ORDER BY sort_order ASC", [
+    regionId,
+  ]);
 }
 
 export async function getZone(zoneId: string): Promise<ZoneRow | null> {
   const conn = await db();
-  const rows = await conn.select<ZoneRow[]>(
-    "SELECT * FROM zone WHERE id = $1",
-    [zoneId],
-  );
+  const rows = await conn.select<ZoneRow[]>("SELECT * FROM zone WHERE id = $1", [zoneId]);
   return rows[0] ?? null;
 }
 
@@ -145,49 +136,39 @@ export async function getZoneStats(regionId: string): Promise<ZoneStats[]> {
 
 export async function getNodesForZone(zoneId: string): Promise<NodeRow[]> {
   const conn = await db();
-  return conn.select<NodeRow[]>(
-    "SELECT * FROM node WHERE zone_id = $1 ORDER BY sort_order ASC",
-    [zoneId],
-  );
+  return conn.select<NodeRow[]>("SELECT * FROM node WHERE zone_id = $1 ORDER BY sort_order ASC", [
+    zoneId,
+  ]);
 }
 
 export async function getNode(nodeId: string): Promise<NodeRow | null> {
   const conn = await db();
-  const rows = await conn.select<NodeRow[]>(
-    "SELECT * FROM node WHERE id = $1",
-    [nodeId],
-  );
+  const rows = await conn.select<NodeRow[]>("SELECT * FROM node WHERE id = $1", [nodeId]);
   return rows[0] ?? null;
 }
 
 export async function getNodeChildren(parentId: string): Promise<NodeRow[]> {
   const conn = await db();
-  return conn.select<NodeRow[]>(
-    "SELECT * FROM node WHERE parent_id = $1 ORDER BY sort_order ASC",
-    [parentId],
-  );
+  return conn.select<NodeRow[]>("SELECT * FROM node WHERE parent_id = $1 ORDER BY sort_order ASC", [
+    parentId,
+  ]);
 }
 
-export async function setNodeStatus(
-  nodeId: string,
-  status: NodeStatus,
-): Promise<void> {
+export async function setNodeStatus(nodeId: string, status: NodeStatus): Promise<void> {
   const conn = await db();
   if (status === "complete") {
-    await conn.execute(
-      "UPDATE node SET status = $1, completed_at = $2 WHERE id = $3",
-      [status, nowIso(), nodeId],
-    );
+    await conn.execute("UPDATE node SET status = $1, completed_at = $2 WHERE id = $3", [
+      status,
+      nowIso(),
+      nodeId,
+    ]);
   } else if (status === "in_progress") {
     await conn.execute(
       "UPDATE node SET status = $1, started_at = COALESCE(started_at, $2) WHERE id = $3",
       [status, nowIso(), nodeId],
     );
   } else {
-    await conn.execute(
-      "UPDATE node SET status = $1 WHERE id = $2",
-      [status, nodeId],
-    );
+    await conn.execute("UPDATE node SET status = $1 WHERE id = $2", [status, nodeId]);
   }
   notifyMutation();
 }
@@ -229,9 +210,7 @@ export async function searchNodes(query: string, limit = 50): Promise<NodeRow[]>
  */
 export async function getAllNodes(): Promise<NodeRow[]> {
   const conn = await db();
-  return conn.select<NodeRow[]>(
-    "SELECT * FROM node ORDER BY zone_id, sort_order",
-  );
+  return conn.select<NodeRow[]>("SELECT * FROM node ORDER BY zone_id, sort_order");
 }
 
 // ---------------------------------------------------------------------------
@@ -281,10 +260,7 @@ export async function deleteResource(id: number): Promise<void> {
 
 export async function togglePinResource(id: number): Promise<void> {
   const conn = await db();
-  await conn.execute(
-    "UPDATE node_resource SET pinned = 1 - pinned WHERE id = $1",
-    [id],
-  );
+  await conn.execute("UPDATE node_resource SET pinned = 1 - pinned WHERE id = $1", [id]);
   notifyMutation();
 }
 
@@ -303,10 +279,9 @@ export async function getAllResources(filterKind?: ResourceKind): Promise<NodeRe
 
 export async function getNote(nodeId: string): Promise<NodeNoteRow | null> {
   const conn = await db();
-  const rows = await conn.select<NodeNoteRow[]>(
-    "SELECT * FROM node_note WHERE node_id = $1",
-    [nodeId],
-  );
+  const rows = await conn.select<NodeNoteRow[]>("SELECT * FROM node_note WHERE node_id = $1", [
+    nodeId,
+  ]);
   return rows[0] ?? null;
 }
 
@@ -368,10 +343,9 @@ export async function recordCompletionDay(): Promise<void> {
 
 export async function getStreakDays(limit = 90): Promise<StreakDayRow[]> {
   const conn = await db();
-  return conn.select<StreakDayRow[]>(
-    "SELECT * FROM streak_day ORDER BY day DESC LIMIT $1",
-    [limit],
-  );
+  return conn.select<StreakDayRow[]>("SELECT * FROM streak_day ORDER BY day DESC LIMIT $1", [
+    limit,
+  ]);
 }
 
 /** Compute current streak length from streak_day rows. */
@@ -416,9 +390,7 @@ export async function getAppState(): Promise<AppStateRow> {
   // `rows[0]!.handle` two levels down the stack.
   const row = rows[0];
   if (!row) {
-    throw new Error(
-      "app_state row id=1 missing — DB may be corrupted or migrations didn't run",
-    );
+    throw new Error("app_state row id=1 missing — DB may be corrupted or migrations didn't run");
   }
   return row;
 }
@@ -472,16 +444,15 @@ export async function unlockAchievement(input: {
   icon?: string;
 }): Promise<boolean> {
   const conn = await db();
-  const existing = await conn.select<AchievementRow[]>(
-    "SELECT * FROM achievement WHERE id = $1",
-    [input.id],
-  );
+  const existing = await conn.select<AchievementRow[]>("SELECT * FROM achievement WHERE id = $1", [
+    input.id,
+  ]);
   if (existing[0]?.unlocked_at) return false;
   if (existing[0]) {
-    await conn.execute(
-      "UPDATE achievement SET unlocked_at = $1 WHERE id = $2",
-      [nowIso(), input.id],
-    );
+    await conn.execute("UPDATE achievement SET unlocked_at = $1 WHERE id = $2", [
+      nowIso(),
+      input.id,
+    ]);
   } else {
     await conn.execute(
       "INSERT INTO achievement (id, name, description, icon, unlocked_at) VALUES ($1, $2, $3, $4, $5)",
@@ -548,10 +519,7 @@ const BOUNTY_UPDATABLE: ReadonlySet<string> = new Set([
   "notes",
 ]);
 
-export async function updateBounty(
-  id: number,
-  patch: Partial<BountySubmissionRow>,
-): Promise<void> {
+export async function updateBounty(id: number, patch: Partial<BountySubmissionRow>): Promise<void> {
   const conn = await db();
   const sets: string[] = [];
   const args: unknown[] = [];
@@ -716,10 +684,9 @@ export async function dueRefreshersWithNode(
 
 export async function ackRefresher(nodeId: string, recalled: boolean): Promise<void> {
   const conn = await db();
-  const rows = await conn.select<RefresherRow[]>(
-    "SELECT * FROM refresher WHERE node_id = $1",
-    [nodeId],
-  );
+  const rows = await conn.select<RefresherRow[]>("SELECT * FROM refresher WHERE node_id = $1", [
+    nodeId,
+  ]);
   const cur = rows[0];
   if (!cur) return;
   const newStreak = recalled ? cur.streak + 1 : 0;
@@ -729,4 +696,3 @@ export async function ackRefresher(nodeId: string, recalled: boolean): Promise<v
   );
   notifyMutation();
 }
-

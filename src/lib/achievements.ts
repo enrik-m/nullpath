@@ -677,9 +677,12 @@ export async function evaluateAchievements(): Promise<void> {
       const old = pendingLevelCheck.last;
       pendingLevelCheck.last = newLevel;
       // Stack on top of any achievement queue
-      window.setTimeout(() => {
-        showModal({ kind: "level-up", oldLevel: old, newLevel });
-      }, 1500 + newly.length * 1500);
+      window.setTimeout(
+        () => {
+          showModal({ kind: "level-up", oldLevel: old, newLevel });
+        },
+        1500 + newly.length * 1500,
+      );
     }
   } finally {
     evaluating = false;
@@ -732,9 +735,7 @@ export async function buildCtx(): Promise<AchievementCtx> {
   const zonesCompleted = stats.filter(
     (z) => z.total_nodes > 0 && z.completed_nodes === z.total_nodes,
   ).length;
-  const zonesTouched = stats.filter(
-    (z) => z.completed_nodes > 0 || z.in_progress_nodes > 0,
-  ).length;
+  const zonesTouched = stats.filter((z) => z.completed_nodes > 0 || z.in_progress_nodes > 0).length;
 
   // Big-day push — peak `sessions` across the streak ledger.
   const days = await db.getStreakDays(365);

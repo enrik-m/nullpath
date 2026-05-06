@@ -36,8 +36,7 @@ export const useToasts = create<ToastStore>((set) => ({
       set((s) => ({ items: s.items.filter((t) => t.id !== id) }));
     }, ttl);
   },
-  dismiss: (id) =>
-    set((s) => ({ items: s.items.filter((t) => t.id !== id) })),
+  dismiss: (id) => set((s) => ({ items: s.items.filter((t) => t.id !== id) })),
 }));
 
 /** Convenience helpers — `toast.error("oops")` reads cleanly at call sites. */

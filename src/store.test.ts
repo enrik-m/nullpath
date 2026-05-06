@@ -7,12 +7,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import {
-  levelForXp,
-  xpForLevel,
-  xpForCompletingNode,
-  computeOperatorXp,
-} from "./store";
+import { levelForXp, xpForLevel, xpForCompletingNode, computeOperatorXp } from "./store";
 import type { NodeRow } from "./db/types";
 
 function node(partial: Partial<NodeRow>): NodeRow {
