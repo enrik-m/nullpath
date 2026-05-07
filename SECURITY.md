@@ -3,12 +3,12 @@
 ## Supported versions
 
 Nullpath is pre-1.0; only the latest released minor receives security
-fixes. Older minors will not be patched. The current supported line:
+fixes. Older minors will not be patched.
 
-| Version       | Status      |
-| ------------- | ----------- |
-| 0.21.x        | ✅ supported |
-| < 0.21.0      | ❌ end-of-life |
+| Version  | Status         |
+| -------- | -------------- |
+| 0.23.x   | ✅ supported   |
+| < 0.23.0 | ❌ end-of-life |
 
 ## Reporting a vulnerability
 
@@ -29,49 +29,68 @@ between 30 and 90 days depending on severity.
 If we agree it's a real vulnerability, you'll be credited in the
 release notes (or anonymously if you prefer).
 
-## Threat model
+## Architecture & threat model
 
-Nullpath is a **local desktop app** — all user data lives in a local
-SQLite file (`nullpath.db`). The app does not contact any network
-service except optionally:
+Nullpath is a single-page web app served as static assets from Vercel
+at `nullpath-one.vercel.app`. There is no bespoke server: the build
+runs entirely in the browser. Two persistence modes share the same
+view layer:
 
-- The configured update endpoint (off by default, see
-  `docs/updater.md`)
-- The OS browser via the opener plugin, when the user clicks an
-  attached resource URL
+- **Local mode.** Data lives in a `sql.js` (SQLite-WASM) database
+  persisted to IndexedDB on the user's device. Nothing leaves the
+  browser. No account, no network calls beyond CDN asset fetches.
+- **Cloud mode.** Data lives in a Supabase Postgres database. Auth is
+  delegated to GitHub via OAuth (PKCE); we never see a password. Every
+  per-user table enforces row-level security with `auth.uid() =
+user_id`, deny-by-default. Achievement evaluation, streak math, and
+  XP totals are computed by `SECURITY DEFINER` Postgres functions so
+  the gates can't be faked from the client.
 
-Things considered **out of scope** for the security policy:
+Frontend hardening:
 
-- Bugs in the offsec content / skill-graph data itself (this is
-  educational material, not security guidance the app enforces)
-- Issues that require local code execution as the user already
-  (the user can read the SQLite file directly anyway)
-- Theoretical issues without a working PoC
+- **CSP** delivered via `vercel.json` headers — no inline scripts, no
+  `unsafe-eval`. (`unsafe-inline` is allowed on styles only because
+  Tailwind v4 emits inline style attributes.)
+- **HSTS** preloaded at the apex (`max-age` ≥ 31536000, `includeSubDomains`,
+  `preload`).
+- **No source maps** in the production build.
+- URL opens are scheme-locked to http/https (`src/lib/url.ts`).
 
-Things considered **in scope**:
+## What's in scope
 
-- Anything that lets a malicious resource URL run code in the app
-  context (URL scheme bypass, CSP bypass, IPC handler abuse)
-- SQL injection through any user-input field
-- Privilege escalation to anything outside `fs:scope`
-  (`$DESKTOP / $DOCUMENT / $DOWNLOAD / $PICTURE / $HOME`)
-- Backup-restore mishandling that corrupts the DB or skips
-  migrations
-- Update-channel attacks (signature forgery, downgrade, MITM —
-  once the updater is active)
+- The deployed build at `nullpath-one.vercel.app`
+- The open-source repository at `github.com/enrik-m/nullpath`
+- The Postgres schema and RLS policies in `supabase/migrations/`
+- The Vercel response headers and CSP configuration in `vercel.json`
 
-## Known security posture
+## What's out of scope
 
-The current shipping defenses, in case you want to start
-attacking from the right place:
+- Self-hosted forks running on infrastructure we don't control. If
+  you change the schema, the headers, or the OAuth flow, you own the
+  resulting risk surface.
+- GitHub itself. Report account-takeover or OAuth-platform issues to
+  GitHub's security team.
+- Supabase platform issues. Report directly to Supabase.
+- Vercel platform issues. Report directly to Vercel.
+- Bugs in the offsec content / skill-graph data itself — this is
+  educational material, not security guidance the app enforces.
+- Theoretical issues without a working PoC.
 
-- All resource URLs validated against an http/https allowlist
-  before storage and before opening (`lib/url.ts`)
-- LIKE wildcards in user search are escaped with `ESCAPE '\\'`
-- Dynamic SQL builders (`updateAppState`, `updateBounty`) have
-  explicit per-table column allowlists
-- All other DB queries are parameterized (`$1`, `$2`); no string
-  concatenation of user input
-- CSP set in `tauri.conf.json`
-- `fs:scope` narrowed to user-writable directories only
-- `noUncheckedIndexedAccess` on, lint-strict TS
+## Hardening summary
+
+- All DB queries are **parameterized**; no string concatenation of
+  user input. Dynamic SQL builders enforce explicit per-table column
+  allowlists.
+- **RLS is deny-by-default** on every per-user table; reads, inserts,
+  updates, and deletes require `auth.uid() = user_id`.
+- **Achievement and streak evaluation runs server-side** in Postgres
+  functions; the catalog is not exposed to the client.
+- **OAuth-only auth.** No passwords on our side; nothing to leak from
+  our database.
+- **2FA delegated to GitHub.** If your GitHub has 2FA, your nullpath
+  has 2FA.
+
+## Bounty / reward
+
+None. Nullpath is a free hobby project with no revenue and no budget
+for payouts. Credit in the release notes is the only thing on offer.

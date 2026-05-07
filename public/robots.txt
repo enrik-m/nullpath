@@ -4,3 +4,5 @@ Allow: /
 # This is a single-page app — there are no per-route URLs to
 # crawl. All views render at `/`. The crawlers will index the
 # landing page and that's the right behavior.
+
+Sitemap: https://nullpath-one.vercel.app/sitemap.xml

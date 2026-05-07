@@ -3,7 +3,7 @@
  * build-seed.mjs
  * ---------------------------------------------------------------------------
  * Parses plans/web-pentesting.md (the unified web pentesting skill skeleton)
- * and emits src-tauri/migrations/002_seed_web.sql containing INSERTs for the
+ * and emits src/db/migrations/002_seed_web.sql containing INSERTs for the
  * Web region, all zones, and every leaf/sub-leaf node.
  *
  * Re-run any time the plan file changes:
@@ -21,7 +21,7 @@ import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..");
 const SOURCE = join(PROJECT_ROOT, "plans", "web-pentesting.md");
-const OUT = join(PROJECT_ROOT, "src-tauri", "migrations", "002_seed_web.sql");
+const OUT = join(PROJECT_ROOT, "src", "db", "migrations", "002_seed_web.sql");
 
 // ---------------------------------------------------------------------------
 // Zone-prefix → kind map. Determines the `kind` column on every node in a zone.

@@ -16,7 +16,6 @@
 - [ ] `npm run lint` clean
 - [ ] `npm test` passes
 - [ ] `npm run build` succeeds
-- [ ] `cd src-tauri && cargo check` clean
 - [ ] Manually exercised the affected views (which ones?)
 
 ## Notes for the reviewer

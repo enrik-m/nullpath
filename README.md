@@ -93,9 +93,7 @@ fidelity available as [`docs/demo.mp4`](./docs/demo.mp4) and
 - **Framer Motion** for view transitions, modal animation, and
   reduced-motion awareness
 - **sql.js** (SQLite compiled to WASM) for the local-mode data layer;
-  persisted to **IndexedDB** so progress survives reloads. Same SQL
-  queries the desktop version used — no rewrite needed when the
-  project pivoted from Tauri to web.
+  persisted to **IndexedDB** so progress survives reloads.
 - **Supabase** (Postgres + GitHub OAuth + RLS) for the cloud-mode data
   layer. Server-side functions (`evaluate_achievements`, `current_streak`,
   `complete_node`, …) make the achievement gates and progression math
