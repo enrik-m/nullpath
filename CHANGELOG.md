@@ -7,6 +7,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Pre-1.0 releases may contain breaking changes within minor bumps; the
 project hasn't reached a stability commitment yet.
 
+## [0.23.7-beta.1] — 2026-05-07
+
+### Removed
+
+- **Removed the amber-on-hover prereq path overlay** (added in
+  0.23.4 / fixed in 0.23.6). The feature was confusing in practice
+  even after the BFS-closure fix, and the user feedback was clear:
+  drop it. Stripped:
+  - `hoveredPrereqEdges` useMemo + the SVG render block
+  - `ancestorIds` useMemo + the dim-non-path-zones wrapper
+  - The wider edge-render-block comments referencing "hover state"
+
+  The primary sort-order pathway (Z01 → Z02 → … → Z23) stays as the
+  only edge layer. `ZONE_PARENTS` is unchanged and still drives
+  `isZoneUnlocked` for the actual gating logic — we just don't
+  visualize it. ESLint clean: no unused imports, no dead refs.
+
 ## [0.23.6-beta.1] — 2026-05-07
 
 ### Fixed
