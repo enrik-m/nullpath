@@ -214,13 +214,59 @@ export function RegionView({ regionId }: RegionViewProps) {
     return out;
   }, [zones, isZoneComplete, isZoneStarted]);
 
-  // Prereq edges shown only when the user is hovering a zone — these
-  // come from ZONE_PARENTS. Drawn in amber dashed so they read as
-  // "additional context" rather than primary navigation.
+  // Hover overlay: the FULL transitive prereq chain from Z01 down to
+  // the hovered zone. The previous version only drew the hovered
+  // zone's direct parents — for Z23 (8 parents) you'd see 8 amber
+  // lines but miss the chain through Z21/Z14/Z11/etc that explains
+  // how those prereqs themselves got unlocked. Walking the full
+  // ancestor closure shows the actual learning path: every zone you
+  // need to clear before this one becomes available.
+  //
+  // BFS up the parent graph starting from `hovered`. Each parent→child
+  // edge encountered along the way is rendered. Cycle-safe (visited
+  // set), which matters because ZONE_PARENTS is technically an
+  // arbitrary DAG even though the seed is acyclic.
   const hoveredPrereqEdges = useMemo(() => {
     if (!hovered) return [];
-    const parents = ZONE_PARENTS[hovered] ?? [];
-    return parents.map((p) => ({ from: p, to: hovered }));
+    const out: Array<{ from: string; to: string }> = [];
+    const visited = new Set<string>();
+    const seenEdges = new Set<string>();
+    const queue: string[] = [hovered];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (visited.has(current)) continue;
+      visited.add(current);
+      const parents = ZONE_PARENTS[current] ?? [];
+      for (const parent of parents) {
+        const key = `${parent}->${current}`;
+        if (!seenEdges.has(key)) {
+          seenEdges.add(key);
+          out.push({ from: parent, to: current });
+        }
+        if (!visited.has(parent)) queue.push(parent);
+      }
+    }
+    return out;
+  }, [hovered]);
+
+  // Highlight the hovered zone's full ancestor set (used to dim
+  // unrelated zone tiles so the path stands out — without this the
+  // amber edges fight the lime "completed" zones for visual weight).
+  const ancestorIds = useMemo(() => {
+    if (!hovered) return null;
+    const set = new Set<string>([hovered]);
+    const queue: string[] = [hovered];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const parents = ZONE_PARENTS[current] ?? [];
+      for (const p of parents) {
+        if (!set.has(p)) {
+          set.add(p);
+          queue.push(p);
+        }
+      }
+    }
+    return set;
   }, [hovered]);
 
   // Pan / zoom
@@ -515,24 +561,35 @@ export function RegionView({ regionId }: RegionViewProps) {
               );
             })}
 
-            {/* Zones */}
-            {zones.map((z) => (
-              <PixelZoneNode
-                key={z.zone.id}
-                zone={z}
-                accent={accent}
-                hovered={hovered === z.zone.id}
-                unlocked={isZoneUnlocked(z.zone.id)}
-                onHover={(id) => {
-                  setHovered(id);
-                  if (id) sfx.hover();
-                }}
-                onSelect={() => {
-                  sfx.zoneUnlock();
-                  go({ name: "zone", zoneId: z.zone.id });
-                }}
-              />
-            ))}
+            {/* Zones — dimmed when hovering an unrelated zone, so the
+                ancestor path stays visually dominant. ancestorIds is
+                null when nothing is hovered, in which case every zone
+                renders at full opacity. */}
+            {zones.map((z) => {
+              const inPath = ancestorIds === null || ancestorIds.has(z.zone.id);
+              return (
+                <g
+                  key={z.zone.id}
+                  opacity={inPath ? 1 : 0.28}
+                  style={{ transition: "opacity 120ms ease-out" }}
+                >
+                  <PixelZoneNode
+                    zone={z}
+                    accent={accent}
+                    hovered={hovered === z.zone.id}
+                    unlocked={isZoneUnlocked(z.zone.id)}
+                    onHover={(id) => {
+                      setHovered(id);
+                      if (id) sfx.hover();
+                    }}
+                    onSelect={() => {
+                      sfx.zoneUnlock();
+                      go({ name: "zone", zoneId: z.zone.id });
+                    }}
+                  />
+                </g>
+              );
+            })}
           </g>
         </svg>
       </div>

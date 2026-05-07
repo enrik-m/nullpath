@@ -7,6 +7,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Pre-1.0 releases may contain breaking changes within minor bumps; the
 project hasn't reached a stability commitment yet.
 
+## [0.23.6-beta.1] — 2026-05-07
+
+### Fixed
+
+- **RegionView hover now shows the full prerequisite chain** from
+  Z01 all the way down to the hovered zone, not just the direct
+  parents. The previous version did one hop — for Z23 (8 direct
+  parents) you'd see 8 amber edges but miss the chain through
+  Z21 / Z14 / Z11 / etc. that explains how those parents themselves
+  unlock. Replaced with a BFS that walks the full ancestor closure
+  in `ZONE_PARENTS`, with cycle-safety + edge deduplication.
+  Hovering Z23 now lights up the entire learning path back to Z01.
+
+### Changed
+
+- **Non-path zones dim while hovering.** When you hover a zone, the
+  zones that aren't part of its prerequisite chain fade to 28%
+  opacity so the highlighted path reads clearly against the rest of
+  the region. Smooth 120ms transition. Releasing the hover restores
+  full opacity.
+
 ## [0.23.5-beta.1] — 2026-05-07
 
 ### Fixed
