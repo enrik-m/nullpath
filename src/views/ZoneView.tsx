@@ -1,11 +1,17 @@
 /**
  * ZoneView — node graph for a single zone, rendered with @xyflow/react.
  *
- * Top-level nodes are packed in a √N-ish grid with adaptive column
- * widths and row heights; sub-nodes sit in a horizontal grid directly
- * below their parent, centered within the parent's allocated cell. By
- * construction no two nodes can overlap regardless of fan-out — see
- * `layoutNodes()` below for the full footprint-aware algorithm.
+ * Layout flows TOP-TO-BOTTOM within columns. Each top-level subtree
+ * (parent + its kid block) is placed in a column-major grid: column 0
+ * fills downward from y=0, then column 1, etc. The reading order is
+ * vertical-first, which reads more like a list / table-of-contents
+ * than a left-to-right grid.
+ *
+ * Column count is adaptive to the zone's top-level density: tight
+ * zones (≤6 parents) collapse to a single vertical stack, big zones
+ * (40+) widen to 4 columns. Per-column widths and per-cell heights
+ * are sized to their footprints, so by construction no two nodes
+ * can overlap regardless of fan-out — see `layoutNodes()` below.
  *
  * Clicking a node opens the side panel.
  */
@@ -83,6 +89,22 @@ interface ParentFootprint {
   kidRows: number;
 }
 
+/**
+ * Pick a column count that keeps total height reasonable without
+ * sprawling the graph horizontally. Each column fills top-to-bottom
+ * before the next one starts, so the user reads vertically first.
+ *
+ * Tuned to the seed's distribution: most zones have 4–10 top-level
+ * parents (1–2 cols), Z01 Foundations Plateau has 43 leaves (3 cols
+ * keeps it ~14 nodes tall per column).
+ */
+function pickColumnCount(topsCount: number): number {
+  if (topsCount <= 6) return 1;
+  if (topsCount <= 16) return 2;
+  if (topsCount <= 30) return 3;
+  return 4;
+}
+
 function layoutNodes(rows: NodeRow[]): Node[] {
   const tops = rows.filter((r) => !r.parent_id);
 
@@ -95,7 +117,7 @@ function layoutNodes(rows: NodeRow[]): Node[] {
     subsByParent.set(r.parent_id, arr);
   }
 
-  // Phase 1: footprints.
+  // Phase 1: footprints (per-parent bounding box including kid block).
   const footprints = new Map<string, ParentFootprint>();
   for (const top of tops) {
     const kids = subsByParent.get(top.id) ?? [];
@@ -108,45 +130,61 @@ function layoutNodes(rows: NodeRow[]): Node[] {
     footprints.set(top.id, { width, height, kidsPerRow, kidRows });
   }
 
-  // Phase 2: pack tops into a √N-ish grid; compute col widths + row heights.
-  const cols = Math.max(3, Math.ceil(Math.sqrt(tops.length)));
+  // Phase 2: column-major fill.
+  // - Reading order: top-to-bottom within column 0, then top-to-bottom
+  //   within column 1, etc. The eye flows down naturally; reaching the
+  //   bottom of a column means "next subtree group" rather than "back
+  //   up to the top".
+  // - Per-column width = max footprint width in that column (so the
+  //   widest parent's kid block fits without bleeding into the next).
+  // - Each cell's height = its parent's footprint height (NOT a
+  //   uniform row height like the row-major grid had — different
+  //   columns can have different per-cell heights, and parents stack
+  //   vertically using their own footprints, not a shared row max).
+  const cols = pickColumnCount(tops.length);
+  const rowsPerCol = Math.ceil(tops.length / cols);
+
   const colW = new Array<number>(cols).fill(TOP_W);
-  const rowH: number[] = [];
+  // cellH[c] is an array of per-cell heights down column c.
+  const cellH: number[][] = Array.from({ length: cols }, () => []);
+
   tops.forEach((top, i) => {
-    const c = i % cols;
-    const r = Math.floor(i / cols);
+    const c = Math.floor(i / rowsPerCol);
+    const r = i % rowsPerCol;
     const fp = footprints.get(top.id);
     if (!fp) return;
     if (fp.width > colW[c]!) colW[c] = fp.width;
-    const cur = rowH[r] ?? TOP_H;
-    if (fp.height > cur) rowH[r] = fp.height;
-    else if (rowH[r] === undefined) rowH[r] = TOP_H;
+    cellH[c]![r] = fp.height;
   });
 
-  // Cumulative pixel offsets for each column / row slot.
+  // Cumulative x for each column.
   const colX: number[] = [];
   let xAcc = 0;
-  for (let i = 0; i < cols; i++) {
+  for (let c = 0; c < cols; c++) {
     colX.push(xAcc);
-    xAcc += colW[i]! + COL_GAP;
-  }
-  const rowY: number[] = [];
-  let yAcc = 0;
-  for (let i = 0; i < rowH.length; i++) {
-    rowY.push(yAcc);
-    yAcc += rowH[i]! + ROW_GAP;
+    xAcc += colW[c]! + COL_GAP;
   }
 
-  // Phase 3: position parents centered horizontally in their cells, kids
-  // in a left-to-right grid below — also centered horizontally.
+  // Cumulative y per (column, cell) — each column has its own
+  // top-to-bottom flow, independent of other columns' heights.
+  const cellY: number[][] = Array.from({ length: cols }, () => []);
+  for (let c = 0; c < cols; c++) {
+    let yAcc = 0;
+    for (let r = 0; r < cellH[c]!.length; r++) {
+      cellY[c]![r] = yAcc;
+      yAcc += cellH[c]![r]! + ROW_GAP;
+    }
+  }
+
+  // Phase 3: place every parent + its kids.
   const nodes: Node[] = [];
   tops.forEach((top, i) => {
-    const c = i % cols;
-    const r = Math.floor(i / cols);
+    const c = Math.floor(i / rowsPerCol);
+    const r = i % rowsPerCol;
     const fp = footprints.get(top.id);
     if (!fp) return;
     const cellLeft = colX[c]!;
-    const cellTop = rowY[r]!;
+    const cellTop = cellY[c]![r]!;
     const cellCenterX = cellLeft + colW[c]! / 2;
     const parentX = cellCenterX - TOP_W / 2;
 

@@ -28,12 +28,26 @@ const page = await ctx.newPage();
 await page.goto(BASE, { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(3500);
 
-// Dismiss daily briefing if present
-const begin = page.getByRole("button", { name: /^begin$/i });
-if (await begin.count()) {
-  await begin.click().catch(() => {});
-  await page.waitForTimeout(400);
+// Dismiss the daily briefing if it's up on first load. Some app
+// state hooks fire on a delay so the modal can mount AFTER the
+// initial waitForTimeout — defensiveDismiss() loops a few times
+// pressing Escape until no [role="dialog"] is visible. Called both
+// at script start and inside each gotoZone() before the screenshot.
+async function defensiveDismiss() {
+  for (let i = 0; i < 6; i++) {
+    const dialog = page.locator("[role='dialog']");
+    if (!(await dialog.count())) return;
+    const begin = page.getByRole("button", { name: /^begin$/i });
+    if (await begin.count()) {
+      await begin.click({ timeout: 1500 }).catch(() => {});
+    } else {
+      await page.keyboard.press("Escape").catch(() => {});
+    }
+    await page.waitForTimeout(450);
+  }
 }
+
+await defensiveDismiss();
 
 // Drive directly into a target zone via the in-app store, bypassing
 // the click-based navigation (we don't care about UX path here, just
@@ -76,6 +90,10 @@ async function gotoZone(zoneId) {
   await page.waitForSelector(".react-flow__node");
   // Let the layout settle + react-flow auto-fit.
   await page.waitForTimeout(2500);
+  // Defensive dismiss: the briefing can mount late on second/later
+  // navigations if the hook re-evaluates. Make sure no modal is
+  // covering the graph before we screenshot.
+  await defensiveDismiss();
 }
 
 const targets = ["Z01", "Z04", "Z11"]; // Z01 = grid of leaves, Z04 = 15-kid parent, Z11 = API1 with 10 kids

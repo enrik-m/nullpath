@@ -7,6 +7,30 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Pre-1.0 releases may contain breaking changes within minor bumps; the
 project hasn't reached a stability commitment yet.
 
+## [0.23.2-beta.1] — 2026-05-07
+
+### Changed
+
+- **ZoneView reading order is now top-to-bottom (column-major).** The
+  previous flow was row-major: row 1 left-to-right, then row 2
+  left-to-right, etc — a zigzag that was harder to scan when looking
+  for a specific top-level skill. Switched to column-major: column 1
+  fills top-to-bottom, then column 2, etc. The eye flows vertically
+  first, which reads more like a list / table-of-contents than a
+  left-to-right grid.
+- Column count is adaptive to the zone's top-level density:
+  - ≤6 parents → 1 column (single vertical stack)
+  - 7–16 parents → 2 columns
+  - 17–30 parents → 3 columns
+  - 31+ parents → 4 columns
+    Tuned to the seed's distribution: tight zones like Z23 (Capstones,
+    18 parents) get 3 cols, wide zones like Z01 (Foundations Plateau,
+    43 leaves) get 4 cols of ~11 each. Avoids the previous problem of
+    wide zones turning into 7×7 grids that lost visual hierarchy.
+- Verified 0 overlaps across Z01 (43 nodes), Z04 (54 nodes including
+  W01's 15-kid block), and Z11 (39 nodes) via the same Playwright
+  bounding-box checker introduced in 0.23.1-beta.1.
+
 ## [0.23.1-beta.1] — 2026-05-07
 
 ### Fixed
