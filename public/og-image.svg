@@ -36,8 +36,24 @@
     <pattern id="scanlines" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
       <rect width="4" height="2" fill="#000" fill-opacity="0.18" />
     </pattern>
-    <!-- Wordmark gradient — cyan top, magenta bottom -->
-    <linearGradient id="wordmarkGrad" x1="0" y1="0" x2="0" y2="1">
+    <!-- Wordmark gradient — cyan top, magenta bottom. Pinned to user
+         space coordinates so every <rect> samples the SAME gradient
+         based on its absolute y-position. Without
+         `gradientUnits="userSpaceOnUse"` each rect would get its own
+         compressed cyan→magenta band based on its own bounding box,
+         producing horizontal banding that read as "broken letters".
+         Coordinates are in the gradient's ORIGIN frame (the wordmark
+         <g> applies translate(104 175), and gradients referenced from
+         inside that group inherit the translate); so y1=0, y2=112
+         here lines up with the wordmark's local y=0..112 rect band. -->
+    <linearGradient
+      id="wordmarkGrad"
+      gradientUnits="userSpaceOnUse"
+      x1="0"
+      y1="0"
+      x2="0"
+      y2="112"
+    >
       <stop offset="0%" stop-color="#5cf2ff" />
       <stop offset="100%" stop-color="#ff66e0" />
     </linearGradient>
