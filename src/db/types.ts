@@ -1,5 +1,5 @@
 /**
- * Database row types — kept in lockstep with src-tauri/migrations/001_initial_schema.sql.
+ * Database row types — kept in lockstep with src/db/migrations/001_initial_schema.sql.
  *
  * SQLite returns 0/1 for booleans; we expose them as `number` here and
  * convert at use-sites where it matters.

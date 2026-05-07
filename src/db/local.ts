@@ -7,8 +7,8 @@
  * Backend: sql.js (SQLite compiled to WASM) with the database file
  * persisted to IndexedDB on every write. The interface exposed below
  * is identical to the desktop version that ran against
- * `tauri-plugin-sql`, so views never had to change when we pivoted
- * from Tauri to browser. When the project gets a real backend with
+ * the local SQLite path, so views never had to change when the project
+ * pivoted to browser-native. When the project grows a real backend with
  * auth + leaderboards, this single file becomes an HTTP client and
  * the views still don't have to change.
  */
@@ -486,7 +486,7 @@ export async function importBackup(snap: BackupSnapshot): Promise<void> {
  */
 export async function resetAllProgress(): Promise<void> {
   const conn = await db();
-  // sqlx-tauri-plugin doesn't expose multi-statement transactions cleanly,
+  // sql.js doesn't expose multi-statement transactions cleanly,
   // so issue each statement; SQLite implicit-transaction-per-stmt is fine
   // here — DELETE order respects FK cascades, all dependents go first.
   await conn.execute("DELETE FROM node_resource");

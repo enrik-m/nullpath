@@ -1,11 +1,10 @@
 /**
- * Migration runner. Mirrors what `tauri-plugin-sql` did on the desktop
- * side: maintains a `_migrations` table with the highest-applied
- * version and applies each pending migration in order on startup.
+ * Migration runner for the local sql.js path: maintains a
+ * `_migrations` table with the highest-applied version and applies
+ * each pending migration in order on startup.
  *
  * The migration files themselves are imported as raw strings via
- * Vite's `?raw` suffix — they're identical to the .sql files the
- * desktop shell used (we copied them verbatim into src/db/migrations/).
+ * Vite's `?raw` suffix and live under src/db/migrations/.
  */
 
 import type { Database } from "sql.js";

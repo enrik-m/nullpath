@@ -26,7 +26,7 @@ import type { OperatorCardData } from "../components/OperatorCardPortrait";
 // The card module pulls in 1080×1920 worth of inline SVG sprites + a long
 // styled tree. It's only ever rendered on this view, so split it from the
 // main bundle. The export path additionally lazy-imports html-to-image
-// (already done) and tauri's dialog/fs plugins on demand.
+// (already done) on demand.
 const OperatorCardPreview = lazy(() =>
   import("../components/OperatorCardPortrait").then((m) => ({
     default: m.OperatorCardPreview,

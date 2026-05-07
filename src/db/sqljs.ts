@@ -1,8 +1,8 @@
 /**
  * Browser SQLite via sql.js (SQLite compiled to WASM) with IndexedDB
- * persistence. Replaces `@tauri-apps/plugin-sql` from the desktop
- * version while preserving the exact `.select<T>()` / `.execute()`
- * interface — `db/index.ts` doesn't change.
+ * persistence. Exposes a `.select<T>()` / `.execute()` interface that
+ * `db/local.ts` consumes — keeping queries and migrations
+ * identical to standard SQLite.
  *
  * Lifecycle:
  *   1. On first call to `getDatabase()`, dynamically load sql.js +
@@ -46,13 +46,14 @@ const IDB_KEY = "nullpath:db:v1";
 /** Debounce window for "save to IndexedDB after writes". */
 const PERSIST_DEBOUNCE_MS = 500;
 
-/** Result shape that mirrors the Tauri SQL plugin's `execute()`. */
+/** Result shape returned from a SQL execute() — `lastInsertId` from
+ * `last_insert_rowid()`, `rowsAffected` from `getRowsModified()`. */
 export interface ExecuteResult {
   lastInsertId: number;
   rowsAffected: number;
 }
 
-/** A `select<T>()` / `execute()` pair compatible with the desktop API. */
+/** A `select<T>()` / `execute()` pair — the SQL surface `db/local.ts` uses. */
 export interface SqlJsClient {
   select<T>(sql: string, args?: unknown[]): Promise<T>;
   execute(sql: string, args?: unknown[]): Promise<ExecuteResult>;
