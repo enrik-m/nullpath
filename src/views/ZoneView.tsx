@@ -254,7 +254,10 @@ const DEPTH_RING: Record<NodeDepth, string> = {
 const STATUS_FILL: Record<NodeStatus, string> = {
   available: "#161b3a",
   in_progress: "#0d2840",
-  complete: "#0e2a14",
+  // Distinctly green — was #0e2a14, too close in luminance to the
+  // available navy fill #161b3a, so completed nodes blended in with
+  // the rest of the grid. New value reads obviously green at a glance.
+  complete: "#1f4d28",
 };
 
 interface SkillNodeData {
@@ -304,7 +307,21 @@ function SkillNode({ data, selected }: NodeProps) {
           </span>
         )}
         {isComplete && (
-          <span className="ml-auto np-display text-[10px] text-[var(--color-lime)]">✓</span>
+          // Chunky DONE chip — the small ✓ in the previous build was easy
+          // to miss against a busy graph. The pill makes "this node is
+          // complete" unmistakable at a glance, with the checkmark
+          // doubled-up for anyone who's pattern-matching on glyphs.
+          <span
+            className="ml-auto np-screen text-[9px] tracking-[0.15em] px-1.5 py-0.5 leading-none"
+            style={{
+              background: "var(--color-lime)",
+              color: "#0a1f0a",
+              borderRadius: 0,
+              boxShadow: "0 0 8px var(--color-lime-glow)",
+            }}
+          >
+            ✓ DONE
+          </span>
         )}
         {isInProgress && <span className="ml-auto w-2 h-2 bg-[var(--color-cyan)] np-pulse" />}
       </div>

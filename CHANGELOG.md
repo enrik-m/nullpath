@@ -7,6 +7,65 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Pre-1.0 releases may contain breaking changes within minor bumps; the
 project hasn't reached a stability commitment yet.
 
+## [0.23.5-beta.1] — 2026-05-07
+
+### Fixed
+
+- **COMPLETE button no longer double-credits XP / streak / refresher.**
+  In cloud mode, `setNodeStatus("complete")` already routed to the
+  server-side `complete_node` RPC which atomically awarded XP,
+  scheduled the refresher, and bumped the streak day — but the client
+  ALSO called `setNodeXp`, `scheduleRefresher`, and
+  `recordCompletionDay` separately, so every completion got the full
+  bookkeeping twice. In local mode the same redundant calls weren't
+  technically a bug, but they were structurally fragile. Replaced
+  with a single atomic `setNodeStatus("complete")` call in NodePanel
+  for both backends; local-mode `setNodeStatus` now handles the full
+  XP / refresher / streak transition inline.
+
+- **Spamming COMPLETE no longer farms XP / achievements.** Three
+  guards:
+  1. View-layer idempotency check — `markComplete` bails immediately
+     if `node.status === "complete"`, so a redundant click on an
+     already-complete node never even hits the data layer.
+  2. `useRef`-based latch on the panel — rapid double-clicks during
+     the await window are dropped (status transitions are now
+     serialized).
+  3. Data-layer no-op — both local `setNodeStatus("complete")` and
+     cloud `complete_node` now check the row state and return
+     without changes when the row is already complete.
+
+- **RE-OPEN → COMPLETE no longer re-awards XP.** Closing the loop on
+  the previous fix: a node that was previously completed (so
+  `completed_at IS NOT NULL`) and re-opened to `available` no longer
+  re-awards XP / re-bumps streak / re-fires achievements when
+  re-completed. Just flips status. Both local and cloud now check
+  `completed_at` to distinguish first-completion from re-completion.
+
+  Cloud-side fix lives in
+  `supabase/migrations/20260507120000_complete_idempotency.sql` —
+  apply via Supabase SQL Editor before this build's behavior is
+  visible to cloud users. (Local-mode users get the fix automatically
+  on next reload.)
+
+### Changed
+
+- **Completed nodes are now obviously green.** The previous fill
+  `#0e2a14` was so close in luminance to the available navy `#161b3a`
+  that completed nodes blended into the grid. Bumped to `#1f4d28` —
+  reads as clearly green at a glance. Also replaced the small `✓`
+  glyph in the corner with a chunky lime `✓ DONE` chip with a glow,
+  so "this is complete" can't be missed even when scanning a busy
+  zone.
+
+- **Button text is now properly centered.** `.np-btn` had asymmetric
+  vertical padding (6px top / 8px bottom on `np-btn-md`, etc.) from
+  an earlier attempt to compensate for the pixel font's visual
+  baseline. In practice short labels like START and COMPLETE read as
+  low-hung. Switched to symmetric padding (7px / 7px) plus
+  `line-height: 1` (the pixel font has no descenders), so flexbox
+  centering puts text exactly in the middle of the button box.
+
 ## [0.23.4-beta.1] — 2026-05-07
 
 ### Changed

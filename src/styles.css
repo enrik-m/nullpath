@@ -291,7 +291,15 @@ textarea::placeholder {
   border-radius: 0;
 }
 
-/* Pixel button — raised that depresses on :active */
+/* Pixel button — raised that depresses on :active.
+ *
+ * Vertical padding is symmetric. An earlier version used 6px top /
+ * 8px bottom thinking the pixel font's baseline needed visual
+ * compensation; in practice the labels read as low-hung for short
+ * buttons like START / COMPLETE. Symmetric padding plus
+ * `line-height: 1` (the pixel font has no descenders to make room
+ * for) keeps text vertically centered for both icon-only and
+ * icon+text variants. */
 .np-btn {
   display: inline-flex;
   align-items: center;
@@ -301,7 +309,8 @@ textarea::placeholder {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 6px 14px 8px;
+  padding: 7px 14px;
+  line-height: 1;
   background: var(--color-bg-3);
   color: var(--color-fg-0);
   border: 2px solid var(--color-border-default);
@@ -390,15 +399,15 @@ textarea::placeholder {
 }
 
 .np-btn-sm {
-  padding: 4px 10px 6px;
+  padding: 5px 10px;
   font-size: 11px;
 }
 .np-btn-md {
-  padding: 6px 14px 8px;
+  padding: 7px 14px;
   font-size: 12px;
 }
 .np-btn-lg {
-  padding: 8px 18px 10px;
+  padding: 9px 18px;
   font-size: 13px;
 }
 

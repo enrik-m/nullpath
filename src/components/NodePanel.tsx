@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import * as db from "../db";
 import type { NodeRow, NodeResourceRow, ResourceKind } from "../db/types";
-import { useUi, xpForCompletingNode } from "../store";
+import { useUi } from "../store";
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
 import { RESOURCE_KIND_LABEL, RESOURCE_KIND_COLOR, RESOURCE_KINDS } from "../lib/resourceKinds";
@@ -104,37 +104,76 @@ export function NodePanel({ nodeId, accent, onClose, onChanged }: NodePanelProps
     setNoteSaved(true);
   }
 
-  // Status actions
+  // Status actions.
+  //
+  // `statusBusyRef` is a ref-based latch that ignores rapid follow-up
+  // clicks while an in-flight status transition is awaiting. Without it
+  // a user double-clicking COMPLETE before the panel reloads could fire
+  // the handler twice, which used to double-award XP / re-bump the
+  // streak day. The data layer is now also idempotent (see
+  // setNodeStatus in db/local.ts and complete_node in
+  // supabase/migrations/20260507120000_complete_idempotency.sql), so
+  // this latch is belt-and-braces — but it also keeps the visible
+  // "busy" disabled state on the button predictable.
+  const statusBusyRef = useRef(false);
+
+  async function withStatusLatch(fn: () => Promise<void>) {
+    if (statusBusyRef.current) return;
+    statusBusyRef.current = true;
+    try {
+      await fn();
+    } finally {
+      statusBusyRef.current = false;
+    }
+  }
+
   async function markInProgress() {
     if (!node) return;
-    sfx.click();
-    await db.setNodeStatus(node.id, "in_progress");
-    await reload();
-    onChanged();
+    if (node.status === "in_progress") return;
+    await withStatusLatch(async () => {
+      sfx.click();
+      await db.setNodeStatus(node.id, "in_progress");
+      await reload();
+      onChanged();
+    });
   }
 
   async function markComplete() {
     if (!node) return;
-    sfx.complete();
-    const xp = xpForCompletingNode(node.depth);
-    await db.setNodeStatus(node.id, "complete");
-    await db.setNodeXp(node.id, (node.user_xp || 0) + xp);
-    await db.scheduleRefresher(node.id);
-    await db.recordCompletionDay();
-    await reload();
-    onChanged();
-    // Echo Mode prompt — fires immediately. The achievement engine is
-    // wired to db.onMutation in App.tsx so any unlocks queue behind this
-    // modal automatically; no manual dispatch needed.
-    showModal({ kind: "echo-prompt", nodeId: node.id });
+    // View-layer idempotency guard. The data layer's also idempotent,
+    // but bailing here means we don't even hit the network on a
+    // redundant click + don't pop the echo modal a second time.
+    if (node.status === "complete") return;
+    await withStatusLatch(async () => {
+      const wasFreshComplete = node.completed_at === null;
+      sfx.complete();
+      // Single atomic call — db.setNodeStatus("complete") now handles
+      // XP award + refresher schedule + streak day record + completed_at
+      // stamp inside one transaction in BOTH backends. No more separate
+      // setNodeXp / scheduleRefresher / recordCompletionDay calls; those
+      // were causing double-credits in cloud mode (where complete_node
+      // had already done all of it).
+      await db.setNodeStatus(node.id, "complete");
+      await reload();
+      onChanged();
+      // Echo prompt only on the FIRST genuine completion; re-completing
+      // an already-completed-then-reopened node skips the prompt since
+      // the user already wrote (or skipped) their echo for it.
+      if (wasFreshComplete) {
+        showModal({ kind: "echo-prompt", nodeId: node.id });
+      }
+    });
   }
 
   async function markAvailable() {
     if (!node) return;
-    sfx.click();
-    await db.setNodeStatus(node.id, "available");
-    await reload();
-    onChanged();
+    if (node.status === "available") return;
+    await withStatusLatch(async () => {
+      sfx.click();
+      await db.setNodeStatus(node.id, "available");
+      await reload();
+      onChanged();
+    });
   }
 
   // Resource actions

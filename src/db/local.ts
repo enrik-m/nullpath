@@ -146,14 +146,67 @@ export async function getNodeChildren(parentId: string): Promise<NodeRow[]> {
   ]);
 }
 
+/** XP table for first-time completions. Mirrors xpForCompletingNode in
+ * src/store.ts — duplicated here so the data layer can settle XP
+ * atomically inside setNodeStatus("complete") without an import cycle
+ * back to the UI store. Keep in lockstep with store.ts.
+ */
+const COMPLETE_XP: Record<NodeRow["depth"], number> = {
+  intro: 60,
+  std: 120,
+  adv: 240,
+  res: 480,
+};
+
 export async function setNodeStatus(nodeId: string, status: NodeStatus): Promise<void> {
   const conn = await db();
   if (status === "complete") {
-    await conn.execute("UPDATE node SET status = $1, completed_at = $2 WHERE id = $3", [
-      status,
-      nowIso(),
-      nodeId,
-    ]);
+    // Atomic complete transition. Three idempotency guards:
+    //   1. If the row is already complete, no-op. Spamming the COMPLETE
+    //      button can't double-award XP / re-bump streak / re-fire
+    //      achievements.
+    //   2. If the row was previously completed (completed_at != NULL)
+    //      and re-opened to `available`, re-completing only flips the
+    //      status — XP isn't awarded again, streak day isn't bumped,
+    //      refresher row isn't reset.
+    //   3. Only the FIRST transition from a never-completed state
+    //      runs the full bookkeeping (XP award, refresher schedule,
+    //      streak day record).
+    //
+    // This mirrors the cloud `complete_node` RPC's behavior, so a
+    // user clicking COMPLETE 10 times sees exactly one set of unlocks.
+    const rows = await conn.select<NodeRow[]>("SELECT * FROM node WHERE id = $1", [nodeId]);
+    const row = rows[0];
+    if (!row) return;
+    if (row.status === "complete") {
+      return; // already complete — true no-op
+    }
+    if (row.completed_at !== null) {
+      // Re-complete after re-open: just flip status, no awards.
+      await conn.execute("UPDATE node SET status = 'complete' WHERE id = $1", [nodeId]);
+    } else {
+      // First-time complete — atomic XP + status + completed_at.
+      const xp = COMPLETE_XP[row.depth] ?? 0;
+      await conn.execute(
+        "UPDATE node SET status = 'complete', completed_at = $1, user_xp = user_xp + $2 WHERE id = $3",
+        [nowIso(), xp, nodeId],
+      );
+      // Refresher row + streak day, inlined from scheduleRefresher /
+      // recordCompletionDay so callers don't need to (and shouldn't)
+      // call those separately.
+      const due = refresherDueDate(0);
+      await conn.execute(
+        `INSERT INTO refresher (node_id, streak, due_at) VALUES ($1, 0, $2)
+         ON CONFLICT(node_id) DO UPDATE SET streak = 0, due_at = excluded.due_at`,
+        [nodeId, due],
+      );
+      const day = localDayKey();
+      await conn.execute(
+        `INSERT INTO streak_day (day, sessions) VALUES ($1, 1)
+         ON CONFLICT(day) DO UPDATE SET sessions = sessions + 1`,
+        [day],
+      );
+    }
   } else if (status === "in_progress") {
     await conn.execute(
       "UPDATE node SET status = $1, started_at = COALESCE(started_at, $2) WHERE id = $3",
