@@ -6,58 +6,7 @@
     <title>Privacy — Nullpath</title>
     <meta name="description" content="Privacy policy for nullpath." />
     <meta name="robots" content="index, follow" />
-    <style>
-      :root {
-        --bg: #0a0e0e;
-        --bg-2: #111717;
-        --fg-0: #e6f2f2;
-        --fg-1: #a5b8b8;
-        --fg-2: #788888;
-        --accent: #5af0c8;
-        --border: #243030;
-      }
-      * { box-sizing: border-box; }
-      html, body { background: var(--bg); color: var(--fg-1); margin: 0; }
-      body {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        font-size: 14px;
-        line-height: 1.7;
-        padding: 48px 24px;
-      }
-      .wrap { max-width: 760px; margin: 0 auto; }
-      h1, h2 {
-        color: var(--fg-0);
-        font-family: ui-monospace, monospace;
-        letter-spacing: 0.02em;
-      }
-      h1 { font-size: 28px; margin: 0 0 8px; }
-      h2 { font-size: 16px; margin: 36px 0 8px; padding-top: 14px; border-top: 1px solid var(--border); }
-      p, li { color: var(--fg-1); }
-      a { color: var(--accent); text-decoration: none; }
-      a:hover { text-decoration: underline; }
-      code, strong { color: var(--fg-0); }
-      strong { font-weight: 600; }
-      em { color: var(--fg-2); font-style: normal; font-size: 12px; display: block; margin-bottom: 24px; }
-      ul { padding-left: 18px; }
-      .crumb {
-        font-size: 11px;
-        letter-spacing: 0.3em;
-        text-transform: uppercase;
-        color: var(--fg-2);
-        margin-bottom: 16px;
-      }
-      .crumb a { color: var(--fg-2); }
-      .crumb a:hover { color: var(--fg-0); }
-      footer {
-        margin-top: 64px;
-        padding-top: 24px;
-        border-top: 1px solid var(--border);
-        font-size: 11px;
-        color: var(--fg-2);
-      }
-      footer a { color: var(--fg-2); margin-right: 16px; }
-      footer a:hover { color: var(--fg-0); }
-    </style>
+    <link rel="stylesheet" href="/legal.css" />
   </head>
   <body>
     <div class="wrap">
@@ -66,7 +15,7 @@
       </div>
 
       <h1>Privacy Policy</h1>
-      <em>Last updated: 2026-05-06.</em>
+      <em>Last updated: 2026-05-06</em>
 
       <p>
         This is the privacy policy for <strong>nullpath</strong>, a single-page
@@ -118,8 +67,10 @@
           product is built around — we couldn't sync it without storing it.
         </li>
         <li>
-          <strong>No email address</strong>, <strong>no IP address logging</strong>,
-          <strong>no analytics</strong>, <strong>no advertising identifiers</strong>,
+          <strong>No email address</strong>,
+          <strong>no IP address logging</strong>,
+          <strong>no analytics</strong>,
+          <strong>no advertising identifiers</strong>,
           <strong>no third-party trackers</strong>. We do not run Google
           Analytics, Plausible, Sentry, PostHog, or any similar product against
           the app.
@@ -156,22 +107,24 @@
         </li>
         <li>
           <strong>For incident response.</strong> If something goes
-          catastrophically wrong (e.g. a security breach, see below), we may
-          need to inspect specific rows or operational logs to understand what
-          happened.
+          catastrophically wrong, we may need to inspect specific rows or
+          operational logs to understand what happened.
         </li>
       </ul>
 
       <h2>How long we keep it</h2>
       <p>
         As long as your account exists.
-        <strong>You can delete everything from Settings → Account → Delete
-          account</strong>
+        <strong
+          >You can delete everything from Settings → Account → Delete
+          account</strong
+        >
         at any time, which wipes every row associated with your user ID
         immediately. You can also revoke our OAuth grant from
-        <a href="https://github.com/settings/applications">github.com/settings/applications</a>,
-        which prevents us from re-authenticating you but doesn't itself delete
-        your data — use the in-app delete for that.
+        <a href="https://github.com/settings/applications"
+          >github.com/settings/applications</a
+        >, which prevents us from re-authenticating you but doesn't itself
+        delete your data — use the in-app delete for that.
       </p>
 
       <h2>Where it lives</h2>
@@ -185,41 +138,9 @@
           service. Region: <strong>eu-central-1</strong>.
         </li>
       </ul>
-      <p>We don't transfer your data anywhere else. There are no other sub-processors.</p>
-
-      <h2>Security</h2>
-      <ul>
-        <li>
-          Every per-user row in the database is protected by Postgres
-          row-level security. The policy is
-          <code>auth.uid() = user_id</code> — even if a SQL injection landed
-          in a client-issued query, it could not read or modify another user's
-          rows.
-        </li>
-        <li>
-          We never see your GitHub password or any 2FA secret. Authentication
-          goes directly to GitHub.
-        </li>
-        <li>
-          The site sets a strict Content-Security-Policy (no inline scripts,
-          no eval, locked-down origin allowlist) and ships no third-party
-          scripts.
-        </li>
-        <li>All transport is HTTPS (HSTS preloaded).</li>
-      </ul>
       <p>
-        We are a small project. We don't have a SOC2, we are not certified
-        against ISO 27001, and we make no claims of enterprise-grade security
-        posture. If your threat model requires those certifications, please
-        self-host instead.
-      </p>
-
-      <h2>Breach notification</h2>
-      <p>
-        If we become aware of a breach affecting your data, we will publish a
-        notice on the nullpath repository's GitHub Issues and on the home
-        page, and (if your jurisdiction requires it) attempt to contact you
-        via the email associated with your GitHub account.
+        We don't transfer your data anywhere else. There are no other
+        sub-processors.
       </p>
 
       <h2>Your rights</h2>

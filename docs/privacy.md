@@ -88,31 +88,6 @@ data — use the in-app delete for that.
 We don't transfer your data anywhere else. There are no other
 sub-processors.
 
-## Security
-
-- Every per-user row in the database is protected by Postgres
-  row-level security. The policy is `auth.uid() = user_id` — even if
-  a SQL injection landed in a client-issued query, it could not read
-  or modify another user's rows.
-- We never see your GitHub password or any 2FA secret. Authentication
-  goes directly to GitHub.
-- The site sets a strict Content-Security-Policy (no inline scripts,
-  no eval, locked-down origin allowlist) and ships no third-party
-  scripts.
-- All transport is HTTPS (HSTS preloaded).
-
-We are a small project. We don't have a SOC2, we are not certified
-against ISO 27001, and we make no claims of enterprise-grade security
-posture. If your threat model requires those certifications, please
-self-host instead.
-
-## Breach notification
-
-If we become aware of a breach affecting your data, we will publish a
-notice on the nullpath repository's GitHub Issues and on the home page,
-and (if your jurisdiction requires it) attempt to contact you via the
-email associated with your GitHub account.
-
 ## Your rights
 
 Depending on where you live (GDPR, CCPA, others), you may have rights

@@ -3,14 +3,17 @@
  * isn't authenticated yet.
  *
  * GitHub OAuth only (Q1 spec). No passwords, no email signup, no MFA
- * UI — all of that is GitHub's problem. The button kicks off the OAuth
- * dance; Supabase's `detectSessionInUrl` finishes the flow when the
- * user lands back on our origin with a `?code=` query param.
+ * UI — all of that is GitHub's problem. Visual aesthetic mirrors
+ * BootView (np-display title, np-pixel chrome, scanline-friendly)
+ * so the auth gate feels like a continuation of the app rather than
+ * a third-party login form.
  */
 
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, ShieldCheck } from "lucide-react";
+import { signInWithGitHub } from "../lib/supabase";
+import { toast } from "../lib/toast";
 
 /**
  * GitHub octocat mark, inlined so we don't have to ship a logo asset
@@ -24,8 +27,6 @@ function GithubMark({ className }: { className?: string }) {
     </svg>
   );
 }
-import { signInWithGitHub } from "../lib/supabase";
-import { toast } from "../lib/toast";
 
 export function SignInView() {
   const [busy, setBusy] = useState(false);
@@ -44,33 +45,69 @@ export function SignInView() {
   }
 
   return (
-    <div className="h-screen w-screen flex items-center justify-center px-6 bg-[var(--bg)]">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="w-[440px] max-w-full"
-      >
-        <div className="font-mono text-[var(--fg-2)] text-xs mb-6">{">"}_ nullpath / sign-in</div>
+    <div className="h-screen w-screen flex items-center justify-center px-6">
+      <div className="w-[520px] max-w-full">
+        {/* Pixel logo — same treatment as BootView */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: "linear" }}
+          className="text-center mb-8"
+        >
+          <div
+            className="np-display text-4xl np-flicker"
+            data-text="NULLPATH"
+            style={{
+              background:
+                "linear-gradient(180deg, var(--color-cyan) 0%, var(--color-magenta) 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              textShadow: "0 0 20px var(--color-cyan-glow)",
+            }}
+          >
+            <span className="np-glitch-text" data-text="NULLPATH">
+              NULLPATH
+            </span>
+          </div>
+          <div className="np-screen text-[10px] tracking-[0.4em] text-[var(--color-fg-3)] mt-3">
+            ◇ AUTHENTICATE OPERATOR ◇
+          </div>
+        </motion.div>
 
-        <h1 className="font-pixel text-2xl text-[var(--fg-1)] mb-3">Sign in to nullpath</h1>
+        {/* Boot-log style intro */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="np-pixel-inset p-4 np-mono text-[13px] leading-[1.7] mb-6"
+        >
+          <div className="text-[var(--color-fg-2)]">{">"} link.identity.github</div>
+          <div className="text-[var(--color-fg-2)]">{">"} require.consent</div>
+          <div className="text-[var(--color-fg-1)]">
+            sync.progress · sync.notes · sync.achievements
+          </div>
+          <div className="text-[var(--color-cyan)]">
+            handshake delegated to github.com{" "}
+            <span className="np-blink inline-block w-[7px] h-[12px] bg-[var(--color-cyan)] align-middle ml-1" />
+          </div>
+        </motion.div>
 
-        <p className="text-sm text-[var(--fg-2)] leading-relaxed mb-8">
-          Your progress, notes, achievements and bounty ledger sync to your account. No password —
-          auth is delegated to GitHub, with whatever MFA you've already configured there. We never
-          see your password.
-        </p>
-
-        <button
+        {/* GitHub sign-in button — themed to feel like np-pixel chrome */}
+        <motion.button
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.2 }}
           type="button"
           onClick={onSignIn}
           disabled={busy}
-          className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--fg-1)] text-[var(--bg)] font-pixel text-sm hover:bg-[var(--fg-1)]/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          className="np-pixel w-full flex items-center justify-center gap-3 px-4 py-3 np-mono text-[13px] tracking-[0.15em] uppercase text-[var(--color-fg-0)] hover:border-[var(--color-cyan)] hover:text-[var(--color-cyan)] hover:np-glow-cyan disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          style={{ background: "var(--color-bg-1)" }}
         >
           {busy ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-              <span>Redirecting to GitHub…</span>
+              <span>Redirecting…</span>
             </>
           ) : (
             <>
@@ -78,44 +115,41 @@ export function SignInView() {
               <span>Continue with GitHub</span>
             </>
           )}
-        </button>
+        </motion.button>
 
-        <ul className="mt-8 space-y-2 text-xs text-[var(--fg-2)]">
+        {/* Trust hints — mono, low-contrast, three lines */}
+        <motion.ul
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.35 }}
+          className="mt-6 space-y-1.5 np-mono text-[11px] text-[var(--color-fg-2)]"
+        >
           <li className="flex items-start gap-2">
-            <ShieldCheck className="w-3.5 h-3.5 mt-0.5 text-[var(--accent)]" aria-hidden />
-            <span>
-              We store your GitHub user-id and login. We don't read your repositories, email, or any
-              other GitHub data.
-            </span>
+            <ShieldCheck className="w-3 h-3 mt-0.5 text-[var(--color-lime)] shrink-0" aria-hidden />
+            <span>Stored: GitHub user-id + login. Not stored: repos, email, anything else.</span>
           </li>
           <li className="flex items-start gap-2">
-            <ShieldCheck className="w-3.5 h-3.5 mt-0.5 text-[var(--accent)]" aria-hidden />
-            <span>
-              All per-user data is row-level-security isolated; another account literally can't
-              query your rows.
-            </span>
+            <ShieldCheck className="w-3 h-3 mt-0.5 text-[var(--color-lime)] shrink-0" aria-hidden />
+            <span>Per-user data is RLS-isolated. Other accounts cannot query your rows.</span>
           </li>
           <li className="flex items-start gap-2">
-            <ShieldCheck className="w-3.5 h-3.5 mt-0.5 text-[var(--accent)]" aria-hidden />
-            <span>
-              You can delete everything from Settings. Account deletion also revokes the OAuth
-              grant.
-            </span>
+            <ShieldCheck className="w-3 h-3 mt-0.5 text-[var(--color-lime)] shrink-0" aria-hidden />
+            <span>Settings → Account → Delete wipes everything. One click.</span>
           </li>
-        </ul>
+        </motion.ul>
 
-        <div className="mt-10 flex items-center gap-4 text-[10px] text-[var(--fg-3,var(--fg-2))]">
-          <a
-            href="/privacy.html"
-            className="hover:text-[var(--fg-1)] underline-offset-4 hover:underline"
-          >
+        {/* Footer links */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.5 }}
+          className="mt-10 flex items-center justify-center gap-6 np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg-3)]"
+        >
+          <a href="/privacy.html" className="hover:text-[var(--color-cyan)] transition-colors">
             Privacy
           </a>
           <span aria-hidden>·</span>
-          <a
-            href="/terms.html"
-            className="hover:text-[var(--fg-1)] underline-offset-4 hover:underline"
-          >
+          <a href="/terms.html" className="hover:text-[var(--color-cyan)] transition-colors">
             Terms
           </a>
           <span aria-hidden>·</span>
@@ -123,12 +157,12 @@ export function SignInView() {
             href="https://github.com/enrik-m/nullpath"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[var(--fg-1)] underline-offset-4 hover:underline"
+            className="hover:text-[var(--color-cyan)] transition-colors"
           >
             GitHub
           </a>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }
