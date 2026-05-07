@@ -35,14 +35,21 @@ In cloud mode, we collect:
   **GitHub login** (the public username you chose on GitHub). We use
   the user ID to scope data to your account; we display the login as
   your handle.
+- **Your GitHub primary email address.** The OAuth flow we use grants
+  read access to your email, and Supabase (our auth provider) stores
+  it in the user record as part of how its authentication system
+  identifies accounts. We don't display it anywhere in the app, don't
+  send messages to it, and don't expose it to other users. If you'd
+  rather we never see it, set your GitHub primary email to private in
+  your GitHub settings before signing in.
 - **Whatever you type into nullpath**: node completions, free-text
   notes, attached resource URLs and titles, bounty submissions,
   preferences, streak history. This is the data the product is built
   around — we couldn't sync it without storing it.
-- **No email address**, **no IP address logging**, **no analytics**,
-  **no advertising identifiers**, **no third-party trackers**. We do
-  not run Google Analytics, Plausible, Sentry, PostHog, or any
-  similar product against the app.
+- **No IP address logging**, **no analytics**, **no advertising
+  identifiers**, **no third-party trackers**. We do not run Google
+  Analytics, Plausible, Sentry, PostHog, or any similar product against
+  the app.
 
 Vercel (our hosting provider) and Supabase (our database / auth
 provider) keep their own operational logs, including IP addresses of
@@ -54,9 +61,11 @@ that exports them.
 
 To make the negative space explicit:
 
-- We don't read your GitHub repositories, organizations, email, or
-  any GitHub data beyond your user ID and login. The OAuth scope we
-  request is the default `read:user`, nothing else.
+- We don't read your GitHub repositories, organizations, gists,
+  followers, or any other GitHub data beyond your user ID, login, and
+  primary email. The OAuth scope we request is the default
+  `read:user` + email — nothing that touches code, repos, or other
+  people's data.
 - We don't fingerprint your browser.
 - We don't sell, rent, share, or syndicate any of your data to anyone.
 

@@ -142,16 +142,11 @@ DATA, OR USE, ARISING OUT OF OR IN CONNECTION WITH THE SERVICE OR
 THESE TERMS, WHETHER IN CONTRACT, TORT, OR OTHERWISE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
-OUR TOTAL LIABILITY FOR ANY CLAIM ARISING OUT OF THESE TERMS OR THE
-SERVICE IS LIMITED TO **TEN UNITED STATES DOLLARS (US$10)**, OR THE
-EQUIVALENT IN YOUR LOCAL CURRENCY. (We charge nothing for the
-service; this cap exists to make the legal posture clean, not to
-quantify a real refund mechanism.)
-
-Some jurisdictions don't allow exclusion of certain warranties or
-limitation of certain damages. In those jurisdictions, the above
-disclaimers and limitations apply to the maximum extent permitted by
-your local law.
+Nullpath is provided free of charge, with no payment ever flowing
+from you to us. Where applicable law permits, our liability to you
+for any claim arising out of the service is therefore zero. Where
+applicable law mandates a non-zero floor, this section applies to
+the maximum extent permitted by your local law and no further.
 
 ## 11. Governing law
 

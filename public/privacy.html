@@ -61,15 +61,22 @@
           display the login as your handle.
         </li>
         <li>
+          <strong>Your GitHub primary email address</strong>. The OAuth flow
+          we use grants read access to your email, and Supabase (our auth
+          provider) stores it in the user record as part of how its
+          authentication system identifies accounts. We don't display it
+          anywhere in the app, don't send messages to it, and don't expose it
+          to other users. If you'd rather we never see it, set your GitHub
+          primary email to private in your GitHub settings before signing in.
+        </li>
+        <li>
           <strong>Whatever you type into nullpath</strong>: node completions,
           free-text notes, attached resource URLs and titles, bounty
           submissions, preferences, streak history. This is the data the
           product is built around — we couldn't sync it without storing it.
         </li>
         <li>
-          <strong>No email address</strong>,
-          <strong>no IP address logging</strong>,
-          <strong>no analytics</strong>,
+          <strong>No IP address logging</strong>, <strong>no analytics</strong>,
           <strong>no advertising identifiers</strong>,
           <strong>no third-party trackers</strong>. We do not run Google
           Analytics, Plausible, Sentry, PostHog, or any similar product against
@@ -88,9 +95,11 @@
       <p>To make the negative space explicit:</p>
       <ul>
         <li>
-          We don't read your GitHub repositories, organizations, email, or any
-          GitHub data beyond your user ID and login. The OAuth scope we request
-          is the default <code>read:user</code>, nothing else.
+          We don't read your GitHub repositories, organizations, gists,
+          followers, or any other GitHub data beyond your user ID, login, and
+          primary email. The OAuth scope we request is the default
+          <code>read:user</code> + email — nothing that touches code, repos,
+          or other people's data.
         </li>
         <li>We don't fingerprint your browser.</li>
         <li>
