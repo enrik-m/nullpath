@@ -1,8 +1,13 @@
 /**
  * ZoneView — node graph for a single zone, rendered with @xyflow/react.
  *
- * Top-level nodes are arranged in a force-friendly grid; sub-nodes orbit
- * their parent. Clicking a node opens the side panel.
+ * Top-level nodes are packed in a √N-ish grid with adaptive column
+ * widths and row heights; sub-nodes sit in a horizontal grid directly
+ * below their parent, centered within the parent's allocated cell. By
+ * construction no two nodes can overlap regardless of fan-out — see
+ * `layoutNodes()` below for the full footprint-aware algorithm.
+ *
+ * Clicking a node opens the side panel.
  */
 
 import { useEffect, useMemo, useState, useCallback } from "react";
