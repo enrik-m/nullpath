@@ -48,3 +48,7 @@ Desktop.ini
 *.p12
 *.key
 *.keystore
+
+# Dev-only zone-layout screenshots (re-emitted by scripts/verify-zone-layout.mjs)
+docs/_zone_check/
+docs/_demo_tmp/

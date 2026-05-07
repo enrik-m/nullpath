@@ -7,6 +7,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Pre-1.0 releases may contain breaking changes within minor bumps; the
 project hasn't reached a stability commitment yet.
 
+## [0.23.1-beta.1] — 2026-05-07
+
+### Fixed
+
+- **ZoneView layout no longer overlaps prolific parents.** The previous
+  layout placed sub-nodes in an orbit at radius 130 around their
+  parent, with parents themselves on a fixed 260×200 grid. Once any
+  parent had more than ~5 children (e.g. W01 SQL Injection with 15
+  sub-techniques, X01 with 12, API1 with 10), the orbit ring spilled
+  into the neighboring column's cell — children stacked on top of
+  unrelated parents, edges crossed at random, and the graph became
+  unreadable in zones with deep parents.
+
+  Replaced with a footprint-aware tree layout:
+  - Each top-level node's footprint = `max(card width, kid block width)`
+    where the kid block is up to 6 wide × N rows tall
+  - Top-level grid columns expand to fit the widest footprint in that
+    column; rows expand to fit the tallest
+  - Children sit in a horizontal grid directly below their parent,
+    centered horizontally within the parent's allocated cell
+  - Adjacent cells are separated by 56px / 72px gaps, so by
+    construction no two nodes can overlap
+
+  Verified by `scripts/verify-zone-layout.mjs` which captures Z01,
+  Z04, Z11 and runs an O(n²) bounding-box overlap check — 0 overlaps
+  on the worst-case zone (Z11 with 39 visible nodes).
+
 ## [0.23.0-beta.1] — 2026-05-06
 
 The "cloud accounts" release. Adds an opt-in Supabase backend with

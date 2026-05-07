@@ -32,57 +32,147 @@ interface ZoneViewProps {
 }
 
 // ---------------------------------------------------------------------------
-// Layout: top-level nodes in a grid, sub-nodes orbiting their parent.
+// Layout: footprint-aware tree. Each top-level node is allocated
+// horizontal space equal to its widest "kid block"; children sit in a
+// horizontal row directly below the parent (wrapping into multiple rows
+// when the kid count exceeds MAX_KIDS_PER_ROW). Top-level nodes are
+// arranged in a √N-ish grid, but column widths and row heights expand
+// independently to accommodate each cell's footprint — so a parent
+// with 15 kids never bleeds into the neighboring column.
+//
+// Replaces an earlier "orbit at radius 130" layout that broke once
+// any parent had more than ~5 children, since the orbit ring
+// (260px diameter) overlapped both the next column (260px parent
+// spacing) and the next row (200px parent spacing).
+//
+// Card dimensions match SkillNode's CSS:
+//   top-level: ~210w × ~95h with name + gloss + id row
+//   sub:       ~150w × ~60h with name + id row
+//
+// All overlap is provably impossible: by construction,
+//   colW[c] = max(TOP_W, max kid-block-width across cells in column c)
+//   rowH[r] = max footprint height across cells in row r
+// so a parent's kids fit within its cell, and adjacent cells are
+// separated by COL_GAP / ROW_GAP.
 // ---------------------------------------------------------------------------
+
+const TOP_W = 220;
+const TOP_H = 100;
+const SUB_W = 160;
+const SUB_H = 72;
+const KIDS_GAP_X = 16;
+const KIDS_GAP_Y = 16;
+const PARENT_TO_KIDS_GAP = 44;
+const COL_GAP = 56;
+const ROW_GAP = 72;
+const MAX_KIDS_PER_ROW = 6;
+
+interface ParentFootprint {
+  /** Bounding-box width of the parent + its kid block (whichever wider). */
+  width: number;
+  /** Bounding-box height including the gap to kids and any kid rows. */
+  height: number;
+  /** How many kids per row (capped at MAX_KIDS_PER_ROW). */
+  kidsPerRow: number;
+  /** How many kid rows (0 if no kids). */
+  kidRows: number;
+}
+
 function layoutNodes(rows: NodeRow[]): Node[] {
   const tops = rows.filter((r) => !r.parent_id);
-  const subs = rows.filter((r) => r.parent_id);
 
-  const cols = Math.max(3, Math.ceil(Math.sqrt(tops.length)));
-  const dx = 260;
-  const dy = 200;
-
-  const nodes: Node[] = [];
-
-  // Top-level grid
-  tops.forEach((row, i) => {
-    const c = i % cols;
-    const r = Math.floor(i / cols);
-    nodes.push({
-      id: row.id,
-      type: "skill",
-      position: { x: c * dx, y: r * dy },
-      data: { row, isSub: false },
-    });
-  });
-
-  // Sub-nodes orbit
+  // Bucket subs by parent_id, preserving sort_order via the input order.
   const subsByParent = new Map<string, NodeRow[]>();
-  for (const s of subs) {
-    if (!s.parent_id) continue;
-    const arr = subsByParent.get(s.parent_id) ?? [];
-    arr.push(s);
-    subsByParent.set(s.parent_id, arr);
+  for (const r of rows) {
+    if (!r.parent_id) continue;
+    const arr = subsByParent.get(r.parent_id) ?? [];
+    arr.push(r);
+    subsByParent.set(r.parent_id, arr);
   }
 
-  for (const [parentId, kids] of subsByParent) {
-    const parent = nodes.find((n) => n.id === parentId);
-    if (!parent) continue;
-    const radius = 130;
-    const startAngle = -Math.PI / 2;
-    kids.forEach((k, i) => {
-      const angle = startAngle + (i * (Math.PI * 2)) / Math.max(kids.length, 5);
+  // Phase 1: footprints.
+  const footprints = new Map<string, ParentFootprint>();
+  for (const top of tops) {
+    const kids = subsByParent.get(top.id) ?? [];
+    const kidsPerRow = Math.min(kids.length, MAX_KIDS_PER_ROW);
+    const kidRows = kids.length === 0 ? 0 : Math.ceil(kids.length / MAX_KIDS_PER_ROW);
+    const kidsBlockW = kidsPerRow === 0 ? 0 : kidsPerRow * SUB_W + (kidsPerRow - 1) * KIDS_GAP_X;
+    const kidsBlockH = kidRows === 0 ? 0 : kidRows * SUB_H + (kidRows - 1) * KIDS_GAP_Y;
+    const width = Math.max(TOP_W, kidsBlockW);
+    const height = TOP_H + (kidRows === 0 ? 0 : PARENT_TO_KIDS_GAP + kidsBlockH);
+    footprints.set(top.id, { width, height, kidsPerRow, kidRows });
+  }
+
+  // Phase 2: pack tops into a √N-ish grid; compute col widths + row heights.
+  const cols = Math.max(3, Math.ceil(Math.sqrt(tops.length)));
+  const colW = new Array<number>(cols).fill(TOP_W);
+  const rowH: number[] = [];
+  tops.forEach((top, i) => {
+    const c = i % cols;
+    const r = Math.floor(i / cols);
+    const fp = footprints.get(top.id);
+    if (!fp) return;
+    if (fp.width > colW[c]!) colW[c] = fp.width;
+    const cur = rowH[r] ?? TOP_H;
+    if (fp.height > cur) rowH[r] = fp.height;
+    else if (rowH[r] === undefined) rowH[r] = TOP_H;
+  });
+
+  // Cumulative pixel offsets for each column / row slot.
+  const colX: number[] = [];
+  let xAcc = 0;
+  for (let i = 0; i < cols; i++) {
+    colX.push(xAcc);
+    xAcc += colW[i]! + COL_GAP;
+  }
+  const rowY: number[] = [];
+  let yAcc = 0;
+  for (let i = 0; i < rowH.length; i++) {
+    rowY.push(yAcc);
+    yAcc += rowH[i]! + ROW_GAP;
+  }
+
+  // Phase 3: position parents centered horizontally in their cells, kids
+  // in a left-to-right grid below — also centered horizontally.
+  const nodes: Node[] = [];
+  tops.forEach((top, i) => {
+    const c = i % cols;
+    const r = Math.floor(i / cols);
+    const fp = footprints.get(top.id);
+    if (!fp) return;
+    const cellLeft = colX[c]!;
+    const cellTop = rowY[r]!;
+    const cellCenterX = cellLeft + colW[c]! / 2;
+    const parentX = cellCenterX - TOP_W / 2;
+
+    nodes.push({
+      id: top.id,
+      type: "skill",
+      position: { x: parentX, y: cellTop },
+      data: { row: top, isSub: false },
+    });
+
+    const kids = subsByParent.get(top.id) ?? [];
+    if (kids.length === 0) return;
+
+    const kidsBlockW = fp.kidsPerRow * SUB_W + (fp.kidsPerRow - 1) * KIDS_GAP_X;
+    const kidsLeft = cellCenterX - kidsBlockW / 2;
+    const kidsTop = cellTop + TOP_H + PARENT_TO_KIDS_GAP;
+
+    kids.forEach((k, j) => {
+      const kc = j % fp.kidsPerRow;
+      const kr = Math.floor(j / fp.kidsPerRow);
       nodes.push({
         id: k.id,
         type: "skill",
         position: {
-          x: parent.position.x + Math.cos(angle) * radius,
-          y: parent.position.y + Math.sin(angle) * radius,
+          x: kidsLeft + kc * (SUB_W + KIDS_GAP_X),
+          y: kidsTop + kr * (SUB_H + KIDS_GAP_Y),
         },
         data: { row: k, isSub: true },
       });
     });
-  }
+  });
 
   return nodes;
 }
