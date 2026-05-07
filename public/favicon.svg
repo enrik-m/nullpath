@@ -1,18 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Nullpath favicon — chunky pixel-art "N" with a blinking-underscore-style
-  bar underneath. Reads at 16×16 because the strokes are 4 SVG-units wide
-  (out of a 32-unit viewBox), which renders as 2-pixel strokes at 16×16.
-  Rendered on a deep-void background (#07091a) matching the app theme.
+  Nullpath favicon — chunky "N" with a pixel-block underscore.
 
-  Built as <rect> primitives only — no fonts to embed, scales perfectly,
-  works as the inline favicon source for modern browsers.
+  Rendered crisp at every size from 16x16 (browser tab) up to 180x180
+  (iOS home-screen icon) by drawing the letter as filled <polygon>
+  shapes rather than rotated rects — no aliasing at small sizes,
+  no thinning at large sizes. Background is the app's deep-void
+  with the same chunky border treatment as np-pixel chrome.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- Background -->
-  <rect width="32" height="32" fill="#07091a" rx="3" />
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 32 32"
+  width="32"
+  height="32"
+>
+  <defs>
+    <!-- Cyan-to-magenta vertical gradient — matches the in-app
+         NULLPATH wordmark and the OG image. -->
+    <linearGradient id="np" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5cf2ff" />
+      <stop offset="100%" stop-color="#ff66e0" />
+    </linearGradient>
+  </defs>
 
-  <!-- Subtle chunky pixel border (1px inside the rounded rect) -->
+  <!-- Background tile with rounded corners + chunky inner border -->
+  <rect width="32" height="32" fill="#07091a" rx="4" />
   <rect
     x="1.5"
     y="1.5"
@@ -21,24 +33,28 @@
     fill="none"
     stroke="#3a4480"
     stroke-width="1"
-    rx="2"
+    rx="3"
   />
 
-  <!-- The "N" — three rects forming the letter, in cyan -->
-  <!-- Left vertical stroke -->
-  <rect x="7" y="7" width="4" height="14" fill="#5cf2ff" />
-  <!-- Diagonal — approximated as a rotated rect for crispness at 16×16 -->
-  <rect
-    x="11"
-    y="7"
-    width="4"
-    height="20"
-    fill="#5cf2ff"
-    transform="rotate(-35 13 17)"
-  />
-  <!-- Right vertical stroke (in magenta for the gradient feel) -->
-  <rect x="21" y="7" width="4" height="14" fill="#ff66e0" />
+  <!-- The "N" — three solid shapes forming a single readable letter:
+       1. Left vertical bar
+       2. Right vertical bar
+       3. Diagonal parallelogram connecting top-left of the right bar
+          to bottom-right of the left bar (so the diagonal "ducks
+          under" both verticals like a real N)
 
-  <!-- Blinking-underscore bar — the project's signature -->
-  <rect x="7" y="24" width="18" height="2" fill="#a8ff5c" />
+       Padding inside the tile: 7px from edges on the sides, 7px
+       top + 9px bottom (extra room for the underscore). -->
+  <g fill="url(#np)">
+    <!-- Left vertical bar: x=7..11, y=7..23 -->
+    <rect x="7" y="7" width="4" height="16" />
+    <!-- Right vertical bar: x=21..25, y=7..23 -->
+    <rect x="21" y="7" width="4" height="16" />
+    <!-- Diagonal: 4px-wide parallelogram from top of left bar to
+         bottom of right bar. Vertices clockwise from top-left. -->
+    <polygon points="11,7 15,7 25,23 21,23" />
+  </g>
+
+  <!-- Blinking-underscore signature bar — lime, sits below the N -->
+  <rect x="7" y="25" width="18" height="2" fill="#a8ff5c" />
 </svg>

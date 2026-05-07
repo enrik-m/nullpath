@@ -161,7 +161,7 @@
     font-size="22"
     fill="#7280b0"
     text-anchor="middle"
-  >Browser-native SQLite. Local-first. No cloud, no signup.</text>
+  >OWASP / CWE tagged · Sign in with GitHub or self-host · open source</text>
 
   <!-- Stat pills row -->
   <g transform="translate(0 490)">
@@ -199,5 +199,5 @@
     fill="#7280b0"
     text-anchor="end"
     letter-spacing="2"
-  >v0.22.0-beta.1</text>
+  >v0.23.0-beta.1</text>
 </svg>

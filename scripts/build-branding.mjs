@@ -51,3 +51,26 @@ await renderPng(
   32,
   32,
 );
+
+// PWA / Android home-screen icons referenced from site.webmanifest.
+// 192 and 512 are the canonical "Add to Home Screen" sizes — Android
+// picks one based on device DPI. The maskable version uses the
+// safe-zone-scaled SVG so circular / squircle masks don't clip.
+await renderPng(
+  resolve(root, "public/favicon.svg"),
+  resolve(root, "public/icon-192.png"),
+  192,
+  192,
+);
+await renderPng(
+  resolve(root, "public/favicon.svg"),
+  resolve(root, "public/icon-512.png"),
+  512,
+  512,
+);
+await renderPng(
+  resolve(root, "public/favicon-maskable.svg"),
+  resolve(root, "public/icon-maskable-512.png"),
+  512,
+  512,
+);

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maskable favicon source — same N as favicon.svg but with the
+  letter scaled into the central "safe zone" (40% radius around
+  center) so Android's circular / squircle / rounded-square mask
+  doesn't clip the design. Background fills the full canvas in
+  the deep-void color so the mask reveals brand color all the way
+  to the edge.
+
+  Spec reference: https://web.dev/articles/maskable-icon
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 32 32"
+  width="32"
+  height="32"
+>
+  <defs>
+    <linearGradient id="np-mask" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5cf2ff" />
+      <stop offset="100%" stop-color="#ff66e0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed background — the mask will crop this to whatever
+       shape the OS uses; we don't draw a border because borders
+       get clipped. -->
+  <rect width="32" height="32" fill="#07091a" />
+
+  <!-- N, scaled into central 60% safe zone (x=10..22, y=10..22) -->
+  <g fill="url(#np-mask)" transform="translate(2 2) scale(0.875)">
+    <rect x="10" y="10" width="3" height="12" />
+    <rect x="19" y="10" width="3" height="12" />
+    <polygon points="13,10 16,10 22,22 19,22" />
+  </g>
+
+  <!-- Underscore signature in the safe zone -->
+  <rect x="10" y="23" width="12" height="1.5" fill="#a8ff5c" />
+</svg>
