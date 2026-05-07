@@ -10,9 +10,13 @@
  *
  * Auth: GitHub OAuth only (Q1 spec — "no passkeys, entirely free,
  * blame goes to the IdP if a breach happens"). MFA is handled at
- * GitHub's side, so we never see passwords or 2FA secrets. The user
- * profile we persist is just (id, github_username) — no email lookup,
- * no contact form, nothing PII-sensitive on our side.
+ * GitHub's side, so we never see passwords or 2FA secrets. Supabase's
+ * GitHub provider grants `read:user` + `email` scopes by default; the
+ * resulting auth.users row holds (id, github_login, email). We never
+ * display the email in the app, never send anything to it, and never
+ * expose it to other users — it's there because Supabase's auth
+ * system uses it as a stable identifier. The privacy policy spells
+ * this out for the user.
  *
  * The `isCloudMode()` flag is determined at module load and frozen for
  * the session — every db helper reads it once and routes accordingly.

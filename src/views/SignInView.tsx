@@ -126,7 +126,9 @@ export function SignInView() {
         >
           <li className="flex items-start gap-2">
             <ShieldCheck className="w-3 h-3 mt-0.5 text-[var(--color-lime)] shrink-0" aria-hidden />
-            <span>Stored: GitHub user-id + login. Not stored: repos, email, anything else.</span>
+            <span>
+              Stored: GitHub user-id, login, primary email. Not stored: repos, orgs, anything else.
+            </span>
           </li>
           <li className="flex items-start gap-2">
             <ShieldCheck className="w-3 h-3 mt-0.5 text-[var(--color-lime)] shrink-0" aria-hidden />
