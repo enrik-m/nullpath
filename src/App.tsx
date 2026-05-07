@@ -20,6 +20,7 @@ import { Toaster } from "./components/Toaster";
 import { useDailyBriefing } from "./hooks/useDailyBriefing";
 import { primeAchievementEngine, startAchievementWatcher } from "./lib/achievements";
 import { startRealtimeWatcher } from "./lib/realtime";
+import { writePersistedRoute } from "./lib/routePersistence";
 import * as db from "./db";
 import { initAuth, isCloudMode, onAuthChange, currentUser, displayHandle } from "./lib/supabase";
 import type { User } from "@supabase/supabase-js";
@@ -157,6 +158,21 @@ function App() {
   useEffect(() => {
     const off = startRealtimeWatcher();
     return off;
+  }, []);
+
+  // Route persistence: mirror (route, selectedNodeId) into localStorage
+  // on every change so BootView can restore the user to where they
+  // left off after a refresh, instead of always shipping them back to
+  // the atlas. The boot route itself is filtered inside the writer
+  // (avoids restoring users into a perpetual boot animation).
+  useEffect(() => {
+    const unsub = useUi.subscribe((state, prev) => {
+      if (state.route === prev.route && state.selectedNodeId === prev.selectedNodeId) {
+        return;
+      }
+      writePersistedRoute(state.route, state.selectedNodeId);
+    });
+    return unsub;
   }, []);
 
   // DB init gate. The browser DB is local-first (sql.js + IndexedDB);

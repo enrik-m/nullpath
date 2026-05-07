@@ -7,6 +7,37 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Pre-1.0 releases may contain breaking changes within minor bumps; the
 project hasn't reached a stability commitment yet.
 
+## [0.23.4-beta.1] — 2026-05-07
+
+### Changed
+
+- **RegionView shows a single primary pathway instead of the full
+  prereq graph.** The previous edge layer drew every entry from
+  `ZONE_PARENTS` — that meant Z23 alone had 8 incoming lines, the
+  graph crisscrossed itself, and "where do I start?" was unreadable.
+  Replaced with a single sequential pathway following sort_order:
+  Z01 → Z02 → Z03 → … → Z23. The full dependency graph is still
+  authoritative for unlock logic in `isZoneUnlocked()`; just no
+  longer drawn by default.
+- **Hover a zone to reveal its specific prereqs.** A zone's incoming
+  prereqs now render as amber dashed edges only while you're hovering
+  it. Default view stays clean ("here's the path"); hovering reveals
+  the dependency context for that zone.
+
+### Added
+
+- **Route persistence across refresh.** Closing devtools, hard-
+  reloading, or just F5'ing while you're 3 levels deep no longer
+  bounces you back to the atlas. Last route + selected node ID are
+  mirrored to localStorage on every change; BootView reads them on
+  mount and uses the saved route as the post-boot destination.
+  - Falls back to atlas if storage is unavailable / corrupt
+  - Validates route shape before navigating (won't restore to a
+    schema we no longer understand if the persisted shape changes)
+  - Skips persisting the boot route itself (avoids loops)
+  - New `src/lib/routePersistence.ts` is the single source of truth
+    for the format / KEY; reader is BootView, writer is App.tsx
+
 ## [0.23.3-beta.1] — 2026-05-07
 
 ### Changed

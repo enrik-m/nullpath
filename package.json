@@ -1,7 +1,7 @@
 {
   "name": "nullpath",
   "private": true,
-  "version": "0.23.3-beta.1",
+  "version": "0.23.4-beta.1",
   "type": "module",
   "scripts": {
     "predev": "node scripts/copy-sql-wasm.mjs",

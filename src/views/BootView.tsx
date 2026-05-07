@@ -5,11 +5,12 @@
  * and a quick fade on subsequent launches.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useUi } from "../store";
 import { sfx, unlockAudio } from "../lib/sfx";
 import * as db from "../db";
+import { readPersistedRoute } from "../lib/routePersistence";
 
 const LINES = [
   { delay: 0, text: ">>> nullpath_kernel.boot()", color: "fg-2" },
@@ -27,9 +28,18 @@ const LINES = [
 
 export function BootView() {
   const go = useUi((s) => s.go);
+  const selectNode = useUi((s) => s.selectNode);
   const [shown, setShown] = useState(0);
   const [skip, setSkip] = useState(false);
   const titleRef = useRef<HTMLDivElement | null>(null);
+
+  // Resolved once on mount — where to send the user once boot animates
+  // to completion (or the quick-fade for returning visitors). Falls
+  // back to atlas for first-time visitors and for any persistence
+  // read failure (corrupt JSON, localStorage disabled, route refers
+  // to a deleted zone, etc.).
+  const restored = useMemo(() => readPersistedRoute(), []);
+  const destination = restored?.route ?? { name: "atlas" as const };
 
   useEffect(() => {
     let cancelled = false;
@@ -38,7 +48,9 @@ export function BootView() {
         const state = await db.getAppState();
         if (state.onboarded_at) {
           window.setTimeout(() => {
-            if (!cancelled) go({ name: "atlas" });
+            if (cancelled) return;
+            if (restored?.selectedNodeId) selectNode(restored.selectedNodeId);
+            go(destination);
           }, 700);
           if (!cancelled) setSkip(true);
         } else {
@@ -53,7 +65,7 @@ export function BootView() {
     return () => {
       cancelled = true;
     };
-  }, [go]);
+  }, [go, selectNode, destination, restored]);
 
   useEffect(() => {
     if (skip) return;
@@ -66,13 +78,14 @@ export function BootView() {
     const finish = window.setTimeout(async () => {
       await db.updateAppState({ onboarded_at: new Date().toISOString() });
       sfx.success();
-      go({ name: "atlas" });
+      if (restored?.selectedNodeId) selectNode(restored.selectedNodeId);
+      go(destination);
     }, 2500);
     return () => {
       timers.forEach((t) => window.clearTimeout(t));
       window.clearTimeout(finish);
     };
-  }, [skip, go]);
+  }, [skip, go, selectNode, destination, restored]);
 
   return (
     <div className="h-screen w-screen flex items-center justify-center px-6">

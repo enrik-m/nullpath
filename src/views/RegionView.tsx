@@ -189,17 +189,39 @@ export function RegionView({ regionId }: RegionViewProps) {
     [isZoneComplete],
   );
 
+  // Primary pathway: sort_order sequential (Z01 → Z02 → … → Z23).
+  // The full prereq graph in ZONE_PARENTS is still authoritative for
+  // unlock logic — those edges aren't drawn anymore because the
+  // resulting tangle (Z23 alone has 8 parents) was unreadable. This
+  // gives new operators a single "follow this path" line rather than
+  // the spider-web of dependencies.
+  //
+  // ZONE_PARENTS still controls isZoneUnlocked() further up so the
+  // dependency model is preserved; we just don't visualize it by
+  // default. A hover state (see `hoveredPrereqEdges`) brings the
+  // specific prereqs of the hovered zone into view in a distinct
+  // amber color for users who want the data.
   const edges = useMemo(() => {
     const out: Array<{ from: string; to: string; lit: boolean; reachable: boolean }> = [];
-    for (const [child, parents] of Object.entries(ZONE_PARENTS)) {
-      for (const parent of parents) {
-        const lit = isZoneComplete(parent);
-        const reachable = isZoneStarted(parent);
-        out.push({ from: parent, to: child, lit, reachable });
-      }
+    const sorted = [...zones].sort((a, b) => a.zone.sort_order - b.zone.sort_order);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const from = sorted[i]!.zone.id;
+      const to = sorted[i + 1]!.zone.id;
+      const lit = isZoneComplete(from);
+      const reachable = isZoneStarted(from);
+      out.push({ from, to, lit, reachable });
     }
     return out;
-  }, [isZoneComplete, isZoneStarted]);
+  }, [zones, isZoneComplete, isZoneStarted]);
+
+  // Prereq edges shown only when the user is hovering a zone — these
+  // come from ZONE_PARENTS. Drawn in amber dashed so they read as
+  // "additional context" rather than primary navigation.
+  const hoveredPrereqEdges = useMemo(() => {
+    if (!hovered) return [];
+    const parents = ZONE_PARENTS[hovered] ?? [];
+    return parents.map((p) => ({ from: p, to: hovered }));
+  }, [hovered]);
 
   // Pan / zoom
   function onMouseDown(e: React.MouseEvent) {
@@ -465,6 +487,31 @@ export function RegionView({ regionId }: RegionViewProps) {
                     }
                   />
                 </g>
+              );
+            })}
+
+            {/* Hover-only prereq edges — amber, dashed, to reveal
+                a zone's specific prerequisites without cluttering
+                the default view. */}
+            {hoveredPrereqEdges.map((e) => {
+              const a = zoneById.get(e.from);
+              const b = zoneById.get(e.to);
+              if (!a || !b) return null;
+              const sx = a.zone.cx ?? 0;
+              const sy = a.zone.cy ?? 0;
+              const tx = b.zone.cx ?? 0;
+              const ty = b.zone.cy ?? 0;
+              const d = steppedEdgePath(sx, sy, tx, ty);
+              return (
+                <path
+                  key={`prereq:${e.from}->${e.to}`}
+                  d={d}
+                  fill="none"
+                  stroke="var(--color-amber)"
+                  strokeOpacity={0.85}
+                  strokeWidth={2.5 / view.scale}
+                  strokeDasharray={`${5 / view.scale} ${4 / view.scale}`}
+                />
               );
             })}
 
