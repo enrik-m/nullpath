@@ -112,8 +112,6 @@ function Backdrop({
 }: PropsWithChildren<{ containerRef: React.RefObject<HTMLDivElement | null> }>) {
   return (
     <motion.div
-      role="dialog"
-      aria-modal="true"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -124,8 +122,15 @@ function Backdrop({
         backdropFilter: "blur(8px)",
       }}
     >
+      {/* role="dialog" lives on the inner panel (not the backdrop) so screen
+          readers don't announce the dimmed page area as the dialog itself.
+          aria-labelledby points at the title element each modal renders with
+          id="modal-title". */}
       <motion.div
         ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
         initial={{ opacity: 0, scale: 0.95, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 6 }}
@@ -173,7 +178,10 @@ function EchoPromptModal({ nodeId }: { nodeId: string }) {
           NODE COMPLETE
         </div>
       </div>
-      <div className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight">
+      <div
+        id="modal-title"
+        className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight"
+      >
         {node?.name ?? "..."}
       </div>
       <div className="np-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-fg-3)] mt-1">
@@ -220,7 +228,7 @@ function LevelUpModal({ oldLevel, newLevel }: { oldLevel: number; newLevel: numb
           LEVEL UP
         </div>
       </div>
-      <div className="mt-2 flex items-baseline gap-3">
+      <div id="modal-title" className="mt-2 flex items-baseline gap-3">
         <div className="np-mono text-3xl text-[var(--color-fg-2)] line-through opacity-60">
           {oldLevel}
         </div>
@@ -280,7 +288,10 @@ function AchievementModal({
           <Icon size={30} className="text-[var(--color-amber)]" strokeWidth={2.4} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-2xl font-bold text-[var(--color-fg-0)] tracking-tight leading-tight">
+          <div
+            id="modal-title"
+            className="text-2xl font-bold text-[var(--color-fg-0)] tracking-tight leading-tight"
+          >
             {name}
           </div>
         </div>
@@ -355,7 +366,10 @@ function DailyBriefingModal() {
           day: "numeric",
         })}
       </div>
-      <div className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight">
+      <div
+        id="modal-title"
+        className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight"
+      >
         Welcome back, operator.
       </div>
 
@@ -441,8 +455,17 @@ function FirstSyncModal({
   const showModal = useUi((s) => s.showModal);
   const bumpData = useUi((s) => s.bumpData);
   const [busy, setBusy] = useState(false);
+  // Synchronous re-entry latch. `setBusy` triggers a React re-render
+  // and the resulting `disabled` prop only lands on the next paint,
+  // which is too late: a fast double-click queues two onClicks before
+  // React commits. The ref is read+set before any await, so the second
+  // click bails out immediately. (The async flow still flips `busy` so
+  // the button visually disables and shows the spinner.)
+  const inFlightRef = useRef(false);
 
   async function pushLocal() {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setBusy(true);
     try {
       // exportBackup runs against whichever backend index.ts is bound
@@ -460,13 +483,15 @@ function FirstSyncModal({
       sfx.warn();
       toast.error(`Sync failed: ${err instanceof Error ? err.message : String(err)}`);
       setBusy(false);
+    } finally {
+      inFlightRef.current = false;
     }
   }
 
   function keepCloud() {
     sfx.click();
     db.markFirstSyncDone();
-    toast.info("Using cloud data. Local IndexedDB will be ignored from now on.");
+    toast.info("Local data on this device will be ignored from now on.");
     showModal(null);
   }
 
@@ -478,7 +503,10 @@ function FirstSyncModal({
           FIRST SYNC
         </div>
       </div>
-      <div className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight">
+      <div
+        id="modal-title"
+        className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight"
+      >
         You have local progress on this device.
       </div>
       <div className="text-[var(--color-fg-2)] text-[14px] mt-3 leading-relaxed">
@@ -487,14 +515,17 @@ function FirstSyncModal({
         <strong className="text-[var(--color-fg-0)]">{cloudNodeCount}</strong> in your cloud
         account. Push the local progress up?
       </div>
-      <ul className="text-[12px] np-mono text-[var(--color-fg-3)] mt-4 space-y-1">
-        <li>· "Upload" replaces the cloud account with the local snapshot.</li>
-        <li>· "Use cloud" ignores the local data permanently on this device.</li>
+      <ul className="text-[12px] np-mono text-[var(--color-fg-2)] mt-4 space-y-1">
+        <li>· "Upload local" replaces the cloud account with the local snapshot.</li>
+        <li>
+          · "Discard local" permanently ignores the local IndexedDB on this device — the cloud
+          account becomes the source of truth here.
+        </li>
         <li>· You can also export a JSON backup from Settings before deciding.</li>
       </ul>
       <div className="flex gap-2 justify-end mt-5">
-        <Button variant="ghost" size="sm" onClick={keepCloud} disabled={busy}>
-          Use cloud
+        <Button variant="danger" size="sm" onClick={keepCloud} disabled={busy}>
+          Discard local
         </Button>
         <Button variant="primary" size="sm" onClick={pushLocal} disabled={busy}>
           {busy ? (

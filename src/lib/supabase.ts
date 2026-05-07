@@ -217,5 +217,10 @@ export function displayHandle(user: User | null): string {
   const meta = user.user_metadata as Record<string, unknown> | undefined;
   const login = typeof meta?.user_name === "string" ? meta.user_name : null;
   const full = typeof meta?.full_name === "string" ? meta.full_name : null;
-  return login ?? full ?? user.email?.split("@")[0] ?? "operator";
+  // We deliberately do NOT fall back to `user.email.split("@")[0]`.
+  // GitHub primary emails commonly contain real-name local-parts
+  // (`firstname.lastname@…`) and we never want a real name surfacing
+  // as the displayed handle just because the user happens to have a
+  // private GitHub login. "operator" is the safe default.
+  return login ?? full ?? "operator";
 }

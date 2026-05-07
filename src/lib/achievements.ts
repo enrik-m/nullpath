@@ -20,7 +20,7 @@
 import * as db from "../db";
 import type { NodeRow } from "../db/types";
 import { useUi, computeOperatorXp, levelForXp } from "../store";
-import { isCloudMode } from "./supabase";
+import { currentUser, getSupabaseClient, isCloudMode } from "./supabase";
 import { sfx } from "./sfx";
 
 export interface AchievementSpec {
@@ -771,12 +771,103 @@ export function queueAchievementModal(a: {
   showModal({ kind: "achievement", ...a });
 }
 
+/** Zeroed context — used as a safe fallback when the user is not signed in
+ * (cloud mode boot before sign-in) or when an aggregate query fails. The
+ * shape is the canonical AchievementCtx so callers can treat it identically. */
+function emptyCtx(): AchievementCtx {
+  return {
+    totalCompletedNodes: 0,
+    depthCounts: { intro: 0, std: 0, adv: 0, res: 0 },
+    kindCounts: {},
+    topLevelsMastered: 0,
+    zonesCompleted: 0,
+    zonesTouched: 0,
+    streak: 0,
+    level: 1,
+    xp: 0,
+    maxNodesInOneDay: 0,
+    totalResources: 0,
+    pinnedResources: 0,
+    totalNotes: 0,
+    longestNoteLength: 0,
+    totalRefresherAcks: 0,
+    maxRefresherStreak: 0,
+    bountiesAccepted: 0,
+    bountiesPayout: 0,
+    bountiesCves: 0,
+  };
+}
+
+/**
+ * Cloud-mode context builder. The local `buildCtx()` runs raw SQL against
+ * tables that don't exist in Postgres (`node_resource`, `node_note`,
+ * `refresher`); cloud mode delegates to a single server-side aggregator
+ * RPC (`achievement_context`) that returns one row with every counter the
+ * catalog needs. Mapping snake_case → the camelCase AchievementCtx shape
+ * happens here so the rest of the engine stays backend-agnostic.
+ *
+ * Returns a zeroed context if no user is signed in — boot-time evaluation
+ * fires before signin and we don't want it to throw.
+ */
+async function buildCtxCloud(): Promise<AchievementCtx> {
+  const user = currentUser();
+  if (!user) return emptyCtx();
+  const client = getSupabaseClient();
+  const { data, error } = await client.rpc("achievement_context", { p_user_id: user.id }).single();
+  if (error || !data) return emptyCtx();
+  const r = data as Record<string, unknown>;
+  const num = (k: string): number => {
+    const v = r[k];
+    if (typeof v === "number") return v;
+    if (typeof v === "string") {
+      const parsed = Number(v);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
+  };
+  return {
+    totalCompletedNodes: num("total_completed"),
+    depthCounts: {
+      intro: num("depth_intro"),
+      std: num("depth_std"),
+      adv: num("depth_adv"),
+      res: num("depth_res"),
+    },
+    kindCounts: {
+      foundation: num("kind_foundation"),
+      tool: num("kind_tool"),
+      recon: num("kind_recon"),
+      vuln: num("kind_vuln"),
+      defense: num("kind_defense"),
+      methodology: num("kind_methodology"),
+      capstone: num("kind_capstone"),
+    },
+    topLevelsMastered: num("top_levels_mastered"),
+    zonesCompleted: num("zones_completed"),
+    zonesTouched: num("zones_touched"),
+    streak: num("streak"),
+    level: num("level"),
+    xp: num("xp"),
+    maxNodesInOneDay: num("max_in_one_day"),
+    totalResources: num("resources_total"),
+    pinnedResources: num("resources_pinned"),
+    totalNotes: num("notes_total"),
+    longestNoteLength: num("longest_note_length"),
+    totalRefresherAcks: num("refresher_acks"),
+    maxRefresherStreak: num("refresher_max_streak"),
+    bountiesAccepted: num("bounties_accepted"),
+    bountiesPayout: num("bounties_payout"),
+    bountiesCves: num("bounties_cves"),
+  };
+}
+
 /**
  * Build the context object the catalog consumes. Exposed (`export`) so
  * `AchievementsView` can render live progress on locked tiles using the
  * exact same numbers the engine sees.
  */
 export async function buildCtx(): Promise<AchievementCtx> {
+  if (isCloudMode()) return buildCtxCloud();
   const all = await db.getAllNodes();
   const completed = all.filter((n) => n.status === "complete");
   const xp = computeOperatorXp(all);

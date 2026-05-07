@@ -21,6 +21,7 @@
  */
 
 import { currentUser, getSupabaseClient, isCloudMode } from "../lib/supabase";
+import { parseSafeUrl } from "../lib/url";
 import type {
   AchievementRow,
   AppStateRow,
@@ -428,6 +429,14 @@ export async function addResource(input: {
 }): Promise<number> {
   return err("addResource", async () => {
     const userId = requireUid();
+    // URL safety gate. The codex view opens these with `noopener,noreferrer`
+    // but we still don't want javascript:/data:/file: scheme strings to
+    // ever land in the database — RLS lets the user see their own rows so
+    // a malicious paste could theoretically be re-rendered later by some
+    // future codepath that forgets to gate. Refuse at the write boundary.
+    if (input.url != null && input.url !== "" && !parseSafeUrl(input.url)) {
+      throw new Error(`Refusing to store unsafe URL scheme: ${input.url}`);
+    }
     const { data, error } = await c()
       .from("user_node_resource")
       .insert({
@@ -464,9 +473,14 @@ export async function deleteResource(id: number): Promise<void> {
 export async function togglePinResource(id: number): Promise<void> {
   return err("togglePinResource", async () => {
     const userId = requireUid();
-    // Read-modify-write because Postgres doesn't have a clean inline
-    // toggle for SMALLINT. The narrow window between read and write is
-    // RLS-bounded — the user can only race themselves.
+    // KNOWN LIMITATION: read-modify-write across two roundtrips. Two
+    // concurrent toggles on the same row from different tabs of the same
+    // user can collapse to a single net flip (both read pinned=0, both
+    // write pinned=1). Acceptable for now — the user can only race
+    // themselves and the resulting state is still valid (just maybe not
+    // what the second click "intended"). A future hardening pass should
+    // move this to a server-side RPC that flips atomically with one
+    // statement (`UPDATE ... SET pinned = 1 - pinned WHERE id = ...`).
     const { data, error } = await c()
       .from("user_node_resource")
       .select("pinned")
@@ -733,6 +747,20 @@ export async function unlockAchievement(_input: {
 // Bounties
 // ---------------------------------------------------------------------------
 
+/**
+ * Cloud-mode parity gaps (deliberate, documented):
+ *
+ *   - `resolved_at` exists on the local SQLite bounty row but not on the
+ *     cloud `user_bounty` table. We synthesize `null` here so the shared
+ *     `BountySubmissionRow` type stays satisfied; round-tripping a
+ *     backup through cloud will lose any local `resolved_at` values.
+ *   - `visibility` is hard-coded to `"private"`. Cloud bounties have no
+ *     visibility column (Q-spec: bounties are personal stats, not
+ *     shared). A backup imported into cloud collapses any "guild" rows
+ *     to private.
+ *
+ * If/when the schema grows these columns, drop the synthesized values.
+ */
 function adaptBounty(r: Record<string, unknown>): BountySubmissionRow {
   return {
     id: r.id as number,
@@ -742,11 +770,11 @@ function adaptBounty(r: Record<string, unknown>): BountySubmissionRow {
     status: r.status as BountyStatus,
     payout_usd: (r.payout_usd as number | null) ?? null,
     submitted_at: r.submitted_at as string,
-    resolved_at: null, // not in cloud schema; preserved for local-shape parity
+    resolved_at: null, // PARITY GAP: not in cloud schema (see banner above).
     cve_id: (r.cve_id as string | null) ?? null,
     related_node: (r.related_node as string | null) ?? null,
     notes: (r.notes as string | null) ?? null,
-    visibility: "private",
+    visibility: "private", // PARITY GAP: cloud has no visibility column.
   };
 }
 
@@ -1077,6 +1105,15 @@ export async function exportBackup(appVersion: string): Promise<BackupSnapshot> 
  * runs after restore so the unlocks reflect the restored state. This
  * matches local-mode semantics for everything except the achievement
  * row metadata, which is regenerated from the catalog.
+ *
+ * Cloud parity gaps on round-trip (local snapshot → cloud import):
+ *   - Bounty `resolved_at`: dropped (no column).
+ *   - Bounty `visibility`: collapsed to `private` (no column).
+ *   - Refresher autoincrement `id`: discarded. Local SQLite refresher
+ *     rows have a surrogate INTEGER PRIMARY KEY; cloud `user_refresher`
+ *     uses a composite (`user_id`,`node_id`) PK and synthesizes
+ *     `id = 0` on read. The id is meaningless across machines so
+ *     dropping it is correct, but worth flagging.
  */
 export async function importBackup(snap: BackupSnapshot): Promise<void> {
   return err("importBackup", async () => {
@@ -1212,12 +1249,23 @@ export async function importBackup(snap: BackupSnapshot): Promise<void> {
 // cloud is canonical.
 // ---------------------------------------------------------------------------
 
-const FIRST_SYNC_MARKER = "nullpath:cloud:first-sync-done:v1";
+/**
+ * The first-sync marker is keyed per-user. A device can host multiple
+ * sign-ins over its lifetime (account swap, household share); without
+ * the user-id suffix, signing in as User B on a device where User A
+ * had already completed first-sync would skip B's prompt and silently
+ * commit B to whatever default decision the modal had baked in.
+ */
+const FIRST_SYNC_MARKER_BASE = "nullpath:cloud:first-sync-done:v1";
+function firstSyncKey(userId: string): string {
+  return `${FIRST_SYNC_MARKER_BASE}:${userId}`;
+}
 
 export async function isFirstSyncNeeded(): Promise<boolean> {
   if (!isCloudMode()) return false;
-  if (!uid()) return false;
-  return localStorage.getItem(FIRST_SYNC_MARKER) !== "1";
+  const userId = uid();
+  if (!userId) return false;
+  return localStorage.getItem(firstSyncKey(userId)) !== "1";
 }
 
 /**
@@ -1233,10 +1281,13 @@ export async function isFirstSyncNeeded(): Promise<boolean> {
  * confirmation.
  */
 export async function performFirstSync(localSnapshot: BackupSnapshot): Promise<void> {
+  const userId = uid();
   await importBackup(localSnapshot);
-  localStorage.setItem(FIRST_SYNC_MARKER, "1");
+  if (userId) localStorage.setItem(firstSyncKey(userId), "1");
 }
 
 export function markFirstSyncDone(): void {
-  localStorage.setItem(FIRST_SYNC_MARKER, "1");
+  const userId = uid();
+  if (!userId) return;
+  localStorage.setItem(firstSyncKey(userId), "1");
 }

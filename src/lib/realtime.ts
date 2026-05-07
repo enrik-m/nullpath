@@ -18,10 +18,20 @@ import { currentUser, getSupabaseClient, isCloudMode, onAuthChange } from "./sup
 import { queueAchievementModal } from "./achievements";
 
 let activeUnsubscribe: (() => void) | null = null;
+/**
+ * The user id the active subscription is bound to. Tracked so non-id
+ * auth events (TOKEN_REFRESHED, USER_UPDATED with the same id, repeated
+ * SIGNED_IN deliveries) don't churn the channel — Supabase emits
+ * onAuthStateChange more often than the identity actually changes, and
+ * tearing down + resubscribing on every emission would briefly drop
+ * realtime unlock notifications during normal token refresh cycles.
+ */
+let activeUserId: string | null = null;
 
 /**
  * Start the realtime subscription. Tied to the current auth state:
- * re-subscribes when the user changes, tears down when they sign out.
+ * re-subscribes only when the user identity actually changes, tears
+ * down when they sign out.
  */
 export function startRealtimeWatcher(): () => void {
   if (!isCloudMode()) {
@@ -29,23 +39,29 @@ export function startRealtimeWatcher(): () => void {
   }
 
   const off = onAuthChange((user) => {
-    // Auth state changed — tear down any previous subscription before
-    // setting up a new one.
+    const newUserId = user?.id ?? null;
+    // No-op when the identity hasn't changed (token refresh, metadata
+    // update, immediate-replay-on-subscribe, etc.). Only sign-in,
+    // sign-out, or account switch reach the teardown branch below.
+    if (newUserId === activeUserId) return;
     activeUnsubscribe?.();
     activeUnsubscribe = null;
-    if (!user) return;
-    activeUnsubscribe = subscribeForUser(user.id);
+    activeUserId = newUserId;
+    if (!newUserId) return;
+    activeUnsubscribe = subscribeForUser(newUserId);
   });
 
   // Seed: the cached user might already be available when we mount.
   const cached = currentUser();
-  if (cached && !activeUnsubscribe) {
+  if (cached && activeUserId !== cached.id) {
+    activeUserId = cached.id;
     activeUnsubscribe = subscribeForUser(cached.id);
   }
 
   return () => {
     activeUnsubscribe?.();
     activeUnsubscribe = null;
+    activeUserId = null;
     off();
   };
 }

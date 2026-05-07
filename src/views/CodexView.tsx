@@ -52,11 +52,11 @@ export function CodexView() {
 
   async function reload() {
     const all = await db.getAllResources();
-    // Hydrate node names — single bulk select
-    const conn = await db.db();
-    const nodes = await conn.select<{ id: string; name: string; zone_id: string }[]>(
-      `SELECT id, name, zone_id FROM node`,
-    );
+    // Hydrate node names. Use the public getAllNodes() helper rather than
+    // raw SQL so this works in both backends — cloud mode's table is
+    // `node_def` (not `node`) and is read-only via PostgREST.
+    const allNodes = await db.getAllNodes();
+    const nodes = allNodes.map((n) => ({ id: n.id, name: n.name, zone_id: n.zone_id }));
     const map = new Map(nodes.map((n) => [n.id, n]));
     const enriched = all.map((r) => {
       const n = map.get(r.node_id);

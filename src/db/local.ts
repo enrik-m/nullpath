@@ -583,8 +583,6 @@ export async function getAppState(): Promise<AppStateRow> {
  */
 const APP_STATE_UPDATABLE: ReadonlySet<string> = new Set([
   "handle",
-  "idle_threshold_seconds",
-  "idle_hard_cap_seconds",
   "scanlines_enabled",
   "sound_enabled",
   "freeze_tokens",
