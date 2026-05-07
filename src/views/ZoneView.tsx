@@ -340,7 +340,11 @@ export function ZoneView({ zoneId }: ZoneViewProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [filter, setFilter] = useState<"all" | "available" | "in_progress" | "complete">("all");
-  const [trailMode, setTrailMode] = useState(false);
+  // Trail mode (heuristic suggested-path overlay) is on by default —
+  // new visitors see the suggested progression edges immediately
+  // instead of having to discover the toggle. Users who want a
+  // distraction-free graph can flip it off via the TRAIL button.
+  const [trailMode, setTrailMode] = useState(true);
 
   // Load zone + nodes
   useEffect(() => {

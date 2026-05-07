@@ -92,7 +92,30 @@ export function RegionView({ regionId }: RegionViewProps) {
       const statsMap = new Map(stats.map((s) => [s.zone_id, s]));
       if (cancelled) return;
       setRegion(r);
-      setZones(zs.map((z) => ({ zone: z, stats: statsMap.get(z.id) ?? null })));
+      // Position zones in a grid by sort_order. The seed has hand-coded
+      // cx/cy values that produced an artistic but-out-of-order
+      // constellation (Z11 might appear before Z09 visually); we
+      // override here so reading left-to-right top-to-bottom matches
+      // Z01 → Z02 → Z03 → … in numeric order. The grid is 5 wide; for
+      // 23 zones in the Web region that's 5 rows of ≤5, last row
+      // partially filled (Z21 / Z22 / Z23). Edges + glow + hover still
+      // give the constellation aesthetic.
+      const REGION_COLS = 5;
+      const REGION_CELL_W = 320;
+      const REGION_CELL_H = 360;
+      const orderedZones = zs.map((z, i) => {
+        // Use sort_order when set (1-indexed in the seed); fall back to
+        // array index for resilience against missing data.
+        const idx = z.sort_order > 0 ? z.sort_order - 1 : i;
+        const col = idx % REGION_COLS;
+        const row = Math.floor(idx / REGION_COLS);
+        return {
+          ...z,
+          cx: col * REGION_CELL_W,
+          cy: row * REGION_CELL_H,
+        };
+      });
+      setZones(orderedZones.map((z) => ({ zone: z, stats: statsMap.get(z.id) ?? null })));
       setLoading(false);
     }
     load();

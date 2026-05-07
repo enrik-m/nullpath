@@ -7,6 +7,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Pre-1.0 releases may contain breaking changes within minor bumps; the
 project hasn't reached a stability commitment yet.
 
+## [0.23.3-beta.1] — 2026-05-07
+
+### Changed
+
+- **Trail mode is on by default** in ZoneView. Was previously a toggle
+  starting at off; new visitors now see the suggested-progression
+  edges immediately rather than having to discover the TRAIL button.
+  Users who want a distraction-free graph can flip it off via the
+  same button.
+
+### Fixed
+
+- **RegionView zone order is now strictly numeric** (Z01 → Z02 → … →
+  Z23 reading left-to-right, top-to-bottom). The seed's hand-coded
+  `cx` / `cy` values produced an artistic but out-of-order
+  constellation where neighbouring stars on screen could be Z09 / Z13
+  / Z11. Replaced with a 5-column grid laid out by `sort_order`, so
+  scanning reads as the canonical zone sequence. Prereq edges still
+  draw between cells — the visual still reads as a flow graph, just
+  ordered. Verified by `scripts/verify-region-order.mjs` which sorts
+  all 23 stars by screen position and asserts the sequence matches
+  Z01 → Z23.
+
 ## [0.23.2-beta.1] — 2026-05-07
 
 ### Changed
