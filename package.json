@@ -10,6 +10,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "seed:build": "node scripts/build-seed.mjs",
+    "seed:build:cloud": "node scripts/build-seed-cloud.mjs",
     "build:branding": "node scripts/build-branding.mjs",
     "capture:screenshots": "node scripts/capture-screenshots.mjs",
     "capture:demo": "node scripts/capture-demo.mjs",

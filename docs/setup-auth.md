@@ -34,50 +34,29 @@ Total wall-clock time: ~15 minutes.
 ## 2. Apply the schema
 
 1. **SQL Editor** → **New query**.
-2. Copy the entire contents of
-   `supabase/migrations/20260506120000_initial_schema.sql` from the
-   nullpath repo and paste it in. Click **Run**.
-3. Repeat for `supabase/migrations/20260506120100_functions.sql`.
+2. Apply, in order, by copy-pasting each file's contents and clicking
+   **Run**:
+   - `supabase/migrations/20260506120000_initial_schema.sql` —
+     tables + RLS policies + the new-user trigger.
+   - `supabase/migrations/20260506120100_functions.sql` —
+     server-side compute (achievement evaluation, streak counting,
+     atomic node completion, etc.).
+   - `supabase/migrations/20260506120200_seed_web.sql` — populates
+     the shared `region` / `zone` / `node_def` rows (1 region, 23
+     zones, 820 nodes). Idempotent: every row uses `ON CONFLICT (id)
+DO NOTHING`.
 
-You should see a green "Success" indicator after each. The schema
-creates the `region`, `zone`, `node_def` tables (shared, read-only) and
-the `user_*` tables (RLS-protected, one row per user per scope). The
-functions migration adds the server-side compute layer (achievement
-evaluation, streak counting, atomic node-completion).
+You should see a green "Success" indicator after each.
 
 If the second migration errors on `ALTER PUBLICATION supabase_realtime
 ADD TABLE public.user_achievement` — that's optional; it only enables
 realtime push for achievement unlocks. Comment that line out and re-run
 if you don't want it.
 
-## 3. Seed the skill graph
-
-The `region` / `zone` / `node_def` tables are empty after step 2 — the
-schema migration just creates the tables, it doesn't populate them.
-
-You have two options:
-
-### Option A — push the existing SQLite seed
-
-`src/db/migrations/002_seed_web.sql` is the source-of-truth seed for
-the skill graph. It's written for SQLite; it works mostly verbatim on
-Postgres but you'll need to:
-
-- Replace any SQLite-only syntax (rare in practice — this seed is just
-  `INSERT INTO ...` statements).
-- Adjust column lists if the Postgres schema diverges. The current
-  schema uses `node_def` instead of `node`, so a literal copy won't
-  work — the seed assumes `node`. The cleanest fix is to add `INSERT
-INTO node_def` aliasing in a separate Postgres-flavored seed file.
-
-### Option B — wait for the build:seed-cloud script
-
-A future commit will add `npm run seed:build:cloud` that re-emits the
-plan markdown into a Postgres-dialect seed. Until then, hand-translate
-or copy your local IndexedDB rows up via the in-app first-sync flow.
-
-(For the launch build, the maintainer is shipping option A as a
-follow-up.)
+The seed migration is auto-generated from the SQLite source via
+`npm run seed:build:cloud` — re-run that whenever the upstream skill
+graph (`plans/web-pentesting.md` → `src/db/migrations/002_seed_web.sql`)
+changes, then re-apply the seed migration.
 
 ## 4. Create the GitHub OAuth app
 

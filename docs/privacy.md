@@ -9,8 +9,8 @@ mostly exists so you can confirm that.
 
 ## Who we are
 
-Nullpath is operated by **[legal-name]** (referred to as "we", "us"
-below). Contact: **[contact-email]**.
+Nullpath is operated by **Enrik Mustafa** (referred to as "we", "us"
+below). Contact: **iceager@protonmail.com**.
 
 If you are reading this from the open-source repo and running your own
 self-hosted copy of nullpath, this policy doesn't bind you — replace
@@ -83,8 +83,7 @@ data — use the in-app delete for that.
 - **Vercel** — hosts the static site (United States / global edge
   network).
 - **Supabase** — hosts the Postgres database and the auth service.
-  Region: **[supabase-region]** (the user can specify; default is
-  `us-east-1` in many setups).
+  Region: **us-east-1**.
 
 We don't transfer your data anywhere else. There are no other
 sub-processors.
@@ -126,7 +125,7 @@ these directly:
 - **Deletion**: Settings → Account → Delete account.
 - **Correction**: Edit any field through the normal UI.
 
-If you need something the UI doesn't cover, email **[contact-email]**.
+If you need something the UI doesn't cover, email **iceager@protonmail.com**.
 
 ## Changes
 
@@ -136,4 +135,4 @@ authoritative record of every revision.
 
 ## Contact
 
-Email: **[contact-email]**.
+Email: **iceager@protonmail.com**.

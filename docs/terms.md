@@ -29,8 +29,8 @@ in case of conflict with this summary.
 
 ## 1. Who we are
 
-Nullpath is operated by **[legal-name]**, located in **[country]**.
-Contact: **[contact-email]**.
+Nullpath is operated by **Enrik Mustafa**, located in **[country]**.
+Contact: **iceager@protonmail.com**.
 
 ## 2. The service
 
@@ -66,7 +66,7 @@ You agree NOT to use nullpath to:
 - Submit illegal content, content that infringes someone else's
   rights, or content depicting CSAM, terrorism, or hate speech.
 - Attempt to compromise the service itself: probe for unintended
-  vulnerabilities (legitimate vuln research goes to **[contact-email]**
+  vulnerabilities (legitimate vuln research goes to **iceager@protonmail.com**
   via the disclosure policy in `SECURITY.md`), break account isolation,
   evade rate limits, scrape mass data from other users.
 - Encourage or instruct others to attack systems they don't have
@@ -102,7 +102,7 @@ the GitHub repository and the home page so you can export your data.
 
 ## 7. Open source
 
-The source code is published at <https://github.com/seskar/nullpath>
+The source code is published at <https://github.com/enrik-m/nullpath>
 under the MIT license. You can fork it, run it yourself, modify it,
 and redistribute it under those terms. These terms only govern your
 use of the **hosted** service at nullpath-one.vercel.app.
@@ -172,4 +172,4 @@ The git history of this document records every revision word-for-word.
 
 ## 13. Contact
 
-Email: **[contact-email]**.
+Email: **iceager@protonmail.com**.

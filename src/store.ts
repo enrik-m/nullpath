@@ -47,7 +47,12 @@ interface UiState {
     | { kind: "daily-briefing" }
     | { kind: "echo-prompt"; nodeId: string }
     | { kind: "level-up"; oldLevel: number; newLevel: number }
-    | { kind: "achievement"; id: string; name: string; description: string; icon: string };
+    | { kind: "achievement"; id: string; name: string; description: string; icon: string }
+    | {
+        kind: "first-sync";
+        localNodeCount: number;
+        cloudNodeCount: number;
+      };
   showModal: (m: UiState["modal"]) => void;
 
   // Theme prefs (mirrored to SQLite app_state)

@@ -20,6 +20,7 @@
 import * as db from "../db";
 import type { NodeRow } from "../db/types";
 import { useUi, computeOperatorXp, levelForXp } from "../store";
+import { isCloudMode } from "./supabase";
 import { sfx } from "./sfx";
 
 export interface AchievementSpec {
@@ -612,28 +613,71 @@ let pendingLevelCheck = { last: -1, init: false };
 /**
  * Run all checks once. Newly qualified achievements unlock and raise modals
  * (queued one at a time so they don't stack).
+ *
+ * In cloud mode, the catalog evaluation is delegated to the
+ * `evaluate_achievements` Postgres function — the gates are checked
+ * against authoritative server-side row counts so a malicious client
+ * can't fake unlocks. We just queue modals for whatever rows the
+ * function reports as freshly unlocked.
+ *
+ * In local mode, we evaluate the catalog in-process against the
+ * SQLite-shaped row counts (the historical path).
  */
 export async function evaluateAchievements(): Promise<void> {
   if (evaluating) return;
   evaluating = true;
   try {
-    const ctx = await buildCtx();
     const showModal = useUi.getState().showModal;
-    const existing = await db.getAchievements();
-    const unlockedSet = new Set(existing.filter((a) => a.unlocked_at).map((a) => a.id));
+    let newly: Array<{ id: string; name: string; description: string; icon: string }> = [];
+    let levelForLevelUp: number | null = null;
 
-    const newly: AchievementSpec[] = [];
-    for (const spec of CATALOG) {
-      if (unlockedSet.has(spec.id)) continue;
-      if (isUnlocked(spec, ctx)) {
-        await db.unlockAchievement({
-          id: spec.id,
-          name: spec.name,
-          description: spec.description,
-          icon: spec.icon,
-        });
-        newly.push(spec);
+    if (isCloudMode()) {
+      // Server-side path: one round-trip evaluates every gate, returns
+      // only the rows that flipped. The client never sees the catalog
+      // table — the fact that it lives in the function makes
+      // achievement-faking architecturally impossible.
+      const cloudUnlocked = await db.evaluateAchievementsCloud();
+      newly = cloudUnlocked.map((a) => ({
+        id: a.id,
+        name: a.name,
+        description: a.description ?? "",
+        icon: a.icon ?? "Trophy",
+      }));
+
+      // Level still needs the local computation since the cloud
+      // function returns achievement rows, not the operator level.
+      // We compute against db.getAllNodes() which in cloud mode hits
+      // the merged node_def + user_node_state view.
+      try {
+        const all = await db.getAllNodes();
+        levelForLevelUp = levelForXp(computeOperatorXp(all));
+      } catch (err) {
+        console.warn("[achievements] level probe failed:", err);
       }
+    } else {
+      // Local path: compute the context, walk the catalog, unlock locally.
+      const ctx = await buildCtx();
+      const existing = await db.getAchievements();
+      const unlockedSet = new Set(existing.filter((a) => a.unlocked_at).map((a) => a.id));
+
+      for (const spec of CATALOG) {
+        if (unlockedSet.has(spec.id)) continue;
+        if (isUnlocked(spec, ctx)) {
+          await db.unlockAchievement({
+            id: spec.id,
+            name: spec.name,
+            description: spec.description,
+            icon: spec.icon,
+          });
+          newly.push({
+            id: spec.id,
+            name: spec.name,
+            description: spec.description,
+            icon: spec.icon,
+          });
+        }
+      }
+      levelForLevelUp = ctx.level;
     }
 
     // Raise modals one at a time. We subscribe to the zustand store
@@ -669,24 +713,62 @@ export async function evaluateAchievements(): Promise<void> {
     }
 
     // Level-up detection
-    const newLevel = ctx.level;
-    if (!pendingLevelCheck.init) {
-      pendingLevelCheck.last = newLevel;
-      pendingLevelCheck.init = true;
-    } else if (newLevel > pendingLevelCheck.last) {
-      const old = pendingLevelCheck.last;
-      pendingLevelCheck.last = newLevel;
-      // Stack on top of any achievement queue
-      window.setTimeout(
-        () => {
-          showModal({ kind: "level-up", oldLevel: old, newLevel });
-        },
-        1500 + newly.length * 1500,
-      );
+    if (levelForLevelUp !== null) {
+      const newLevel = levelForLevelUp;
+      if (!pendingLevelCheck.init) {
+        pendingLevelCheck.last = newLevel;
+        pendingLevelCheck.init = true;
+      } else if (newLevel > pendingLevelCheck.last) {
+        const old = pendingLevelCheck.last;
+        pendingLevelCheck.last = newLevel;
+        // Stack on top of any achievement queue
+        window.setTimeout(
+          () => {
+            showModal({ kind: "level-up", oldLevel: old, newLevel });
+          },
+          1500 + newly.length * 1500,
+        );
+      }
     }
   } finally {
     evaluating = false;
   }
+}
+
+/**
+ * Unlock-modal queue, exposed so the realtime subscription can push to
+ * the same channel `evaluateAchievements()` uses. The two pathways
+ * dedupe via the `seen` set — a server-side eval that returns the same
+ * row that just arrived via realtime won't double-pop the modal.
+ */
+const seenUnlocks = new Set<string>();
+
+export function queueAchievementModal(a: {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}): void {
+  if (seenUnlocks.has(a.id)) return;
+  seenUnlocks.add(a.id);
+  const showModal = useUi.getState().showModal;
+  const cur = useUi.getState().modal;
+  if (cur) {
+    // A modal is already up; defer until the user closes it.
+    // Re-queue via subscription to avoid stacking modals.
+    const off = useUi.subscribe((state, prev) => {
+      if (prev.modal !== null && state.modal === null) {
+        off();
+        window.setTimeout(() => {
+          sfx.success();
+          showModal({ kind: "achievement", ...a });
+        }, 200);
+      }
+    });
+    return;
+  }
+  sfx.success();
+  showModal({ kind: "achievement", ...a });
 }
 
 /**

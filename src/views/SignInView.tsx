@@ -120,7 +120,7 @@ export function SignInView() {
           </a>
           <span aria-hidden>·</span>
           <a
-            href="https://github.com/seskar/nullpath"
+            href="https://github.com/enrik-m/nullpath"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-[var(--fg-1)] underline-offset-4 hover:underline"

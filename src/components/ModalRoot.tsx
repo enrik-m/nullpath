@@ -7,7 +7,7 @@
 
 import { type PropsWithChildren, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Zap, Trophy, Sparkles, Save } from "lucide-react";
+import { CheckCircle2, Zap, Trophy, Sparkles, Save, CloudUpload, Loader2 } from "lucide-react";
 import { useUi } from "../store";
 import { sfx } from "../lib/sfx";
 import { cn } from "../lib/cn";
@@ -16,6 +16,8 @@ import type { NodeRow } from "../db/types";
 import { Button } from "./ui/Button";
 import { LIMITS } from "../lib/limits";
 import { resolveAchievementIcon } from "../lib/achievementIcons";
+import { toast } from "../lib/toast";
+import { APP_VERSION } from "../lib/version";
 
 /** All focusable selectors we tab between when a modal is open. */
 const FOCUSABLE_SELECTOR =
@@ -92,6 +94,12 @@ export function ModalRoot() {
             />
           )}
           {modal.kind === "daily-briefing" && <DailyBriefingModal />}
+          {modal.kind === "first-sync" && (
+            <FirstSyncModal
+              localNodeCount={modal.localNodeCount}
+              cloudNodeCount={modal.cloudNodeCount}
+            />
+          )}
         </Backdrop>
       )}
     </AnimatePresence>
@@ -405,6 +413,101 @@ function DailyBriefingModal() {
         <Button variant="primary" size="md" onClick={() => showModal(null)}>
           <Zap size={12} />
           Begin
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ===========================================================================
+// First-Sync — fires once after a fresh cloud sign-in if the local
+// IndexedDB has data the cloud account doesn't. Three outcomes:
+//   1. Push local → cloud (the common case: user has been using local
+//      mode and is now connecting to their cloud account for the first
+//      time).
+//   2. Discard local, keep cloud (rare: user explicitly wants the
+//      cloud as the source of truth, e.g. they're moving devices).
+//   3. Cancel for now (close modal; the prompt re-fires on next reload
+//      until either button is clicked, since the marker is only set
+//      after a definitive choice).
+// ===========================================================================
+function FirstSyncModal({
+  localNodeCount,
+  cloudNodeCount,
+}: {
+  localNodeCount: number;
+  cloudNodeCount: number;
+}) {
+  const showModal = useUi((s) => s.showModal);
+  const bumpData = useUi((s) => s.bumpData);
+  const [busy, setBusy] = useState(false);
+
+  async function pushLocal() {
+    setBusy(true);
+    try {
+      // exportBackup runs against whichever backend index.ts is bound
+      // to — in cloud mode that's the empty cloud account, which isn't
+      // what we want. Reach directly into the local module so the
+      // snapshot we push genuinely reflects local IndexedDB.
+      const local = await import("../db/local");
+      const snap = await local.exportBackup(APP_VERSION);
+      await db.performFirstSync(snap);
+      sfx.success();
+      toast.success("Local data uploaded to your account.");
+      bumpData();
+      showModal(null);
+    } catch (err) {
+      sfx.warn();
+      toast.error(`Sync failed: ${err instanceof Error ? err.message : String(err)}`);
+      setBusy(false);
+    }
+  }
+
+  function keepCloud() {
+    sfx.click();
+    db.markFirstSyncDone();
+    toast.info("Using cloud data. Local IndexedDB will be ignored from now on.");
+    showModal(null);
+  }
+
+  return (
+    <div className="np-pixel rounded-lg w-[520px] max-w-full p-4 sm:p-6 border-[var(--color-cyan-dim)] np-glow-cyan">
+      <div className="flex items-center gap-2">
+        <CloudUpload size={16} className="text-[var(--color-cyan)]" />
+        <div className="np-mono text-[10px] tracking-[0.3em] uppercase text-[var(--color-cyan)]">
+          FIRST SYNC
+        </div>
+      </div>
+      <div className="mt-2 text-2xl font-bold text-[var(--color-fg-0)] tracking-tight">
+        You have local progress on this device.
+      </div>
+      <div className="text-[var(--color-fg-2)] text-[14px] mt-3 leading-relaxed">
+        We found <strong className="text-[var(--color-fg-0)]">{localNodeCount}</strong> node
+        {localNodeCount === 1 ? "" : "s"} of progress in this browser's local database, and{" "}
+        <strong className="text-[var(--color-fg-0)]">{cloudNodeCount}</strong> in your cloud
+        account. Push the local progress up?
+      </div>
+      <ul className="text-[12px] np-mono text-[var(--color-fg-3)] mt-4 space-y-1">
+        <li>· "Upload" replaces the cloud account with the local snapshot.</li>
+        <li>· "Use cloud" ignores the local data permanently on this device.</li>
+        <li>· You can also export a JSON backup from Settings before deciding.</li>
+      </ul>
+      <div className="flex gap-2 justify-end mt-5">
+        <Button variant="ghost" size="sm" onClick={keepCloud} disabled={busy}>
+          Use cloud
+        </Button>
+        <Button variant="primary" size="sm" onClick={pushLocal} disabled={busy}>
+          {busy ? (
+            <>
+              <Loader2 size={12} className="animate-spin" />
+              Uploading…
+            </>
+          ) : (
+            <>
+              <CloudUpload size={12} />
+              Upload local
+            </>
+          )}
         </Button>
       </div>
     </div>

@@ -19,6 +19,7 @@ import { SignInView } from "./views/SignInView";
 import { Toaster } from "./components/Toaster";
 import { useDailyBriefing } from "./hooks/useDailyBriefing";
 import { primeAchievementEngine, startAchievementWatcher } from "./lib/achievements";
+import { startRealtimeWatcher } from "./lib/realtime";
 import * as db from "./db";
 import { initAuth, isCloudMode, onAuthChange, currentUser, displayHandle } from "./lib/supabase";
 import type { User } from "@supabase/supabase-js";
@@ -76,6 +77,43 @@ function App() {
           // Non-fatal — the user can set the handle from Settings.
           console.warn("[auth] handle seed failed:", err);
         }
+
+        // First-sync prompt: if the local IndexedDB has user-touched
+        // nodes and we haven't yet asked this device, raise the modal.
+        // We probe the LOCAL backend directly (cloud is now bound to
+        // the index.ts router) to get an accurate node-count answer.
+        try {
+          const needSync = await db.isFirstSyncNeeded();
+          if (needSync) {
+            const local = await import("./db/local");
+            const localNodes = await local.getAllNodes();
+            const localCount = localNodes.filter(
+              (n) => n.status !== "available" || n.user_xp > 0,
+            ).length;
+            const cloudNodes = await db.getAllNodes();
+            const cloudCount = cloudNodes.filter(
+              (n) => n.status !== "available" || n.user_xp > 0,
+            ).length;
+            if (localCount > 0) {
+              // Defer to the next tick so the boot sequence finishes
+              // first; the modal raises on top of the atlas, not on
+              // top of BootView.
+              window.setTimeout(() => {
+                useUi.getState().showModal({
+                  kind: "first-sync",
+                  localNodeCount: localCount,
+                  cloudNodeCount: cloudCount,
+                });
+              }, 1500);
+            } else {
+              // Nothing local to sync — just mark done so we don't
+              // re-check on every load.
+              db.markFirstSyncDone();
+            }
+          }
+        } catch (err) {
+          console.warn("[first-sync] probe failed:", err);
+        }
       }
     });
     // Seed from cache in case onAuthChange didn't fire synchronously.
@@ -110,6 +148,14 @@ function App() {
   // note saved, refresher acked, bounty logged — not just node-complete.
   useEffect(() => {
     const off = startAchievementWatcher();
+    return off;
+  }, []);
+
+  // Cloud-mode realtime: subscribe to the user's user_achievement row
+  // inserts. Pops unlock modals immediately, even when triggered by
+  // another tab. No-op in local mode.
+  useEffect(() => {
+    const off = startRealtimeWatcher();
     return off;
   }, []);
 
