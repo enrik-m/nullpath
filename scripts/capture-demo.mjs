@@ -1,26 +1,30 @@
 /**
- * Records an ordered walkthrough of the app: boot → atlas → web region
- * → zone graph → node panel → mark complete → echo skip → achievement
- * → codex → stats → bounties → trophy room → back to atlas. Each step
- * lingers long enough that a viewer can register what's on screen.
+ * Records an ordered walkthrough of the app, narrated by deterministic
+ * navigation rather than fuzzy text-clicks: boot → atlas → web region
+ * → zone → node panel → COMPLETE → echo skip → achievement → codex →
+ * stats → bounties → trophy room → atlas. Total ~40s.
  *
- * Output: `docs/demo.webm`. Conversion to mp4/gif happens at the end
- * via ffmpeg. Total length ~35-40 seconds depending on render speed.
+ * Robustness rules baked in after a previous version sat blank for 30s
+ * because every selector silently fell through:
  *
- * Usage:
- *   1. npx playwright install chromium    (one-time)
- *   2. npm run dev                        (in another terminal)
- *   3. npm run capture:demo
+ *   1. STRICT CLICKS: every target uses `getByRole({name})` or a
+ *      data-attribute. Failures throw — no try/catch swallowing,
+ *      no `maybeClick`. If the demo can't drive the app it should
+ *      blow up loudly and we fix the script.
+ *   2. SVG-AWARE CLICKS: the zone-star is an SVG <g> with no inherent
+ *      bounding box. We dispatch a synthetic click event that bubbles
+ *      to React's event delegation root instead of relying on a
+ *      Playwright pointer hit-test that misses transparent SVG areas.
+ *   3. CHECKPOINTS: after each navigation we screenshot to
+ *      docs/_demo_tmp/ and assert the expected DOM is present. If the
+ *      app didn't navigate, we see exactly which step broke.
+ *   4. NO BLIND TIMEOUTS: when waiting for a view to mount, we
+ *      `waitForSelector` on something the view actually renders
+ *      (zone graph, codex list, etc), not a flat 3-second sleep.
  *
- * Audio note: Playwright's recordVideo is video-only by design. The
- * app's SFX is synthesized at runtime via the Web Audio API (no audio
- * files), so it CAN'T be merged in post. To produce a demo with sound,
- * use OBS Studio or the OS screen recorder against a live browser.
- *
- * The auth gate: the script targets a dev build that has NO
- * VITE_SUPABASE_* env vars set, so isCloudMode() returns false and
- * SignInView is never reached — we land directly on BootView and
- * proceed through local-mode views.
+ * Audio note: Playwright recordVideo is video-only. SFX is synthesized
+ * via Web Audio API (no audio files). To get a demo with sound, use
+ * OBS Studio against a live browser — automation isn't the path.
  */
 
 import { mkdirSync, existsSync, readdirSync, renameSync, statSync, unlinkSync } from "node:fs";
@@ -36,7 +40,6 @@ const tmpDir = resolve(outDir, "_demo_tmp");
 
 if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
 if (existsSync(tmpDir)) {
-  // Clean residue from a previous failed run.
   for (const f of readdirSync(tmpDir)) unlinkSync(resolve(tmpDir, f));
 } else {
   mkdirSync(tmpDir, { recursive: true });
@@ -45,37 +48,26 @@ if (existsSync(tmpDir)) {
 const BASE = process.env.NULLPATH_URL ?? "http://localhost:1421";
 
 console.log(`[demo] target ${BASE}`);
-console.log(`[demo] launching headless chromium…`);
 
 const browser = await chromium.launch({ headless: true });
 const ctx = await browser.newContext({
   viewport: { width: 1280, height: 720 },
-  recordVideo: {
-    dir: tmpDir,
-    size: { width: 1280, height: 720 },
-  },
-  // Force light/dark sensibly — the app is dark-only, but explicit.
+  recordVideo: { dir: tmpDir, size: { width: 1280, height: 720 } },
   colorScheme: "dark",
   reducedMotion: "no-preference",
 });
 
 const page = await ctx.newPage();
 
-// ---------------------------------------------------------------------------
-// Inject a visible click ripple so the recorded video makes user
-// interactions obvious (Playwright's headless mode doesn't render a
-// system cursor in the capture). The ripple is a quick CSS pulse
-// pinned to the page coords of the click.
-// ---------------------------------------------------------------------------
+// Click ripple — visible mark of every interaction since headless
+// chromium doesn't render the system cursor in recorded video.
 await page.addInitScript(() => {
   const style = document.createElement("style");
   style.textContent = `
     .__demo_click_ripple {
       position: fixed;
-      width: 28px;
-      height: 28px;
-      margin-left: -14px;
-      margin-top: -14px;
+      width: 28px; height: 28px;
+      margin-left: -14px; margin-top: -14px;
       border-radius: 50%;
       border: 2px solid #5cf2ff;
       box-shadow: 0 0 16px #5cf2ff, inset 0 0 8px #5cf2ff;
@@ -89,9 +81,6 @@ await page.addInitScript(() => {
     }
   `;
   document.head.appendChild(style);
-
-  // Listen at the capture phase so the ripple shows even when click
-  // handlers preventDefault().
   document.addEventListener(
     "click",
     (e) => {
@@ -106,99 +95,189 @@ await page.addInitScript(() => {
   );
 });
 
-// ---------------------------------------------------------------------------
-// Helper: hold a step for `ms` so the recording lingers on each view.
-// Playwright's waitForTimeout is fine here — we want a paced video, not
-// "as fast as the browser can advance."
-// ---------------------------------------------------------------------------
 const beat = (ms) => page.waitForTimeout(ms);
 
-// ---------------------------------------------------------------------------
-// Helper: try a click, swallow errors. Some selectors only exist in
-// certain states (e.g., "Mark complete" only when a node is selected).
-// We don't want a missing button to crash the recording mid-walk.
-// ---------------------------------------------------------------------------
-async function maybeClick(selector, opts = {}) {
+let stepNo = 0;
+async function step(name, fn) {
+  stepNo++;
+  const tag = String(stepNo).padStart(2, "0");
+  console.log(`[demo] ${tag} ${name}`);
   try {
-    await page.locator(selector).first().click({ timeout: 2000, ...opts });
-    return true;
-  } catch {
-    return false;
+    await fn();
+    await page.screenshot({ path: resolve(tmpDir, `${tag}-${name.replace(/\W+/g, "_")}.png`) });
+  } catch (err) {
+    console.error(`[demo] ${tag} ${name} FAILED:`);
+    console.error(err.message);
+    await page.screenshot({
+      path: resolve(tmpDir, `${tag}-${name.replace(/\W+/g, "_")}-FAIL.png`),
+    });
+    throw err;
   }
 }
 
 // ============================================================================
-// Walkthrough begins.
+// Walkthrough
 // ============================================================================
 
-console.log(`[demo] step 01: boot sequence`);
-await page.goto(BASE, { waitUntil: "domcontentloaded" });
-// BootView animates ~2.5s of CRT log lines, then transitions to Atlas.
-await beat(3500);
+await step("goto-and-boot", async () => {
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
+  // BootView animates to Atlas after ~2.5s.
+  await beat(3500);
+});
 
-console.log(`[demo] step 02: atlas (3 region cards)`);
-// Press 1 to ensure we're on Atlas (idempotent — already there post-boot).
-await page.keyboard.press("1").catch(() => {});
-await beat(2500);
+await step("atlas-arrived", async () => {
+  // Wait for the Web Pentesting card to be in the DOM.
+  await page.getByRole("button", { name: /web pentesting/i }).waitFor({ timeout: 8000 });
+  // Linger so the viewer registers the 3 region cards.
+  await beat(2500);
+});
 
-console.log(`[demo] step 03: enter Web Pentesting region`);
-await maybeClick("text=/web pentesting/i");
-await beat(3500);
+await step("dismiss-daily-briefing-if-present", async () => {
+  // First-launch-of-day pops the Daily Briefing modal which intercepts
+  // every pointer event (it's a full-viewport <Backdrop>). The CTA reads
+  // "Begin"; Escape would also work, but a real click reads cleaner in
+  // the recording (the briefing is a feature worth showing on screen
+  // briefly before dismissing).
+  const begin = page.getByRole("button", { name: /^begin$/i });
+  if (await begin.count()) {
+    // Linger ~1.2s so the briefing flashes on screen, then dismiss.
+    await beat(1200);
+    await begin.click();
+    await beat(600);
+  }
+});
 
-console.log(`[demo] step 04: enter first zone`);
-// Zones render as constellation stars; click the first one.
-const clickedZone =
-  (await maybeClick("[data-zone-star]")) ||
-  (await maybeClick(".np-pixel:has-text(/Z0\\d/)"));
-if (!clickedZone) {
-  console.warn(`[demo] couldn't find zone selector; falling back to keyboard`);
-}
-await beat(3500);
+await step("click-web-region", async () => {
+  await page.getByRole("button", { name: /web pentesting/i }).click();
+  // RegionView mounts — wait for at least one zone-star to appear.
+  await page.waitForSelector("[data-zone-star]", { timeout: 8000 });
+  await beat(3500);
+});
 
-console.log(`[demo] step 05: pan around the zone graph`);
-// Let the @xyflow react-flow nodes animate in.
-await beat(1500);
+await step("enter-first-zone", async () => {
+  // SVG <g> elements lack a hit-test area Playwright pointer clicks
+  // can rely on — dispatch a synthetic click that bubbles to React.
+  const ok = await page.evaluate(() => {
+    const star = document.querySelector("[data-zone-star]");
+    if (!star) return false;
+    star.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    return true;
+  });
+  if (!ok) throw new Error("no [data-zone-star] in DOM");
+  // ZoneView mounts — wait for the react-flow canvas + at least one node.
+  await page.waitForSelector(".react-flow__node", { timeout: 8000 });
+  await beat(3000);
+});
 
-console.log(`[demo] step 06: click a node`);
-await maybeClick(".react-flow__node");
-await beat(2200);
+await step("click-first-node", async () => {
+  const ok = await page.evaluate(() => {
+    const n = document.querySelector(".react-flow__node");
+    if (!n) return false;
+    n.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    return true;
+  });
+  if (!ok) throw new Error("no react-flow node in DOM");
+  // NodePanel slides in from the right — wait for the COMPLETE button.
+  await page.getByRole("button", { name: /^complete$/i }).waitFor({ timeout: 6000 });
+  await beat(2000);
+});
 
-console.log(`[demo] step 07: mark complete`);
-await maybeClick('button:has-text(/mark complete/i)');
-await beat(1500);
+await step("mark-complete", async () => {
+  await page.getByRole("button", { name: /^complete$/i }).click();
+  // Echo prompt modal mounts — wait for its Skip / Save echo controls.
+  await page.getByRole("button", { name: /^skip$/i }).waitFor({ timeout: 5000 });
+  await beat(1500);
+});
 
-console.log(`[demo] step 08: skip echo prompt`);
-await maybeClick('button:has-text(/skip/i)');
-await beat(800);
+await step("dismiss-modal-stack", async () => {
+  // After mark-complete, any number of modals can stack:
+  //   - Echo prompt (always shows)
+  //   - Achievement modal (if a trigger was met — first-node, first-zone, etc)
+  //   - More achievement modals queued behind it (the engine pops them
+  //     in sequence as each one closes)
+  //   - Level-up modal (if XP crossed a threshold)
+  //
+  // The engine subscribes to modal-close transitions and pops the next
+  // queued modal ~200ms after each dismissal. We loop dismissing
+  // whatever's up — Skip / Nice / Continue / Begin (any CTA) — with a
+  // beat between each, until no modal element is in the DOM.
+  //
+  // The modal root mounts inside <div role="dialog" aria-modal="true">,
+  // so we use that as the "is anything modal-y up?" probe.
 
-console.log(`[demo] step 09: dismiss achievement (if any)`);
-await maybeClick('button:has-text(/^nice$/i)');
-await beat(1200);
+  for (let i = 0; i < 8; i++) {
+    const dialog = page.locator("[role='dialog']");
+    const visible = await dialog.count();
+    if (!visible) break;
 
-console.log(`[demo] step 10: codex (key 2)`);
-await page.keyboard.press("Escape").catch(() => {});
-await page.keyboard.press("2");
-await beat(3000);
+    // Try in priority order: Skip > Nice > Continue > Begin > Esc fallback.
+    const ctas = [
+      page.getByRole("button", { name: /^skip$/i }),
+      page.getByRole("button", { name: /^nice$/i }),
+      page.getByRole("button", { name: /^continue$/i }),
+      page.getByRole("button", { name: /^begin$/i }),
+    ];
+    let clicked = false;
+    for (const cta of ctas) {
+      if (await cta.count()) {
+        await cta.click({ timeout: 2000 }).catch(() => {});
+        clicked = true;
+        break;
+      }
+    }
+    if (!clicked) {
+      // No recognized CTA — Escape it.
+      await page.keyboard.press("Escape").catch(() => {});
+    }
+    // Wait for the close animation + queue advance.
+    await beat(700);
+  }
+});
 
-console.log(`[demo] step 11: stats (key 3)`);
-await page.keyboard.press("3");
-await beat(4000);
+await step("close-side-panel", async () => {
+  // Escape clears any lingering side panel; without it, focus stays
+  // there and the digit-key shortcuts below get eaten as text input.
+  await page.keyboard.press("Escape");
+  await beat(400);
+});
 
-console.log(`[demo] step 12: bounties (key 4)`);
-await page.keyboard.press("4");
-await beat(3000);
+// Each shortcut-key step waits for the destination view's H1 to mount.
+// Using the actual heading text rather than fuzzy body-text matching
+// avoids matching the previous view's residual content during the
+// AnimatePresence cross-fade.
 
-console.log(`[demo] step 13: trophy room (key 5)`);
-await page.keyboard.press("5");
-await beat(3500);
+await step("codex-key-2", async () => {
+  await page.keyboard.press("2");
+  await page.locator("h1", { hasText: /every resource/i }).waitFor({ timeout: 6000 });
+  await beat(3200);
+});
 
-console.log(`[demo] step 14: back to atlas (key 1)`);
-await page.keyboard.press("1");
-await beat(2000);
+await step("stats-key-3", async () => {
+  await page.keyboard.press("3");
+  await page.locator("h1", { hasText: /operator dossier/i }).waitFor({ timeout: 6000 });
+  await beat(4500);
+});
+
+await step("bounties-key-4", async () => {
+  await page.keyboard.press("4");
+  await page.locator("h1", { hasText: /real-world wins/i }).waitFor({ timeout: 6000 });
+  await beat(3000);
+});
+
+await step("trophy-room-key-5", async () => {
+  await page.keyboard.press("5");
+  await page.locator("h1", { hasText: /trophy room/i }).waitFor({ timeout: 6000 });
+  await beat(3500);
+});
+
+await step("back-to-atlas-key-1", async () => {
+  await page.keyboard.press("1");
+  await page.getByRole("button", { name: /web pentesting/i }).waitFor({ timeout: 6000 });
+  await beat(2000);
+});
 
 // ============================================================================
-// Tear down — the video lands in tmpDir with a hash filename. Move it
-// to docs/demo.webm and run the conversions.
+// Tear down + ffmpeg conversions
 // ============================================================================
 
 await page.close();
@@ -215,24 +294,12 @@ if (candidates.length === 0) {
   process.exit(1);
 }
 
-const chosen = candidates[0].n;
 const finalWebm = resolve(outDir, "demo.webm");
 if (existsSync(finalWebm)) unlinkSync(finalWebm);
-renameSync(resolve(tmpDir, chosen), finalWebm);
-
-// Clean tmp residue.
-for (const f of readdirSync(tmpDir)) unlinkSync(resolve(tmpDir, f));
-
+renameSync(resolve(tmpDir, candidates[0].n), finalWebm);
 console.log(`[demo] webm saved → docs/demo.webm`);
 
-// ----------------------------------------------------------------------------
-// ffmpeg conversions: webm → mp4 (Twitter/LinkedIn) + webm → gif (README).
-// We call ffmpeg via execSync; if it's not on PATH, we skip with a
-// helpful message instead of failing the whole script.
-// ----------------------------------------------------------------------------
-
 const ffmpegPath = process.env.FFMPEG_PATH ?? "ffmpeg";
-
 function tryFfmpeg(args, label) {
   try {
     execSync(`${ffmpegPath} ${args}`, { stdio: ["ignore", "ignore", "inherit"] });
@@ -254,16 +321,18 @@ tryFfmpeg(
   `mp4 saved → docs/demo.mp4`,
 );
 
-// GIF: scale down + reduce framerate so the file isn't 30 MB. The
-// two-pass palettegen approach gives much better color than the
-// naive single-pass fps+scale filter chain.
+// 10fps + 800px wide + Bayer dither. The combination keeps the GIF
+// under GitHub's 10 MB README inline-upload ceiling for a 40-second
+// walkthrough. `palettegen=stats_mode=diff` adapts the palette to
+// frame-to-frame deltas (better than `full` for screen-cap content).
 tryFfmpeg(
-  `-y -i "${finalWebm}" -vf "fps=12,scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 "${gif}"`,
+  `-y -i "${finalWebm}" -vf "fps=10,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=4" -loop 0 "${gif}"`,
   `gif saved → docs/demo.gif`,
 );
 
 console.log(``);
-console.log(`Recording complete. Files:`);
-console.log(`  docs/demo.webm  — Playwright native, GitHub README inline upload`);
-console.log(`  docs/demo.mp4   — Twitter / LinkedIn / Reddit native`);
+console.log(`Recording complete. Step screenshots in ${tmpDir.replace(root, ".")}`);
+console.log(`Files:`);
+console.log(`  docs/demo.webm  — Playwright native, GitHub README inline`);
+console.log(`  docs/demo.mp4   — Twitter / LinkedIn / Reddit`);
 console.log(`  docs/demo.gif   — README fallback (lower quality)`);
