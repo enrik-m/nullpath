@@ -74,7 +74,7 @@ real values before you ship the URL publicly:
 
 The other placeholders (`[legal-name]`, `[contact-email]`,
 `[supabase-region]`) were already substituted with sensible defaults
-(`Enrik Mustafa`, `iceager@protonmail.com`, `us-east-1`). Override any
+(`Enrik Mustafa`, `iceager@protonmail.com`, `eu-central-1`). Override any
 that don't match your reality.
 
 ## 6. First-sync sanity test
@@ -99,21 +99,21 @@ need a Supabase Edge Function that calls
 
 - [ ] (Optional) Deploy a small Edge Function:
       `ts
-    // supabase/functions/delete-account/index.ts
-    import { createClient } from "@supabase/supabase-js";
-    Deno.serve(async (req) => {
-      const auth = req.headers.get("Authorization");
-      if (!auth) return new Response("missing auth", { status: 401 });
-      const sb = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      );
-      const { data: { user } } = await sb.auth.getUser(auth.replace("Bearer ", ""));
-      if (!user) return new Response("invalid token", { status: 401 });
-      await sb.auth.admin.deleteUser(user.id);
-      return new Response("deleted");
-    });
-    `
+  // supabase/functions/delete-account/index.ts
+  import { createClient } from "@supabase/supabase-js";
+  Deno.serve(async (req) => {
+    const auth = req.headers.get("Authorization");
+    if (!auth) return new Response("missing auth", { status: 401 });
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const { data: { user } } = await sb.auth.getUser(auth.replace("Bearer ", ""));
+    if (!user) return new Response("invalid token", { status: 401 });
+    await sb.auth.admin.deleteUser(user.id);
+    return new Response("deleted");
+  });
+  `
 - [ ] (Optional) Deploy: `supabase functions deploy delete-account`.
 - [ ] (Optional) Wire the in-app delete button to call the function
       after `reset_all_progress`.

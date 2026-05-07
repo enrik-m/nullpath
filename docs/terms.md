@@ -29,7 +29,7 @@ in case of conflict with this summary.
 
 ## 1. Who we are
 
-Nullpath is operated by **Enrik Mustafa**, located in **[country]**.
+Nullpath is operated by **Enrik Mustafa**, located in **Kosovo**.
 Contact: **iceager@protonmail.com**.
 
 ## 2. The service
@@ -155,9 +155,9 @@ your local law.
 
 ## 11. Governing law
 
-These terms are governed by the laws of **[country]**, without regard
+These terms are governed by the laws of **Kosovo**, without regard
 to conflict-of-law principles. Any dispute arising out of these terms
-or the service will be resolved in the courts of **[country]**, except
+or the service will be resolved in the courts of **Kosovo**, except
 that you may bring claims in your local consumer-protection venue
 where local law gives you that right.
 

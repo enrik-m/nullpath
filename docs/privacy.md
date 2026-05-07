@@ -83,7 +83,7 @@ data — use the in-app delete for that.
 - **Vercel** — hosts the static site (United States / global edge
   network).
 - **Supabase** — hosts the Postgres database and the auth service.
-  Region: **us-east-1**.
+  Region: **eu-central-1**.
 
 We don't transfer your data anywhere else. There are no other
 sub-processors.
