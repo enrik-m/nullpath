@@ -104,6 +104,13 @@ export const resetAllProgress = impl.resetAllProgress;
 export const exportBackup = impl.exportBackup;
 export const importBackup = impl.importBackup;
 
+/**
+ * Cloud-only: full account deletion via the delete-account Edge Function.
+ * Wipes auth.users which CASCADEs to every per-user row. No-op in local
+ * mode (callers should branch on isCloudMode() before invoking).
+ */
+export const deleteAccount = isCloudMode() ? cloud.deleteAccount : async () => {};
+
 // ---------------------------------------------------------------------------
 // Cloud-specific extras — exported as no-ops in local mode so callers
 // can use them unconditionally.

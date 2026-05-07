@@ -473,28 +473,15 @@ export async function deleteResource(id: number): Promise<void> {
 export async function togglePinResource(id: number): Promise<void> {
   return err("togglePinResource", async () => {
     const userId = requireUid();
-    // KNOWN LIMITATION: read-modify-write across two roundtrips. Two
-    // concurrent toggles on the same row from different tabs of the same
-    // user can collapse to a single net flip (both read pinned=0, both
-    // write pinned=1). Acceptable for now — the user can only race
-    // themselves and the resulting state is still valid (just maybe not
-    // what the second click "intended"). A future hardening pass should
-    // move this to a server-side RPC that flips atomically with one
-    // statement (`UPDATE ... SET pinned = 1 - pinned WHERE id = ...`).
-    const { data, error } = await c()
-      .from("user_node_resource")
-      .select("pinned")
-      .eq("user_id", userId)
-      .eq("id", id)
-      .single();
+    // Atomic via the toggle_pin_resource RPC — single UPDATE on the
+    // server with `SET pinned = 1 - pinned`, returns the new value.
+    // Two concurrent toggles from different tabs always net out
+    // correctly (one wins the first slot, the other wins the second).
+    const { error } = await c().rpc("toggle_pin_resource", {
+      p_user_id: userId,
+      p_resource_id: id,
+    });
     if (error) throw error;
-    const next = data.pinned === 1 ? 0 : 1;
-    const { error: upErr } = await c()
-      .from("user_node_resource")
-      .update({ pinned: next })
-      .eq("user_id", userId)
-      .eq("id", id);
-    if (upErr) throw upErr;
     _broadcastMutation();
   });
 }
@@ -1100,20 +1087,21 @@ export async function exportBackup(appVersion: string): Promise<BackupSnapshot> 
 }
 
 /**
- * Re-apply a backup snapshot. Clears existing per-user rows first then
- * re-inserts. Achievements are NOT restored — the catalog evaluator
- * runs after restore so the unlocks reflect the restored state. This
- * matches local-mode semantics for everything except the achievement
- * row metadata, which is regenerated from the catalog.
+ * Re-apply a backup snapshot atomically via the `import_user_backup`
+ * Postgres function. The wipe + restore + achievement re-evaluation
+ * all happen inside a single server-side transaction, so a network
+ * blip mid-flow can't leave the account half-restored — either the
+ * whole snapshot lands or nothing changes.
  *
  * Cloud parity gaps on round-trip (local snapshot → cloud import):
  *   - Bounty `resolved_at`: dropped (no column).
  *   - Bounty `visibility`: collapsed to `private` (no column).
  *   - Refresher autoincrement `id`: discarded. Local SQLite refresher
  *     rows have a surrogate INTEGER PRIMARY KEY; cloud `user_refresher`
- *     uses a composite (`user_id`,`node_id`) PK and synthesizes
- *     `id = 0` on read. The id is meaningless across machines so
- *     dropping it is correct, but worth flagging.
+ *     uses a composite (`user_id`,`node_id`) PK. The id is meaningless
+ *     across machines so dropping it is correct.
+ *   - Resource ids likewise are local-only — cloud allocates fresh
+ *     BIGSERIAL ids.
  */
 export async function importBackup(snap: BackupSnapshot): Promise<void> {
   return err("importBackup", async () => {
@@ -1122,120 +1110,40 @@ export async function importBackup(snap: BackupSnapshot): Promise<void> {
     }
     const userId = requireUid();
 
-    // Wipe existing per-user data, then re-insert. Order respects FK
-    // cascades (deletes from child tables first). reset_all_progress
-    // bundles the wipe + app_state reset in one server-side call.
-    const { error: rErr } = await c().rpc("reset_all_progress", { p_user_id: userId });
-    if (rErr) throw rErr;
-
-    // Restore node state.
-    if (snap.nodes.length > 0) {
-      const rows = snap.nodes.map((n) => ({
-        user_id: userId,
-        node_id: n.id,
-        status: n.status,
-        user_xp: n.user_xp,
-        completed_at: n.completed_at,
-        started_at: n.started_at,
-      }));
-      const { error } = await c()
-        .from("user_node_state")
-        .upsert(rows, { onConflict: "user_id,node_id" });
-      if (error) throw error;
-    }
-
-    // Resources — fresh ids (BIGSERIAL allocates new ones).
-    if (snap.resources.length > 0) {
-      const rows = snap.resources.map((r) => ({
-        user_id: userId,
-        node_id: r.node_id,
-        kind: r.kind,
-        title: r.title,
-        url: r.url,
-        note: r.note,
-        pinned: r.pinned,
-        visibility: r.visibility === "guild" ? "private" : r.visibility,
-        added_at: r.added_at,
-      }));
-      const { error } = await c().from("user_node_resource").insert(rows);
-      if (error) throw error;
-    }
-
-    // Notes (composite PK).
-    if (snap.notes.length > 0) {
-      const rows = snap.notes.map((n) => ({
-        user_id: userId,
-        node_id: n.node_id,
-        body_md: n.body_md,
-        visibility: n.visibility === "guild" ? "private" : n.visibility,
-        updated_at: n.updated_at,
-      }));
-      const { error } = await c()
-        .from("user_node_note")
-        .upsert(rows, { onConflict: "user_id,node_id" });
-      if (error) throw error;
-    }
-
-    // Refreshers.
-    if (snap.refreshers.length > 0) {
-      const rows = snap.refreshers.map((r) => ({
-        user_id: userId,
-        node_id: r.node_id,
-        streak: r.streak,
-        last_at: r.last_at,
-        due_at: r.due_at,
-      }));
-      const { error } = await c()
-        .from("user_refresher")
-        .upsert(rows, { onConflict: "user_id,node_id" });
-      if (error) throw error;
-    }
-
-    // Bounties — fresh ids.
-    if (snap.bounties.length > 0) {
-      const rows = snap.bounties.map((b) => ({
-        user_id: userId,
-        program: b.program,
-        title: b.title,
-        severity: b.severity,
-        status: b.status,
-        payout_usd: b.payout_usd,
-        submitted_at: b.submitted_at,
-        cve_id: b.cve_id,
-        related_node: b.related_node,
-        notes: b.notes,
-      }));
-      const { error } = await c().from("user_bounty").insert(rows);
-      if (error) throw error;
-    }
-
-    // Streak days.
-    if (snap.streakDays.length > 0) {
-      const rows = snap.streakDays.map((d) => ({
-        user_id: userId,
-        day: d.day,
-        sessions: d.sessions,
-        used_freeze: d.used_freeze,
-      }));
-      const { error } = await c()
-        .from("user_streak_day")
-        .upsert(rows, { onConflict: "user_id,day" });
-      if (error) throw error;
-    }
-
-    // App state — patch only the user-controlled fields. Server side
-    // already has a row from the on-signup trigger; we update it.
-    await updateAppState({
-      handle: snap.appState.handle,
-      scanlines_enabled: snap.appState.scanlines_enabled,
-      sound_enabled: snap.appState.sound_enabled,
-      freeze_tokens: snap.appState.freeze_tokens,
-      last_freeze_award_week: snap.appState.last_freeze_award_week,
+    // The server function expects the snapshot shape via JSONB. The
+    // shape mirrors BackupSnapshot 1:1 — see import_user_backup in
+    // 20260506120400_polish.sql for the parser.
+    const { error } = await c().rpc("import_user_backup", {
+      p_user_id: userId,
+      p_payload: snap as unknown as Record<string, unknown>,
     });
+    if (error) throw error;
 
-    // Re-evaluate achievements against the restored state.
-    await evaluateAchievementsRpc();
+    _broadcastMutation();
+  });
+}
 
+// ---------------------------------------------------------------------------
+// Account deletion — the in-app "Delete account" path. Calls the
+// `delete-account` Edge Function which runs as service_role and deletes
+// the auth.users row; ON DELETE CASCADE on every per-user FK then wipes
+// every row attached to the account. Returns when the auth row is gone.
+//
+// We use the Supabase client's `functions.invoke` so the Authorization
+// header is set automatically from the active session — no need to
+// re-fish the JWT out manually.
+// ---------------------------------------------------------------------------
+
+export async function deleteAccount(): Promise<void> {
+  return err("deleteAccount", async () => {
+    requireUid();
+    const { data, error } = await c().functions.invoke("delete-account", {
+      method: "POST",
+    });
+    if (error) throw error;
+    if (!(data as { ok?: boolean })?.ok) {
+      throw new Error(`delete-account responded without ok=true: ${JSON.stringify(data)}`);
+    }
     _broadcastMutation();
   });
 }

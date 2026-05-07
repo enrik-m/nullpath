@@ -339,18 +339,35 @@ function AccountSection() {
       return;
 
     try {
-      // Wipe all user-owned rows via the RPC (covered by RLS; server
-      // verifies auth.uid() = p_user_id). The auth.users row itself is
-      // deleted via Supabase auth admin API — which we don't expose to
-      // the browser. So we sign the user out here; the actual auth row
-      // deletion is handled via the Supabase Edge Function gated by
-      // their own JWT (deferred to follow-up if not yet deployed).
-      await db.resetAllProgress();
-      toast.success("All progress data deleted. Signing out...");
-      await cloudSignOut();
+      // Full account deletion via the delete-account Edge Function:
+      // verifies the JWT, calls auth.admin.deleteUser(uid) with
+      // service_role, ON DELETE CASCADE wipes every per-user row.
+      // After this returns, the auth.users row is gone and the next
+      // signInWithOAuth would create a brand-new account.
+      await db.deleteAccount();
+      toast.success("Account deleted. Signing out...");
+      // Auth session is already invalid (the user row no longer exists),
+      // but call signOut to clear local cached session + storage.
+      await cloudSignOut().catch(() => {
+        // Ignore — session was already invalidated by the user delete.
+      });
       location.reload();
     } catch (err) {
-      toast.error(`Deletion failed: ${err instanceof Error ? err.message : String(err)}`);
+      // Fallback: if the Edge Function isn't deployed or unreachable,
+      // at least wipe the per-user rows so the user's data is gone
+      // even if the auth.users stub remains. They can revoke the OAuth
+      // grant themselves at github.com/settings/applications.
+      console.error("[delete-account] Edge Function failed, falling back to row wipe:", err);
+      try {
+        await db.resetAllProgress();
+        toast.warn(
+          "Couldn't reach the deletion endpoint. Your data has been wiped, but the account stub remains — revoke at github.com/settings/applications.",
+        );
+        await cloudSignOut();
+        location.reload();
+      } catch (err2) {
+        toast.error(`Deletion failed: ${err2 instanceof Error ? err2.message : String(err2)}`);
+      }
     }
   }
 
